@@ -98,10 +98,10 @@ Internet / Jaringan Kantor -> nginx:443 -> frontend:3000 (/) dan backend:4000 (/
 cp .env.example .env
 ```
 
-   Wajib diisi: `POSTGRES_PASSWORD`, `JWT_ACCESS_SECRET` (minimal 32 karakter), `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`. Buat rahasia acak dengan:
+   Wajib diisi: `POSTGRES_PASSWORD`, `JWT_ACCESS_SECRET` (minimal 32 karakter), `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`. Buat rahasia acak dengan perintah berikut. Gunakan format heksadesimal untuk `POSTGRES_PASSWORD` karena nilainya disisipkan ke dalam URL koneksi dan tidak boleh mengandung karakter seperti `/`, `@`, `+`, atau `=`:
 
 ```bash
-openssl rand -base64 48
+openssl rand -hex 32
 ```
 
 3. Letakkan sertifikat TLS di `infrastructure/nginx/certs/` dengan nama `fullchain.pem` dan `privkey.pem` (misalnya dari Let's Encrypt atau CA internal kantor). HTTPS wajib karena cookie sesi memakai flag `Secure` dan kamera QR (Tahap 2) membutuhkan HTTPS.
@@ -153,14 +153,23 @@ docker compose stop backend
 ```
 
 ```bash
-docker compose run --rm backup sh /scripts/restore.sh /backups/oams-YYYYMMDD-HHMM.dump
+docker compose run --rm --entrypoint sh backup /scripts/restore.sh /backups/oams-YYYYMMDD-HHMM.dump
 ```
+
+`--entrypoint sh` wajib ditulis, karena entrypoint bawaan container `backup` adalah loop backup harian.
 
 ```bash
 docker compose start backend
 ```
 
 Uji pemulihan secara berkala (disarankan setiap triwulan) pada database kosong, misalnya dengan `POSTGRES_DB=oams_uji` di salinan `.env` terpisah, untuk memastikan berkas backup benar-benar bisa dipulihkan.
+
+### Keamanan operasional
+
+- Setelah login pertama dan password Super Admin diganti, hapus `SEED_ADMIN_PASSWORD` dari `.env` atau set `SEED_ON_START=false`. Seed tidak pernah mengubah password akun yang sudah ada, tetapi rahasia tidak perlu tersimpan lebih lama dari yang diperlukan.
+- Seed saat start hanya menambahkan permission yang baru diperkenalkan oleh versi aplikasi; permission yang dicabut Super Admin lewat menu Role & Izin tidak dikembalikan.
+- Login dibatasi 5 kegagalan per menit per akun dan 30 permintaan per menit per alamat; endpoint refresh dan logout 60 per menit per alamat.
+- Dokumentasi Swagger (`/api/docs`) ikut terekspos di balik Nginx. Batasi aksesnya di Nginx (misalnya hanya dari jaringan kantor) bila tidak ingin struktur API terlihat publik.
 
 ### Catatan
 

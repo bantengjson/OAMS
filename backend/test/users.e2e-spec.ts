@@ -275,6 +275,86 @@ describe('users (e2e)', () => {
     expect(res.body.message).toBe('Anda tidak dapat menonaktifkan akun sendiri.');
   });
 
+  describe('when users.manage is delegated to a non-Super-Admin', () => {
+    let adminRoleId: string;
+    let baseline: string[];
+
+    beforeAll(async () => {
+      const role = await ctx.http().get('/api/v1/roles').set(bearer(superAdmin)).expect(200);
+      const adminRole = role.body.find((r: { code: string }) => r.code === 'ADMIN_INVENTARIS');
+      adminRoleId = adminRole.id;
+      baseline = adminRole.permissions;
+      await ctx
+        .http()
+        .put(`/api/v1/roles/${adminRoleId}/permissions`)
+        .set(bearer(superAdmin))
+        .send({ permissions: [...baseline, 'users.manage'] })
+        .expect(200);
+    });
+
+    afterAll(async () => {
+      await ctx
+        .http()
+        .put(`/api/v1/roles/${adminRoleId}/permissions`)
+        .set(bearer(superAdmin))
+        .send({ permissions: baseline })
+        .expect(200);
+    });
+
+    it('cannot create a Super Admin', async () => {
+      const res = await ctx
+        .http()
+        .post(USERS)
+        .set(bearer(admin))
+        .send({
+          email: 'sneaky@test.local',
+          fullName: 'Sneaky',
+          password: 'Sneaky123',
+          roleCodes: ['SUPER_ADMIN'],
+        })
+        .expect(400);
+      expect(res.body.message).toBe('Hanya Super Admin yang dapat menetapkan role Super Admin.');
+    });
+
+    it('cannot grant or strip the Super Admin role', async () => {
+      await ctx
+        .http()
+        .put(`${USERS}/${budiId}/roles`)
+        .set(bearer(admin))
+        .send({ roleCodes: ['SUPER_ADMIN'] })
+        .expect(400);
+      await ctx
+        .http()
+        .put(`${USERS}/${seedAdminId}/roles`)
+        .set(bearer(admin))
+        .send({ roleCodes: ['VIEWER'] })
+        .expect(400);
+      // ordinary role changes still work
+      await ctx
+        .http()
+        .put(`${USERS}/${budiId}/roles`)
+        .set(bearer(admin))
+        .send({ roleCodes: ['PETUGAS_INVENTARIS', 'VIEWER'] })
+        .expect(200);
+    });
+
+    it('cannot deactivate the last active Super Admin', async () => {
+      // two active super admins: deactivating one is fine, the other is refused
+      await ctx.http().post(`${USERS}/${superAdmin.userId}/deactivate`).set(bearer(admin)).expect(200);
+      try {
+        const res = await ctx
+          .http()
+          .post(`${USERS}/${seedAdminId}/deactivate`)
+          .set(bearer(admin))
+          .expect(400);
+        expect(res.body.message).toBe('Sistem harus memiliki minimal satu Super Admin aktif.');
+      } finally {
+        await ctx.prisma.user.update({ where: { id: superAdmin.userId }, data: { isActive: true } });
+        superAdmin = await ctx.loginAs('SUPER_ADMIN');
+      }
+    });
+  });
+
   it('never lets the last active Super Admin be removed', async () => {
     // two active super admins exist: the seed admin and super_admin@test.local
     await ctx.http().post(`${USERS}/${seedAdminId}/deactivate`).set(bearer(superAdmin)).expect(200);

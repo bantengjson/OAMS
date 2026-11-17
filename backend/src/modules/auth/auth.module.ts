@@ -7,6 +7,7 @@ import { EnvService } from '../../config/env.service.js';
 import { AuthUserLoader } from './auth-user.loader.js';
 import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
+import { LoginAttemptLimiter } from './login-attempt.limiter.js';
 import { PasswordService } from './password.service.js';
 import { RefreshTokenService } from './refresh-token.service.js';
 
@@ -27,6 +28,7 @@ import { RefreshTokenService } from './refresh-token.service.js';
     AuthUserLoader,
     PasswordService,
     RefreshTokenService,
+    LoginAttemptLimiter,
     // Order matters: authentication first, then permission checks.
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },

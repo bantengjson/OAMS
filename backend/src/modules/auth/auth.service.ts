@@ -11,6 +11,7 @@ import type { AccessTokenPayload, AuthUser } from '../../common/auth/auth-user.j
 import { PrismaService } from '../../common/prisma/prisma.service.js';
 import { EnvService } from '../../config/env.service.js';
 import { AuthUserLoader } from './auth-user.loader.js';
+import { LoginAttemptLimiter } from './login-attempt.limiter.js';
 import { PasswordService } from './password.service.js';
 import { INVALID_SESSION_MESSAGE, RefreshTokenService } from './refresh-token.service.js';
 import type { IssuedRefreshToken } from './refresh-token.service.js';
@@ -47,6 +48,7 @@ export class AuthService implements OnModuleInit {
     private readonly loader: AuthUserLoader,
     private readonly audit: AuditService,
     private readonly env: EnvService,
+    private readonly attempts: LoginAttemptLimiter,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -55,10 +57,12 @@ export class AuthService implements OnModuleInit {
 
   async login(email: string, password: string): Promise<AuthResult> {
     const normalized = normalizeEmail(email);
+    this.attempts.assertAllowed(normalized);
     const user = await this.prisma.user.findUnique({ where: { email: normalized } });
     const valid = await this.passwords.verify(user?.passwordHash ?? this.dummyHash, password);
 
     if (!user || !valid) {
+      this.attempts.recordFailure(normalized);
       await this.audit.record({
         action: 'auth.login_failed',
         module: 'auth',
@@ -82,6 +86,7 @@ export class AuthService implements OnModuleInit {
     const authUser = await this.loader.load(user.id);
     if (!authUser) throw new ForbiddenException(INACTIVE_ACCOUNT_MESSAGE);
 
+    this.attempts.reset(normalized);
     await this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
     const refresh = await this.refreshTokens.issue(user.id);
     await this.audit.record({

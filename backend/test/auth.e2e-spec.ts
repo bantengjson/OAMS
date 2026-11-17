@@ -248,7 +248,7 @@ describe('auth (e2e)', () => {
     expect(user?.lastLoginAt).not.toBeNull();
   });
 
-  it('rate limits login after 5 attempts per minute from one address', async () => {
+  it('locks an account after 5 failed attempts per minute', async () => {
     const ip = '203.0.113.77';
     for (let i = 0; i < 5; i += 1) {
       await rawLogin({ email: 'limit@test.local', password: 'Salah1234' }, ip).expect(401);
@@ -257,5 +257,23 @@ describe('auth (e2e)', () => {
       429,
     );
     expect(blocked.body.message).toBe('Terlalu banyak percobaan login. Coba lagi dalam satu menit.');
+    // the lock follows the account, not the address
+    await rawLogin({ email: 'LIMIT@test.local', password: 'Salah1234' }, '203.0.113.78').expect(429);
+  });
+
+  it('does not lock other people sharing one address (office NAT)', async () => {
+    const ip = '198.51.100.9';
+    for (let i = 0; i < 6; i += 1) {
+      await rawLogin({ email: `nat${i}@test.local`, password: 'Salah1234' }, ip).expect(401);
+    }
+    await rawLogin({ email: TEST_ADMIN.email, password: TEST_ADMIN.password }, ip).expect(200);
+  });
+
+  it('rate limits anonymous refresh calls per address', async () => {
+    const ip = '192.0.2.44';
+    for (let i = 0; i < 60; i += 1) {
+      await ctx.http().post(REFRESH).set('X-Forwarded-For', ip).expect(401);
+    }
+    await ctx.http().post(REFRESH).set('X-Forwarded-For', ip).expect(429);
   });
 });

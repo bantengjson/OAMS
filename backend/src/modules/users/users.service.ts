@@ -20,6 +20,15 @@ export const USER_NOT_FOUND = 'Pengguna tidak ditemukan.';
 export const DEPARTMENT_NOT_FOUND = 'Unit kerja tidak ditemukan.';
 export const CANNOT_DEACTIVATE_SELF = 'Anda tidak dapat menonaktifkan akun sendiri.';
 export const LAST_SUPER_ADMIN = 'Sistem harus memiliki minimal satu Super Admin aktif.';
+export const ONLY_SUPER_ADMIN_ASSIGNS = 'Hanya Super Admin yang dapat menetapkan role Super Admin.';
+
+/** Only a Super Admin may grant or strip the Super Admin role. */
+function assertSuperAdminAssignment(actor: AuthUser, before: string[], next: string[]): void {
+  const touchesSuperAdmin = before.includes('SUPER_ADMIN') !== next.includes('SUPER_ADMIN');
+  if (touchesSuperAdmin && !actor.roles.includes('SUPER_ADMIN')) {
+    throw new BadRequestException(ONLY_SUPER_ADMIN_ASSIGNS);
+  }
+}
 
 const userInclude = {
   department: { select: { id: true, code: true, name: true } },
@@ -95,6 +104,7 @@ export class UsersService {
 
   async create(dto: CreateUserDto, actor: AuthUser): Promise<UserDto> {
     this.passwords.assertStrong(dto.password);
+    assertSuperAdminAssignment(actor, [], dto.roleCodes);
     const roleIds = await this.resolveRoleIds(dto.roleCodes);
     await this.ensureDepartment(dto.departmentId);
 
@@ -143,9 +153,10 @@ export class UsersService {
 
   async setRoles(id: string, roleCodes: string[], actor: AuthUser): Promise<UserDto> {
     const current = toDto(await this.getRow(id));
-    const roleIds = await this.resolveRoleIds(roleCodes);
     const nextCodes = Array.from(new Set(roleCodes)).sort();
     const beforeCodes = current.roles.map((r) => r.code);
+    assertSuperAdminAssignment(actor, beforeCodes, nextCodes);
+    const roleIds = await this.resolveRoleIds(roleCodes);
 
     const losesSuperAdmin =
       beforeCodes.includes('SUPER_ADMIN') && !nextCodes.includes('SUPER_ADMIN');

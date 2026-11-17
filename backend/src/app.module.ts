@@ -17,8 +17,13 @@ import { UsersModule } from './modules/users/users.module.js';
     AppConfigModule,
     PrismaModule,
     AuditModule,
+    // Per-address limits only; they stay loose because an office shares one NAT
+    // address. Brute force on a single account is stopped by LoginAttemptLimiter.
     ThrottlerModule.forRoot({
-      throttlers: [{ name: 'login', ttl: 60_000, limit: 5 }],
+      throttlers: [
+        { name: 'login', ttl: 60_000, limit: 30 },
+        { name: 'auth', ttl: 60_000, limit: 60 },
+      ],
       errorMessage: 'Terlalu banyak percobaan login. Coba lagi dalam satu menit.',
     }),
     AuthModule,

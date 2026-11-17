@@ -76,6 +76,51 @@ describe('database seed (e2e)', () => {
     }).toEqual(before);
   });
 
+  it('does not re-grant a permission an admin revoked from a role', async () => {
+    const viewer = await ctx.prisma.role.findUniqueOrThrow({ where: { code: 'VIEWER' } });
+    const reportsView = await ctx.prisma.permission.findUniqueOrThrow({
+      where: { code: 'reports.view' },
+    });
+    await ctx.prisma.rolePermission.delete({
+      where: { roleId_permissionId: { roleId: viewer.id, permissionId: reportsView.id } },
+    });
+    try {
+      await seed(ctx.prisma, {
+        adminEmail: TEST_ADMIN.email,
+        adminPassword: TEST_ADMIN.password,
+        adminName: TEST_ADMIN.fullName,
+      });
+      const stillRevoked = await ctx.prisma.rolePermission.findUnique({
+        where: { roleId_permissionId: { roleId: viewer.id, permissionId: reportsView.id } },
+      });
+      expect(stillRevoked).toBeNull();
+    } finally {
+      await ctx.prisma.rolePermission.create({
+        data: { roleId: viewer.id, permissionId: reportsView.id },
+      });
+    }
+  });
+
+  it('grants a newly introduced permission to every role whose baseline includes it', async () => {
+    // simulate a permission that did not exist in an older deployment
+    await ctx.prisma.permission.delete({ where: { code: 'qr.scan' } });
+    await seed(ctx.prisma, {
+      adminEmail: TEST_ADMIN.email,
+      adminPassword: TEST_ADMIN.password,
+      adminName: TEST_ADMIN.fullName,
+    });
+    const holders = await ctx.prisma.rolePermission.findMany({
+      where: { permission: { code: 'qr.scan' } },
+      include: { role: { select: { code: true } } },
+    });
+    expect(holders.map((h) => h.role.code).sort()).toEqual([
+      'ADMIN_INVENTARIS',
+      'PETUGAS_INVENTARIS',
+      'SUPER_ADMIN',
+      'VIEWER',
+    ]);
+  });
+
   it('reports the database as up on /health', async () => {
     const res = await request(ctx.app.getHttpServer()).get('/api/v1/health').expect(200);
     expect(res.body).toMatchObject({ status: 'ok', database: 'up' });

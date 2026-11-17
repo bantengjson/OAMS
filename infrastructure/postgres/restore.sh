@@ -1,7 +1,7 @@
 #!/bin/sh
 # Restore database OAMS dari berkas backup pg_dump (format custom).
 #
-#   docker compose run --rm backup /scripts/restore.sh /backups/oams-20261117-0200.dump
+#   docker compose run --rm --entrypoint sh backup /scripts/restore.sh /backups/oams-20261117-0200.dump
 #
 # Hentikan backend terlebih dahulu (docker compose stop backend) agar tidak ada
 # koneksi yang menulis selama restore.

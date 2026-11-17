@@ -11,7 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { SkipThrottle, ThrottlerGuard } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 import { API_PREFIX } from '../../app.setup.js';
 import { REFRESH_COOKIE } from '../../common/auth/auth-user.js';
@@ -25,8 +25,6 @@ import { ChangePasswordDto } from './dto/change-password.dto.js';
 import { LoginDto } from './dto/login.dto.js';
 import type { IssuedRefreshToken } from './refresh-token.service.js';
 
-export const LOGIN_RATE_LIMIT = { limit: 5, ttl: 60_000 };
-
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
@@ -35,9 +33,10 @@ export class AuthController {
     private readonly env: EnvService,
   ) {}
 
+  // Named throttlers are configured in AppModule: 'login' 30/min, 'auth' 60/min per address.
   @Public()
   @UseGuards(ThrottlerGuard)
-  @Throttle({ login: LOGIN_RATE_LIMIT })
+  @SkipThrottle({ auth: true })
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login dengan email dan password' })
@@ -51,6 +50,8 @@ export class AuthController {
   }
 
   @Public()
+  @UseGuards(ThrottlerGuard)
+  @SkipThrottle({ login: true })
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Tukar refresh cookie dengan access token baru' })
@@ -69,6 +70,8 @@ export class AuthController {
   }
 
   @Public()
+  @UseGuards(ThrottlerGuard)
+  @SkipThrottle({ login: true })
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Logout dan cabut refresh token' })

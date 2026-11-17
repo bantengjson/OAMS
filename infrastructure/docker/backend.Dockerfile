@@ -17,6 +17,9 @@ RUN npm ci --workspace backend
 
 # ---- compile ------------------------------------------------------------
 FROM deps AS build
+# prisma.config.ts resolves DATABASE_URL eagerly; `generate` never connects,
+# so a placeholder is enough at build time. The real URL comes from Compose.
+ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
 COPY backend ./backend
 RUN npm run prisma:generate -w backend \
  && npm run build -w backend
