@@ -1,6 +1,6 @@
 import request from 'supertest';
 import { PERMISSION_DEFINITIONS, ROLE_DEFINITIONS } from '../src/common/auth/permissions.catalog.js';
-import { seed } from '../prisma/seed.js';
+import { INITIAL_CATEGORIES, seed } from '../prisma/seed.js';
 import { createTestApp, TEST_ADMIN } from './utils/app.js';
 import type { TestContext } from './utils/app.js';
 
@@ -18,7 +18,13 @@ describe('database seed (e2e)', () => {
   it('seeds roles, permissions, categories and the super admin', async () => {
     expect(await ctx.prisma.role.count()).toBe(ROLE_DEFINITIONS.length);
     expect(await ctx.prisma.permission.count()).toBe(PERMISSION_DEFINITIONS.length);
-    expect(await ctx.prisma.category.count()).toBe(9);
+    // other suites may add categories; assert the seeded nine specifically
+    expect(
+      await ctx.prisma.category.count({
+        where: { code: { in: INITIAL_CATEGORIES.map((c) => c.code) } },
+      }),
+    ).toBe(9);
+    expect(INITIAL_CATEGORIES).toHaveLength(9);
 
     const admin = await ctx.prisma.user.findUnique({
       where: { email: TEST_ADMIN.email },
