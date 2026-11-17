@@ -6,6 +6,13 @@ import { EnvService } from '../../config/env.service.js';
 
 export const INVALID_SESSION_MESSAGE = 'Sesi tidak valid.';
 
+/**
+ * How long a just-rotated token may be presented again without being treated
+ * as theft. Covers two tabs (or React StrictMode) refreshing at the same
+ * moment with the same cookie. Logged-out tokens never get this grace.
+ */
+export const REFRESH_REUSE_GRACE_MS = 30_000;
+
 export interface IssuedRefreshToken {
   raw: string;
   expiresAt: Date;
@@ -56,13 +63,21 @@ export class RefreshTokenService {
       where: { tokenHash: hashToken(raw) },
     });
     if (!current) throw new UnauthorizedException(INVALID_SESSION_MESSAGE);
+    const now = new Date();
 
     if (current.revokedAt) {
-      // Replay of a rotated or logged-out token: kill the whole family.
-      await this.revokeAllForUser(current.userId);
-      throw new UnauthorizedException(INVALID_SESSION_MESSAGE);
+      const rotatedRecently =
+        current.replacedById !== null &&
+        now.getTime() - current.revokedAt.getTime() < REFRESH_REUSE_GRACE_MS;
+      if (!rotatedRecently) {
+        // Replay of an old rotated token, or of a logged-out one: kill the family.
+        await this.revokeAllForUser(current.userId);
+        throw new UnauthorizedException(INVALID_SESSION_MESSAGE);
+      }
+      // Benign concurrent refresh: hand out another successor, keep the family alive.
+      const issued = await this.issue(current.userId);
+      return { userId: current.userId, ...issued };
     }
-    const now = new Date();
     if (current.expiresAt <= now) {
       await this.prisma.refreshToken.update({
         where: { id: current.id },

@@ -113,13 +113,35 @@ describe('auth (e2e)', () => {
     const rotated = extractCookie(refreshed.headers['set-cookie'], 'oams_refresh');
     expect(rotated).not.toBe(session.refreshCookie);
 
+    await ctx.prisma.refreshToken.updateMany({
+      where: { userId: session.userId, revokedAt: { not: null } },
+      data: { revokedAt: new Date(Date.now() - 10 * 60 * 1000) },
+    });
     const replay = await ctx.http().post(REFRESH).set('Cookie', session.refreshCookie).expect(401);
     expect(replay.body.message).toBe('Sesi tidak valid.');
+  });
 
-    // the rotated token itself is now burned by the replay detection below,
-    // so only assert the happy path once more with a fresh session
-    const fresh = await ctx.login(TEST_ADMIN.email, TEST_ADMIN.password);
-    await ctx.http().post(REFRESH).set('Cookie', fresh.refreshCookie).expect(200);
+  it('a logged-out token is rejected immediately, grace window or not', async () => {
+    const session = await ctx.login(TEST_ADMIN.email, TEST_ADMIN.password);
+    await ctx.http().post(LOGOUT).set('Cookie', session.refreshCookie).expect(204);
+    await ctx.http().post(REFRESH).set('Cookie', session.refreshCookie).expect(401);
+  });
+
+  it('tolerates a second refresh with the same cookie inside the reuse grace window', async () => {
+    // two browser tabs (or React StrictMode) refreshing at the same moment
+    const session = await ctx.login(TEST_ADMIN.email, TEST_ADMIN.password);
+    const [first, second] = await Promise.all([
+      ctx.http().post(REFRESH).set('Cookie', session.refreshCookie),
+      ctx.http().post(REFRESH).set('Cookie', session.refreshCookie),
+    ]);
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    const cookieA = extractCookie(first.headers['set-cookie'], 'oams_refresh');
+    const cookieB = extractCookie(second.headers['set-cookie'], 'oams_refresh');
+    expect(cookieA).not.toBe(cookieB);
+    // both successors stay usable
+    await ctx.http().post(REFRESH).set('Cookie', cookieA).expect(200);
+    await ctx.http().post(REFRESH).set('Cookie', cookieB).expect(200);
   });
 
   it('a replayed refresh token revokes every session of the user', async () => {
@@ -128,6 +150,12 @@ describe('auth (e2e)', () => {
 
     const rotatedRes = await ctx.http().post(REFRESH).set('Cookie', victim.refreshCookie).expect(200);
     const rotatedCookie = extractCookie(rotatedRes.headers['set-cookie'], 'oams_refresh');
+
+    // pretend the rotation happened long ago (outside the reuse grace window)
+    await ctx.prisma.refreshToken.updateMany({
+      where: { userId: victim.userId, revokedAt: { not: null } },
+      data: { revokedAt: new Date(Date.now() - 10 * 60 * 1000) },
+    });
 
     // replay of the already-rotated token: theft signal
     await ctx.http().post(REFRESH).set('Cookie', victim.refreshCookie).expect(401);
