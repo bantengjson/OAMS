@@ -7,6 +7,7 @@ import { AuthModule } from './modules/auth/auth.module.js';
 import { CategoriesModule } from './modules/categories/categories.module.js';
 import { DepartmentsModule } from './modules/departments/departments.module.js';
 import { HealthModule } from './modules/health/health.module.js';
+import { LocationsModule } from './modules/locations/locations.module.js';
 import { RolesModule } from './modules/roles/roles.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 
@@ -24,6 +25,7 @@ import { UsersModule } from './modules/users/users.module.js';
     UsersModule,
     CategoriesModule,
     DepartmentsModule,
+    LocationsModule,
     HealthModule,
   ],
 })
