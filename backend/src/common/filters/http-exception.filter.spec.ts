@@ -53,6 +53,41 @@ describe('HttpExceptionFilter', () => {
     });
   });
 
+  it('derives the field from a driver-adapter constraint name (Prisma 7 shape)', () => {
+    const err = Object.assign(new Error('Unique constraint failed'), {
+      name: 'PrismaClientKnownRequestError',
+      code: 'P2002',
+      meta: {
+        modelName: 'User',
+        driverAdapterError: {
+          name: 'DriverAdapterError',
+          cause: {
+            kind: 'UniqueConstraintViolation',
+            constraint: { index: 'users_email_key' },
+            table: 'users',
+          },
+        },
+      },
+    });
+    const { status, body } = runFilter(err);
+    expect(status).toBe(409);
+    expect(body).toMatchObject({ errors: { email: ['Nilai sudah digunakan.'] } });
+  });
+
+  it('derives the field from driver-adapter constraint fields', () => {
+    const err = Object.assign(new Error('Unique constraint failed'), {
+      name: 'PrismaClientKnownRequestError',
+      code: 'P2002',
+      meta: {
+        driverAdapterError: {
+          cause: { kind: 'UniqueConstraintViolation', constraint: { fields: ['code'] } },
+        },
+      },
+    });
+    const { body } = runFilter(err);
+    expect(body).toMatchObject({ errors: { code: ['Nilai sudah digunakan.'] } });
+  });
+
   it('maps Prisma P2025 to 404', () => {
     const err = Object.assign(new Error('Record not found'), {
       name: 'PrismaClientKnownRequestError',

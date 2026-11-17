@@ -26,7 +26,37 @@ interface Normalized {
 
 interface PrismaKnownError extends Error {
   code: string;
-  meta?: { target?: string[] | string; field_name?: string };
+  meta?: {
+    target?: string[] | string;
+    field_name?: string;
+    driverAdapterError?: {
+      cause?: {
+        constraint?: { index?: string; fields?: string[] };
+        table?: string;
+      };
+    };
+  };
+}
+
+function snakeToCamel(value: string): string {
+  return value.replace(/_([a-z0-9])/g, (_, c: string) => c.toUpperCase());
+}
+
+/** Resolves the offending field(s) of a unique violation across Prisma error shapes. */
+function uniqueViolationFields(meta: PrismaKnownError['meta']): string[] {
+  const fromTarget = fieldsFromTarget(meta?.target);
+  if (fromTarget.length > 0) return fromTarget;
+
+  const constraint = meta?.driverAdapterError?.cause?.constraint;
+  if (constraint?.fields?.length) return constraint.fields.map(snakeToCamel);
+  if (constraint?.index) {
+    let name = constraint.index;
+    const table = meta?.driverAdapterError?.cause?.table;
+    if (table && name.startsWith(`${table}_`)) name = name.slice(table.length + 1);
+    name = name.replace(/_key$/, '').replace(/_idx$/, '');
+    return [snakeToCamel(name)];
+  }
+  return [];
 }
 
 function isPrismaKnownError(error: unknown): error is PrismaKnownError {
@@ -111,7 +141,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
   private fromPrisma(error: PrismaKnownError): Normalized {
     switch (error.code) {
       case 'P2002': {
-        const fields = fieldsFromTarget(error.meta?.target);
+        const fields = uniqueViolationFields(error.meta);
         const errors =
           fields.length > 0
             ? Object.fromEntries(fields.map((f) => [f, ['Nilai sudah digunakan.']]))
