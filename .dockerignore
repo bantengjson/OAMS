@@ -1,0 +1,16 @@
+**/node_modules
+**/dist
+**/.next
+**/coverage
+**/.pgdata
+**/.env
+**/.env.*
+!**/.env.example
+.git
+.github
+.superpowers
+.claude
+docs
+backups
+infrastructure/nginx/certs
+*.log

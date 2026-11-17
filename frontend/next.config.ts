@@ -1,9 +1,12 @@
+import { fileURLToPath } from 'node:url';
 import type { NextConfig } from 'next';
 
 const API_URL = process.env.API_URL ?? 'http://localhost:4000';
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  // Monorepo: trace files from the repository root so the standalone bundle is complete.
+  outputFileTracingRoot: fileURLToPath(new URL('..', import.meta.url)),
   turbopack: {
     rules: {
       '*.css': {

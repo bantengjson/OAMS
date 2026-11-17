@@ -80,6 +80,90 @@ npm run lint
 - Desain Tahap 1: [docs/superpowers/specs/2026-11-17-oams-tahap1-foundation-design.md](docs/superpowers/specs/2026-11-17-oams-tahap1-foundation-design.md)
 - Rencana Tahap 1: [docs/superpowers/plans/2026-11-17-oams-tahap1-foundation.md](docs/superpowers/plans/2026-11-17-oams-tahap1-foundation.md)
 
-## Deployment
+## Deployment (server dengan Docker)
 
-Lihat bagian ini setelah Tahap 1 selesai: petunjuk Docker Compose, backup, dan restore akan ditambahkan di sini.
+Stack produksi dijalankan dengan Docker Compose: Nginx (reverse proxy + TLS), Next.js, NestJS, PostgreSQL 17, dan container backup harian. PostgreSQL berada di jaringan internal Docker dan tidak dipublikasikan ke luar; hanya backend yang mengaksesnya.
+
+```text
+Internet / Jaringan Kantor -> nginx:443 -> frontend:3000 (/) dan backend:4000 (/api/)
+                                                   backend -> postgres:5432 (internal)
+```
+
+### 1. Persiapan di server
+
+1. Clone repository ini ke server, lalu masuk ke foldernya.
+2. Salin konfigurasi dan isi nilainya:
+
+```bash
+cp .env.example .env
+```
+
+   Wajib diisi: `POSTGRES_PASSWORD`, `JWT_ACCESS_SECRET` (minimal 32 karakter), `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`. Buat rahasia acak dengan:
+
+```bash
+openssl rand -base64 48
+```
+
+3. Letakkan sertifikat TLS di `infrastructure/nginx/certs/` dengan nama `fullchain.pem` dan `privkey.pem` (misalnya dari Let's Encrypt atau CA internal kantor). HTTPS wajib karena cookie sesi memakai flag `Secure` dan kamera QR (Tahap 2) membutuhkan HTTPS.
+
+### 2. Menjalankan
+
+```bash
+docker compose up -d --build
+```
+
+Saat container backend start, ia otomatis menjalankan migrasi database (`prisma migrate deploy`) dan seed idempoten (role, permission, kategori awal, Super Admin dari `SEED_ADMIN_*`). Pantau dengan:
+
+```bash
+docker compose logs -f backend
+```
+
+Buka `https://<domain-kantor>/login`, masuk dengan akun `SEED_ADMIN_*`, lalu segera ganti password lewat menu Profil.
+
+Perintah lain yang sering dipakai:
+
+```bash
+docker compose ps
+```
+
+```bash
+docker compose pull && docker compose up -d --build
+```
+
+```bash
+docker compose down
+```
+
+### 3. Backup
+
+Container `backup` membuat dump setiap 24 jam ke folder `./backups` di server (format custom `pg_dump`, retensi 14 hari, atur lewat `BACKUP_RETENTION_DAYS`). Folder ini harus disalin rutin ke penyimpanan lain di luar server (rsync, rclone, atau NAS kantor) agar backup terpisah dari server utama.
+
+Membuat backup manual kapan saja:
+
+```bash
+docker compose exec backup sh /scripts/backup.sh
+```
+
+### 4. Restore dan uji pemulihan
+
+Hentikan backend, pulihkan, lalu jalankan lagi:
+
+```bash
+docker compose stop backend
+```
+
+```bash
+docker compose run --rm backup sh /scripts/restore.sh /backups/oams-YYYYMMDD-HHMM.dump
+```
+
+```bash
+docker compose start backend
+```
+
+Uji pemulihan secara berkala (disarankan setiap triwulan) pada database kosong, misalnya dengan `POSTGRES_DB=oams_uji` di salinan `.env` terpisah, untuk memastikan berkas backup benar-benar bisa dipulihkan.
+
+### Catatan
+
+- Nilai `API_URL` untuk rewrite `/api` di frontend dibakukan saat build image (`http://backend:4000`), sesuai nama service di Compose.
+- Mesin pengembangan tidak memiliki Docker, sehingga `docker compose config`/`up` belum pernah dijalankan dari repo ini. Jalankan pertama kali di server dan laporkan log bila ada kegagalan build.
+- Konfigurasi sensitif hanya lewat `.env` di server; file ini tidak pernah di-commit.

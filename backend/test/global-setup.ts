@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { PrismaPg } from '@prisma/adapter-pg';
 import type { TestProject } from 'vitest/node';
-import { seed } from '../prisma/seed.js';
+import { seed } from '../src/database/seed.js';
 import { startEmbeddedDatabase } from '../scripts/embedded-db.js';
 import { PrismaClient } from '../src/generated/prisma/client.js';
 import { TEST_ADMIN } from './utils/test-admin.js';

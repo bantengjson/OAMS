@@ -1,6 +1,6 @@
 import request from 'supertest';
 import { PERMISSION_DEFINITIONS, ROLE_DEFINITIONS } from '../src/common/auth/permissions.catalog.js';
-import { INITIAL_CATEGORIES, seed } from '../prisma/seed.js';
+import { INITIAL_CATEGORIES, seed } from '../src/database/seed.js';
 import { createTestApp, TEST_ADMIN } from './utils/app.js';
 import type { TestContext } from './utils/app.js';
 
