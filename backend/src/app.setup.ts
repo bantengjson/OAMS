@@ -3,6 +3,7 @@ import type { ValidationError } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import type { Express } from 'express';
+import { requestContextMiddleware } from './common/context/request-context.middleware.js';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter.js';
 import type { FieldErrors } from './common/filters/http-exception.filter.js';
 
@@ -40,6 +41,7 @@ export function configureApp(app: INestApplication): INestApplication {
   express.disable('x-powered-by');
 
   app.setGlobalPrefix(API_PREFIX);
+  app.use(requestContextMiddleware);
   app.use(cookieParser());
   app.useGlobalPipes(
     new ValidationPipe({
