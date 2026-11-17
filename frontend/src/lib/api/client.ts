@@ -29,10 +29,13 @@ export class ApiError extends Error {
 
 export type QueryValue = string | number | boolean | null | undefined;
 
+/** Any plain object; undefined, null and empty-string values are skipped. */
+export type QueryInput = object;
+
 export interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
-  query?: Record<string, QueryValue>;
+  query?: QueryInput;
   signal?: AbortSignal;
 }
 
@@ -52,12 +55,12 @@ export function setUnauthorizedHandler(handler: (() => void) | null): void {
   unauthorizedHandler = handler;
 }
 
-export function buildUrl(path: string, query?: Record<string, QueryValue>): string {
+export function buildUrl(path: string, query?: QueryInput): string {
   const params = new URLSearchParams();
   if (query) {
-    for (const [key, value] of Object.entries(query)) {
+    for (const [key, value] of Object.entries(query as Record<string, unknown>)) {
       if (value === undefined || value === null || value === '') continue;
-      params.set(key, String(value));
+      params.set(key, String(value as QueryValue));
     }
   }
   const qs = params.toString();
@@ -167,12 +170,10 @@ export async function apiFetch<T>(path: string, init: RequestOptions = {}): Prom
   return body as T;
 }
 
-type Query = Record<string, QueryValue>;
-
 export const api = {
-  get: <T>(path: string, opts: { query?: Query; signal?: AbortSignal } = {}) =>
+  get: <T>(path: string, opts: { query?: QueryInput; signal?: AbortSignal } = {}) =>
     apiFetch<T>(path, { method: 'GET', ...opts }),
-  post: <T = void>(path: string, body?: unknown, opts: { query?: Query } = {}) =>
+  post: <T = void>(path: string, body?: unknown, opts: { query?: QueryInput } = {}) =>
     apiFetch<T>(path, { method: 'POST', body, ...opts }),
   put: <T = void>(path: string, body?: unknown) => apiFetch<T>(path, { method: 'PUT', body }),
   patch: <T = void>(path: string, body?: unknown) => apiFetch<T>(path, { method: 'PATCH', body }),
