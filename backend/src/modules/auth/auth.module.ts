@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard.js';
+import { PermissionsGuard } from '../../common/auth/permissions.guard.js';
 import { EnvService } from '../../config/env.service.js';
 import { AuthUserLoader } from './auth-user.loader.js';
 import { AuthController } from './auth.controller.js';
@@ -26,7 +27,9 @@ import { RefreshTokenService } from './refresh-token.service.js';
     AuthUserLoader,
     PasswordService,
     RefreshTokenService,
+    // Order matters: authentication first, then permission checks.
     { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: PermissionsGuard },
   ],
   exports: [AuthUserLoader, PasswordService, RefreshTokenService],
 })

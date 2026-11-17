@@ -5,6 +5,7 @@ import { PrismaModule } from './common/prisma/prisma.module.js';
 import { AppConfigModule } from './config/config.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { HealthModule } from './modules/health/health.module.js';
+import { RolesModule } from './modules/roles/roles.module.js';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { HealthModule } from './modules/health/health.module.js';
       errorMessage: 'Terlalu banyak percobaan login. Coba lagi dalam satu menit.',
     }),
     AuthModule,
+    RolesModule,
     HealthModule,
   ],
 })
