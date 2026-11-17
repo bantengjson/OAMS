@@ -3,6 +3,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { AuditModule } from './common/audit/audit.module.js';
 import { PrismaModule } from './common/prisma/prisma.module.js';
 import { AppConfigModule } from './config/config.module.js';
+import { AuditLogsModule } from './modules/audit-logs/audit-logs.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { CategoriesModule } from './modules/categories/categories.module.js';
 import { DepartmentsModule } from './modules/departments/departments.module.js';
@@ -26,6 +27,7 @@ import { UsersModule } from './modules/users/users.module.js';
     CategoriesModule,
     DepartmentsModule,
     LocationsModule,
+    AuditLogsModule,
     HealthModule,
   ],
 })
