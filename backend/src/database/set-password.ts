@@ -2,14 +2,14 @@
  * Mengatur ulang password satu pengguna dari terminal (mis. admin yang lupa
  * password). Semua sesi pengguna tersebut dicabut.
  *
- *   npm run user:set-password -w backend -- <email-atau-username> <password-baru>
+ *   npm run user:set-password -w backend -- <email-atau-username> <password-baru>   (lokal)
  *
- * Di server (container): docker compose exec backend node dist/scripts/set-password.js ...
+ * Di server (container): docker compose exec backend node dist/database/set-password.js <email-atau-username> <password-baru>
  */
 import 'dotenv/config';
 import argon2 from 'argon2';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient } from '../src/generated/prisma/client.js';
+import { PrismaClient } from '../generated/prisma/client.js';
 
 const [identifierArg, password] = process.argv.slice(2);
 if (!identifierArg || !password) {

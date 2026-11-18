@@ -74,6 +74,12 @@ Login memakai **email atau username**. Akun Super Admin lokal dibuat oleh seed d
 npm run user:set-password -w backend -- admin PasswordBaru123
 ```
 
+Di server, perintah yang sama dijalankan di dalam container backend:
+
+```bash
+docker compose exec backend node dist/database/set-password.js admin PasswordBaru123
+```
+
 ## Pengujian
 
 ```bash
