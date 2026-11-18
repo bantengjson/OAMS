@@ -2,8 +2,9 @@ import type { AuthUser, LoginResponse } from '@/types/api';
 import { api, refreshSession } from './client';
 
 export const authApi = {
-  login: (email: string, password: string) =>
-    api.post<LoginResponse>('/auth/login', { email, password }),
+  /** `identifier` is an email or a username. */
+  login: (identifier: string, password: string) =>
+    api.post<LoginResponse>('/auth/login', { identifier, password }),
   /** Deduplicated; resolves null when no session exists. */
   refresh: () => refreshSession(),
   logout: () => api.post<void>('/auth/logout'),

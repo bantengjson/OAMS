@@ -1,5 +1,6 @@
 export const TEST_ADMIN = {
   email: 'admin@test.local',
+  username: 'admin',
   password: 'Admin1234!',
   fullName: 'Admin Test',
 } as const;

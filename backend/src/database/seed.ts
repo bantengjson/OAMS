@@ -12,9 +12,13 @@ import type { PrismaClient } from '../generated/prisma/client.js';
 
 export interface SeedOptions {
   adminEmail: string;
+  /** Short login name for the first Super Admin (lower-case), e.g. "admin". */
+  adminUsername?: string;
   adminPassword: string;
   adminName: string;
 }
+
+export const USERNAME_PATTERN = /^[a-z0-9._-]{3,50}$/;
 
 export const INITIAL_CATEGORIES: readonly { code: string; name: string }[] = [
   { code: 'ELEKTRONIK', name: 'Elektronik' },
@@ -83,8 +87,13 @@ export async function seed(prisma: PrismaClient, opts: SeedOptions): Promise<voi
     });
   }
 
-  // 4. Super Admin. Never resets an existing user's password.
+  // 4. Super Admin. Never resets an existing user's password; fills in the
+  //    username when the account has none yet.
   const email = opts.adminEmail.trim().toLowerCase();
+  const username = opts.adminUsername?.trim().toLowerCase() || null;
+  if (username && !USERNAME_PATTERN.test(username)) {
+    throw new Error(`Username admin tidak valid: ${username}`);
+  }
   const superAdminRole = await prisma.role.findUniqueOrThrow({ where: { code: 'SUPER_ADMIN' } });
   const existing = await prisma.user.findUnique({ where: { email } });
   const admin =
@@ -92,10 +101,15 @@ export async function seed(prisma: PrismaClient, opts: SeedOptions): Promise<voi
     (await prisma.user.create({
       data: {
         email,
+        username,
         fullName: opts.adminName,
         passwordHash: await hashPassword(opts.adminPassword),
       },
     }));
+  if (existing && !existing.username && username) {
+    const taken = await prisma.user.findUnique({ where: { username } });
+    if (!taken) await prisma.user.update({ where: { id: admin.id }, data: { username } });
+  }
   await prisma.userRole.upsert({
     where: { userId_roleId: { userId: admin.id, roleId: superAdminRole.id } },
     update: {},
@@ -105,6 +119,7 @@ export async function seed(prisma: PrismaClient, opts: SeedOptions): Promise<voi
 
 export function readSeedOptionsFromEnv(env: NodeJS.ProcessEnv = process.env): SeedOptions {
   const adminEmail = env.SEED_ADMIN_EMAIL;
+  const adminUsername = env.SEED_ADMIN_USERNAME || undefined;
   const adminPassword = env.SEED_ADMIN_PASSWORD;
   const adminName = env.SEED_ADMIN_NAME ?? 'Super Admin';
   if (!adminEmail || !adminPassword) {
@@ -113,5 +128,5 @@ export function readSeedOptionsFromEnv(env: NodeJS.ProcessEnv = process.env): Se
   if (adminPassword.length < 8) {
     throw new Error('SEED_ADMIN_PASSWORD minimal 8 karakter.');
   }
-  return { adminEmail, adminPassword, adminName };
+  return { adminEmail, adminUsername, adminPassword, adminName };
 }

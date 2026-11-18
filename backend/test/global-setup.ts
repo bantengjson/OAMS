@@ -35,6 +35,7 @@ export default async function globalSetup(project: TestProject) {
   try {
     await seed(prisma, {
       adminEmail: TEST_ADMIN.email,
+      adminUsername: TEST_ADMIN.username,
       adminPassword: TEST_ADMIN.password,
       adminName: TEST_ADMIN.fullName,
     });

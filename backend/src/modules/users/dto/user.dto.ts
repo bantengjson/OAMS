@@ -14,6 +14,7 @@ export class UserRoleDto {
 export class UserDto {
   @ApiProperty() id!: string;
   @ApiProperty() email!: string;
+  @ApiProperty({ nullable: true }) username!: string | null;
   @ApiProperty() fullName!: string;
   @ApiProperty({ nullable: true }) phone!: string | null;
   @ApiProperty() isActive!: boolean;

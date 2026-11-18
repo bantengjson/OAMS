@@ -217,7 +217,7 @@ describe('users (e2e)', () => {
       .http()
       .post('/api/v1/auth/login')
       .set('X-Forwarded-For', nextForwardedIp())
-      .send({ email: 'budi@test.local', password: 'Budi1234' })
+      .send({ identifier: 'budi@test.local', password: 'Budi1234' })
       .expect(401);
     const session = await ctx.login('budi@test.local', 'ResetBaru123');
     expect(session.userId).toBe(budiId);
@@ -246,7 +246,7 @@ describe('users (e2e)', () => {
       .http()
       .post('/api/v1/auth/login')
       .set('X-Forwarded-For', nextForwardedIp())
-      .send({ email: 'budi@test.local', password: 'ResetBaru123' })
+      .send({ identifier: 'budi@test.local', password: 'ResetBaru123' })
       .expect(403);
     expect(blocked.body.message).toBe('Akun dinonaktifkan. Hubungi administrator.');
 

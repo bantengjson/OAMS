@@ -41,6 +41,7 @@ function toDto(row: UserRow): UserDto {
   return {
     id: row.id,
     email: row.email,
+    username: row.username,
     fullName: row.fullName,
     phone: row.phone,
     isActive: row.isActive,
@@ -58,6 +59,7 @@ function toDto(row: UserRow): UserDto {
 function snapshot(dto: UserDto) {
   return {
     email: dto.email,
+    username: dto.username,
     fullName: dto.fullName,
     phone: dto.phone,
     isActive: dto.isActive,
@@ -81,6 +83,7 @@ export class UsersService {
       where.OR = [
         { fullName: { contains: q.search, mode: 'insensitive' } },
         { email: { contains: q.search, mode: 'insensitive' } },
+        { username: { contains: q.search, mode: 'insensitive' } },
       ];
     }
     if (q.isActive !== undefined) where.isActive = q.isActive;
@@ -111,6 +114,7 @@ export class UsersService {
     const created = await this.prisma.user.create({
       data: {
         email: normalizeEmail(dto.email),
+        username: dto.username ?? null,
         fullName: dto.fullName,
         phone: dto.phone ?? null,
         departmentId: dto.departmentId ?? null,
@@ -134,6 +138,7 @@ export class UsersService {
     if (dto.departmentId !== undefined) await this.ensureDepartment(dto.departmentId);
 
     const data: Prisma.UserUncheckedUpdateInput = {};
+    if (dto.username !== undefined) data.username = dto.username;
     if (dto.fullName !== undefined) data.fullName = dto.fullName;
     if (dto.phone !== undefined) data.phone = dto.phone;
     if (dto.departmentId !== undefined) data.departmentId = dto.departmentId;

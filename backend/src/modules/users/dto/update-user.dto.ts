@@ -1,8 +1,16 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsNotEmpty, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsUUID, Matches, MaxLength } from 'class-validator';
 
 export class UpdateUserDto {
+  @ApiPropertyOptional({ nullable: true, description: 'Kosongkan (null) untuk menghapus username' })
+  @IsOptional()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
+  @Matches(/^[a-z0-9._-]{3,50}$/, {
+    message: 'Username 3-50 karakter: huruf kecil, angka, titik, garis bawah, atau strip',
+  })
+  username?: string | null;
+
   @ApiPropertyOptional()
   @IsOptional()
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))

@@ -20,6 +20,8 @@ datasource db {
 model User {
   id           String    @id @default(uuid()) @db.Uuid
   email        String    @unique @db.VarChar(255)
+  /// Optional short login name (lower-case), e.g. "admin". Email always works too.
+  username     String?   @unique @db.VarChar(50)
   passwordHash String    @map("password_hash")
   fullName     String    @map("full_name") @db.VarChar(150)
   phone        String?   @db.VarChar(30)

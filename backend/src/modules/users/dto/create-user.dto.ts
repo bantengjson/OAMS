@@ -8,6 +8,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Matches,
   MaxLength,
 } from 'class-validator';
 
@@ -17,6 +18,14 @@ export class CreateUserDto {
   @IsEmail({}, { message: 'Format email tidak valid' })
   @MaxLength(255)
   email!: string;
+
+  @ApiPropertyOptional({ example: 'budi', description: 'Nama login singkat, opsional' })
+  @IsOptional()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
+  @Matches(/^[a-z0-9._-]{3,50}$/, {
+    message: 'Username 3-50 karakter: huruf kecil, angka, titik, garis bawah, atau strip',
+  })
+  username?: string | null;
 
   @ApiProperty({ example: 'Budi Santoso' })
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))

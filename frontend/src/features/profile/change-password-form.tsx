@@ -8,8 +8,8 @@ import { toast } from 'sonner';
 import { z } from 'zod';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Field, FieldError, FieldHint, Label } from '@/components/ui/label';
+import { PasswordInput } from '@/components/ui/password-input';
 import { authApi } from '@/lib/api/auth';
 import { ApiError } from '@/lib/api/client';
 import { useAuth } from '@/lib/auth/use-auth';
@@ -60,9 +60,8 @@ export function ChangePasswordForm() {
         <Label htmlFor="currentPassword" required>
           Password saat ini
         </Label>
-        <Input
+        <PasswordInput
           id="currentPassword"
-          type="password"
           autoComplete="current-password"
           aria-invalid={Boolean(errors.currentPassword)}
           {...form.register('currentPassword')}
@@ -73,9 +72,8 @@ export function ChangePasswordForm() {
         <Label htmlFor="newPassword" required>
           Password baru
         </Label>
-        <Input
+        <PasswordInput
           id="newPassword"
-          type="password"
           autoComplete="new-password"
           aria-invalid={Boolean(errors.newPassword)}
           {...form.register('newPassword')}
@@ -87,9 +85,8 @@ export function ChangePasswordForm() {
         <Label htmlFor="confirmPassword" required>
           Ulangi password baru
         </Label>
-        <Input
+        <PasswordInput
           id="confirmPassword"
-          type="password"
           autoComplete="new-password"
           aria-invalid={Boolean(errors.confirmPassword)}
           {...form.register('confirmPassword')}

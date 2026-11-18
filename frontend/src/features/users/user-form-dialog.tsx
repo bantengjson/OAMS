@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Field, FieldError, FieldHint, Label } from '@/components/ui/label';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Select } from '@/components/ui/select';
 import { departmentsApi } from '@/lib/api/departments';
 import { applyApiError } from '@/lib/api/form-errors';
@@ -24,8 +25,18 @@ const passwordRule = z
   .regex(/[A-Za-z]/, 'Harus mengandung huruf')
   .regex(/\d/, 'Harus mengandung angka');
 
+const usernameRule = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .refine((v) => v === '' || /^[a-z0-9._-]{3,50}$/.test(v), {
+    message: '3-50 karakter: huruf kecil, angka, titik, garis bawah, atau strip',
+  })
+  .optional();
+
 const createSchema = z.object({
   email: z.email({ message: 'Format email tidak valid' }),
+  username: usernameRule,
   fullName: z.string().trim().min(1, 'Nama lengkap wajib diisi').max(150),
   password: passwordRule,
   roleCodes: z.array(z.string()).min(1, 'Pilih minimal satu role'),
@@ -35,6 +46,7 @@ const createSchema = z.object({
 
 const editSchema = z.object({
   email: z.string().optional(),
+  username: usernameRule,
   fullName: z.string().trim().min(1, 'Nama lengkap wajib diisi').max(150),
   password: z.string().optional(),
   roleCodes: z.array(z.string()).optional(),
@@ -83,6 +95,7 @@ function UserForm({ user, onSaved }: { user: User | null; onSaved: () => void })
     resolver: zodResolver((isEdit ? editSchema : createSchema) as typeof createSchema),
     defaultValues: {
       email: user?.email ?? '',
+      username: user?.username ?? '',
       fullName: user?.fullName ?? '',
       password: '',
       roleCodes: user?.roles.map((r) => r.code) ?? [],
@@ -101,8 +114,10 @@ function UserForm({ user, onSaved }: { user: User | null; onSaved: () => void })
   const submit = form.handleSubmit(async (values) => {
     setFormError(null);
     try {
+      const username = values.username?.trim() ? values.username : null;
       if (user) {
         await usersApi.update(user.id, {
+          username,
           fullName: values.fullName,
           phone: values.phone?.trim() ? values.phone : null,
           departmentId: values.departmentId || null,
@@ -110,6 +125,7 @@ function UserForm({ user, onSaved }: { user: User | null; onSaved: () => void })
       } else {
         await usersApi.create({
           email: values.email,
+          username,
           fullName: values.fullName,
           password: values.password,
           roleCodes: values.roleCodes,
@@ -123,6 +139,7 @@ function UserForm({ user, onSaved }: { user: User | null; onSaved: () => void })
       setFormError(
         applyApiError(error, form.setError, [
           'email',
+          'username',
           'fullName',
           'password',
           'roleCodes',
@@ -149,6 +166,20 @@ function UserForm({ user, onSaved }: { user: User | null; onSaved: () => void })
         <FieldError>{errors.fullName?.message}</FieldError>
       </Field>
 
+      <Field>
+        <Label htmlFor="u-username">Username</Label>
+        <Input
+          id="u-username"
+          autoComplete="off"
+          autoCapitalize="none"
+          placeholder="mis. budi"
+          aria-invalid={Boolean(errors.username)}
+          {...form.register('username')}
+        />
+        <FieldHint>Opsional. Nama login singkat selain email.</FieldHint>
+        <FieldError>{errors.username?.message}</FieldError>
+      </Field>
+
       {!isEdit ? (
         <>
           <Field>
@@ -168,9 +199,8 @@ function UserForm({ user, onSaved }: { user: User | null; onSaved: () => void })
             <Label htmlFor="u-password" required>
               Password awal
             </Label>
-            <Input
+            <PasswordInput
               id="u-password"
-              type="password"
               autoComplete="new-password"
               aria-invalid={Boolean(errors.password)}
               {...form.register('password')}

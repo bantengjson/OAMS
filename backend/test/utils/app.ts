@@ -66,7 +66,7 @@ export async function createTestApp(): Promise<TestContext> {
     const res = await http()
       .post('/api/v1/auth/login')
       .set('X-Forwarded-For', nextForwardedIp())
-      .send({ email, password });
+      .send({ identifier: email, password });
     if (res.status !== 200) {
       throw new Error(`Login ${email} gagal: ${res.status} ${JSON.stringify(res.body)}`);
     }

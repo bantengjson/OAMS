@@ -18,6 +18,10 @@ const envSchema = z.object({
   COOKIE_SECURE: booleanString.optional(),
   APP_TIMEZONE: z.string().min(1).default('Asia/Jakarta'),
   SEED_ADMIN_EMAIL: z.email().optional(),
+  SEED_ADMIN_USERNAME: z
+    .string()
+    .regex(/^[a-z0-9._-]{3,50}$/i)
+    .optional(),
   SEED_ADMIN_PASSWORD: z.string().min(8).optional(),
   SEED_ADMIN_NAME: z.string().min(1).optional(),
 });

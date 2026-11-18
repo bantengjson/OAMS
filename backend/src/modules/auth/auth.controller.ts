@@ -39,12 +39,12 @@ export class AuthController {
   @SkipThrottle({ auth: true })
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Login dengan email dan password' })
+  @ApiOperation({ summary: 'Login dengan email atau username dan password' })
   async login(
     @Body() dto: LoginDto,
     @Res({ passthrough: true }) res: Response,
   ): Promise<AuthTokens> {
-    const { tokens, refresh } = await this.auth.login(dto.email, dto.password);
+    const { tokens, refresh } = await this.auth.login(dto.identifier, dto.password);
     this.setRefreshCookie(res, refresh);
     return tokens;
   }

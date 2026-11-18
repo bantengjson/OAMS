@@ -11,12 +11,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Field, FieldError, Label } from '@/components/ui/label';
+import { PasswordInput } from '@/components/ui/password-input';
 import { PageSpinner } from '@/components/ui/spinner';
 import { ApiError } from '@/lib/api/client';
 import { useAuth } from '@/lib/auth/use-auth';
 
 const schema = z.object({
-  email: z.email({ message: 'Format email tidak valid' }),
+  identifier: z.string().trim().min(1, 'Email atau username wajib diisi'),
   password: z.string().min(1, 'Password wajib diisi'),
 });
 
@@ -36,7 +37,7 @@ function LoginForm() {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { email: '', password: '' },
+    defaultValues: { identifier: '', password: '' },
   });
 
   useEffect(() => {
@@ -46,13 +47,13 @@ function LoginForm() {
   const onSubmit = form.handleSubmit(async (values) => {
     setFormError(null);
     try {
-      await login(values.email, values.password);
+      await login(values.identifier, values.password);
       router.replace(nextPath);
     } catch (error) {
       if (error instanceof ApiError) {
         if (error.errors) {
           for (const [field, messages] of Object.entries(error.errors)) {
-            if (field === 'email' || field === 'password') {
+            if (field === 'identifier' || field === 'password') {
               form.setError(field, { message: messages[0] });
             }
           }
@@ -81,27 +82,28 @@ function LoginForm() {
           {formError ? <Alert variant="error">{formError}</Alert> : null}
 
           <Field>
-            <Label htmlFor="email" required>
-              Email
+            <Label htmlFor="identifier" required>
+              Email atau username
             </Label>
             <Input
-              id="email"
-              type="email"
+              id="identifier"
+              type="text"
               autoComplete="username"
-              placeholder="nama@kantor.local"
-              aria-invalid={Boolean(errors.email)}
-              {...form.register('email')}
+              autoCapitalize="none"
+              spellCheck={false}
+              placeholder="admin"
+              aria-invalid={Boolean(errors.identifier)}
+              {...form.register('identifier')}
             />
-            <FieldError>{errors.email?.message}</FieldError>
+            <FieldError>{errors.identifier?.message}</FieldError>
           </Field>
 
           <Field>
             <Label htmlFor="password" required>
               Password
             </Label>
-            <Input
+            <PasswordInput
               id="password"
-              type="password"
               autoComplete="current-password"
               aria-invalid={Boolean(errors.password)}
               {...form.register('password')}

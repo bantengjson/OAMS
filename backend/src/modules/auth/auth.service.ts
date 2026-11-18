@@ -16,7 +16,7 @@ import { PasswordService } from './password.service.js';
 import { INVALID_SESSION_MESSAGE, RefreshTokenService } from './refresh-token.service.js';
 import type { IssuedRefreshToken } from './refresh-token.service.js';
 
-export const BAD_CREDENTIALS_MESSAGE = 'Email atau password salah.';
+export const BAD_CREDENTIALS_MESSAGE = 'Email/username atau password salah.';
 export const INACTIVE_ACCOUNT_MESSAGE = 'Akun dinonaktifkan. Hubungi administrator.';
 
 export interface AuthTokens {
@@ -55,10 +55,13 @@ export class AuthService implements OnModuleInit {
     this.dummyHash = await this.passwords.hash('dummy-password-for-timing');
   }
 
-  async login(email: string, password: string): Promise<AuthResult> {
-    const normalized = normalizeEmail(email);
+  /** `identifier` is an email (contains "@") or a username; both case-insensitive. */
+  async login(identifier: string, password: string): Promise<AuthResult> {
+    const normalized = normalizeEmail(identifier);
     this.attempts.assertAllowed(normalized);
-    const user = await this.prisma.user.findUnique({ where: { email: normalized } });
+    const user = await this.prisma.user.findUnique({
+      where: normalized.includes('@') ? { email: normalized } : { username: normalized },
+    });
     const valid = await this.passwords.verify(user?.passwordHash ?? this.dummyHash, password);
 
     if (!user || !valid) {
@@ -68,7 +71,7 @@ export class AuthService implements OnModuleInit {
         module: 'auth',
         actorId: user?.id ?? null,
         entityId: user?.id ?? null,
-        after: { email: normalized, reason: user ? 'wrong_password' : 'unknown_email' },
+        after: { identifier: normalized, reason: user ? 'wrong_password' : 'unknown_account' },
       });
       throw new UnauthorizedException(BAD_CREDENTIALS_MESSAGE);
     }
@@ -78,7 +81,7 @@ export class AuthService implements OnModuleInit {
         module: 'auth',
         actorId: user.id,
         entityId: user.id,
-        after: { email: normalized, reason: 'inactive' },
+        after: { identifier: normalized, reason: 'inactive' },
       });
       throw new ForbiddenException(INACTIVE_ACCOUNT_MESSAGE);
     }

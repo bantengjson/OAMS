@@ -68,6 +68,12 @@ npm run dev:frontend
 - API: http://localhost:4000/api/v1
 - Dokumentasi API (Swagger): http://localhost:4000/api/docs
 
+Login memakai **email atau username**. Akun Super Admin lokal dibuat oleh seed dari `backend/.env` (bawaan: username `admin`, password `12345678`; hanya untuk pengembangan). Lupa password akun mana pun di lokal maupun server:
+
+```bash
+npm run user:set-password -w backend -- admin PasswordBaru123
+```
+
 ## Pengujian
 
 ```bash

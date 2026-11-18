@@ -28,6 +28,7 @@ export class AuthUserLoader {
     return {
       id: user.id,
       email: user.email,
+      username: user.username,
       fullName: user.fullName,
       departmentId: user.departmentId,
       roles,

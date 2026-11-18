@@ -162,7 +162,7 @@ function UsersAdmin({ meId }: { meId: string | null }) {
               <TR key={u.id}>
                 <TD>
                   <p className="font-medium">{u.fullName}</p>
-                  <p className="text-xs text-muted-foreground md:hidden">{u.email}</p>
+                  <p className="text-xs text-muted-foreground">{u.username ? `@${u.username} · ` : ""}<span className="md:hidden">{u.email}</span></p>
                 </TD>
                 <TD className="hidden text-muted-foreground md:table-cell">{u.email}</TD>
                 <TD>

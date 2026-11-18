@@ -9,6 +9,7 @@ export interface UserQuery extends PageQuery {
 
 export interface CreateUserInput {
   email: string;
+  username?: string | null;
   fullName: string;
   password: string;
   roleCodes: string[];
@@ -17,6 +18,7 @@ export interface CreateUserInput {
 }
 
 export interface UpdateUserInput {
+  username?: string | null;
   fullName?: string;
   phone?: string | null;
   departmentId?: string | null;

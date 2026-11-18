@@ -24,7 +24,7 @@ describe('auth (e2e)', () => {
     ctx.http().post(LOGIN).set('X-Forwarded-For', ip).send(body);
 
   it('logs in and returns an access token plus HttpOnly refresh cookie', async () => {
-    const res = await rawLogin({ email: TEST_ADMIN.email, password: TEST_ADMIN.password }).expect(
+    const res = await rawLogin({ identifier: TEST_ADMIN.email, password: TEST_ADMIN.password }).expect(
       200,
     );
     expect(typeof res.body.accessToken).toBe('string');
@@ -46,28 +46,36 @@ describe('auth (e2e)', () => {
   });
 
   it('accepts the email in any letter case', async () => {
-    await rawLogin({ email: TEST_ADMIN.email.toUpperCase(), password: TEST_ADMIN.password }).expect(
+    await rawLogin({ identifier: TEST_ADMIN.email.toUpperCase(), password: TEST_ADMIN.password }).expect(
       200,
     );
   });
 
+  it('logs in with the username as well, case-insensitively', async () => {
+    const res = await rawLogin({ identifier: TEST_ADMIN.username, password: TEST_ADMIN.password }).expect(200);
+    expect(res.body.user.email).toBe(TEST_ADMIN.email);
+    expect(res.body.user.username).toBe(TEST_ADMIN.username);
+    await rawLogin({ identifier: ` ${TEST_ADMIN.username.toUpperCase()} `, password: TEST_ADMIN.password }).expect(200);
+    await rawLogin({ identifier: TEST_ADMIN.username, password: 'salah-sekali' }).expect(401);
+  });
+
   it('rejects a wrong password with 401 and the Indonesian message', async () => {
-    const res = await rawLogin({ email: TEST_ADMIN.email, password: 'salah-sekali' }).expect(401);
-    expect(res.body.message).toBe('Email atau password salah.');
+    const res = await rawLogin({ identifier: TEST_ADMIN.email, password: 'salah-sekali' }).expect(401);
+    expect(res.body.message).toBe('Email/username atau password salah.');
     expect(res.headers['set-cookie']).toBeUndefined();
   });
 
   it('rejects an unknown email with the same 401 message', async () => {
-    const res = await rawLogin({ email: 'nobody@test.local', password: 'Whatever123' }).expect(
+    const res = await rawLogin({ identifier: 'nobody@test.local', password: 'Whatever123' }).expect(
       401,
     );
-    expect(res.body.message).toBe('Email atau password salah.');
+    expect(res.body.message).toBe('Email/username atau password salah.');
   });
 
   it('validates the login body', async () => {
-    const res = await rawLogin({ email: 'bukan-email' }).expect(400);
+    const res = await rawLogin({}).expect(400);
     expect(res.body.message).toBe('Validasi gagal.');
-    expect(res.body.errors).toHaveProperty('email');
+    expect(res.body.errors).toHaveProperty('identifier');
     expect(res.body.errors).toHaveProperty('password');
   });
 
@@ -83,7 +91,7 @@ describe('auth (e2e)', () => {
         passwordHash: await argon2.hash('Nonaktif123', { type: argon2.argon2id }),
       },
     });
-    const res = await rawLogin({ email, password: 'Nonaktif123' }).expect(403);
+    const res = await rawLogin({ identifier: email, password: 'Nonaktif123' }).expect(403);
     expect(res.body.message).toBe('Akun dinonaktifkan. Hubungi administrator.');
     expect(res.headers['set-cookie']).toBeUndefined();
   });
@@ -221,8 +229,8 @@ describe('auth (e2e)', () => {
       .expect(204);
 
     await ctx.http().post(REFRESH).set('Cookie', session.refreshCookie).expect(401);
-    await rawLogin({ email: session.email, password: 'Test1234!' }).expect(401);
-    await rawLogin({ email: session.email, password: 'BaruBanget123' }).expect(200);
+    await rawLogin({ identifier: session.email, password: 'Test1234!' }).expect(401);
+    await rawLogin({ identifier: session.email, password: 'BaruBanget123' }).expect(200);
 
     const audit = await ctx.prisma.auditLog.findFirst({
       where: { action: 'auth.password_changed', actorId: session.userId },
@@ -231,12 +239,12 @@ describe('auth (e2e)', () => {
   });
 
   it('records successful and failed logins in the audit log', async () => {
-    await rawLogin({ email: TEST_ADMIN.email, password: 'salah-lagi' }).expect(401);
+    await rawLogin({ identifier: TEST_ADMIN.email, password: 'salah-lagi' }).expect(401);
     const failed = await ctx.prisma.auditLog.findFirst({
       where: { action: 'auth.login_failed', module: 'auth' },
       orderBy: { createdAt: 'desc' },
     });
-    expect(failed?.after).toMatchObject({ email: TEST_ADMIN.email });
+    expect(failed?.after).toMatchObject({ identifier: TEST_ADMIN.email });
 
     const session = await ctx.login(TEST_ADMIN.email, TEST_ADMIN.password);
     const ok = await ctx.prisma.auditLog.findFirst({
@@ -251,22 +259,22 @@ describe('auth (e2e)', () => {
   it('locks an account after 5 failed attempts per minute', async () => {
     const ip = '203.0.113.77';
     for (let i = 0; i < 5; i += 1) {
-      await rawLogin({ email: 'limit@test.local', password: 'Salah1234' }, ip).expect(401);
+      await rawLogin({ identifier: 'limit@test.local', password: 'Salah1234' }, ip).expect(401);
     }
-    const blocked = await rawLogin({ email: 'limit@test.local', password: 'Salah1234' }, ip).expect(
+    const blocked = await rawLogin({ identifier: 'limit@test.local', password: 'Salah1234' }, ip).expect(
       429,
     );
     expect(blocked.body.message).toBe('Terlalu banyak percobaan login. Coba lagi dalam satu menit.');
     // the lock follows the account, not the address
-    await rawLogin({ email: 'LIMIT@test.local', password: 'Salah1234' }, '203.0.113.78').expect(429);
+    await rawLogin({ identifier: 'LIMIT@test.local', password: 'Salah1234' }, '203.0.113.78').expect(429);
   });
 
   it('does not lock other people sharing one address (office NAT)', async () => {
     const ip = '198.51.100.9';
     for (let i = 0; i < 6; i += 1) {
-      await rawLogin({ email: `nat${i}@test.local`, password: 'Salah1234' }, ip).expect(401);
+      await rawLogin({ identifier: `nat${i}@test.local`, password: 'Salah1234' }, ip).expect(401);
     }
-    await rawLogin({ email: TEST_ADMIN.email, password: TEST_ADMIN.password }, ip).expect(200);
+    await rawLogin({ identifier: TEST_ADMIN.email, password: TEST_ADMIN.password }, ip).expect(200);
   });
 
   it('rate limits anonymous refresh calls per address', async () => {

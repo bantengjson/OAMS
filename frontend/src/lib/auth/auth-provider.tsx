@@ -11,7 +11,7 @@ export type AuthStatus = 'loading' | 'authenticated' | 'anonymous';
 export interface AuthContextValue {
   status: AuthStatus;
   user: AuthUser | null;
-  login(email: string, password: string): Promise<AuthUser>;
+  login(identifier: string, password: string): Promise<AuthUser>;
   logout(): Promise<void>;
   hasPermission(code: string): boolean;
   hasAnyPermission(codes: readonly string[]): boolean;
@@ -46,8 +46,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => setUnauthorizedHandler(null);
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
-    const session = await authApi.login(email, password);
+  const login = useCallback(async (identifier: string, password: string) => {
+    const session = await authApi.login(identifier, password);
     setAccessToken(session.accessToken);
     setState({ status: 'authenticated', user: session.user });
     return session.user;

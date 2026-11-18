@@ -8,8 +8,8 @@ import { z } from 'zod';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Field, FieldError, FieldHint, Label } from '@/components/ui/label';
+import { PasswordInput } from '@/components/ui/password-input';
 import { applyApiError } from '@/lib/api/form-errors';
 import { usersApi } from '@/lib/api/users';
 import type { User } from '@/types/api';
@@ -82,9 +82,8 @@ function ResetPasswordForm({ user, onSaved }: { user: User; onSaved: () => void 
         <Label htmlFor="rp-password" required>
           Password baru
         </Label>
-        <Input
+        <PasswordInput
           id="rp-password"
-          type="password"
           autoComplete="new-password"
           aria-invalid={Boolean(errors.newPassword)}
           {...form.register('newPassword')}
