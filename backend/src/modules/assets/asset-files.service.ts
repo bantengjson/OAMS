@@ -26,6 +26,8 @@ export interface StoredFile {
 
 const photoDir = (assetId: string) => `assets/${assetId}/photos`;
 const documentDir = (assetId: string) => `assets/${assetId}/documents`;
+/** Decode guard: a small compressed file can still describe a huge bitmap. */
+const MAX_INPUT_PIXELS = 50_000_000;
 const thumbName = (fileName: string) => fileName.replace(/\.webp$/, '.thumb.webp');
 
 @Injectable()
@@ -50,12 +52,12 @@ export class AssetFilesService {
     await detectUpload(file.buffer, 'photo');
 
     // Normalise: auto-rotate from EXIF, cap size, re-encode as WebP (metadata dropped).
-    const full = await sharp(file.buffer, { failOn: 'error' })
+    const full = await sharp(file.buffer, { failOn: 'error', limitInputPixels: MAX_INPUT_PIXELS })
       .rotate()
       .resize({ width: 1920, height: 1920, fit: 'inside', withoutEnlargement: true })
       .webp({ quality: 82 })
       .toBuffer({ resolveWithObject: true });
-    const thumb = await sharp(file.buffer)
+    const thumb = await sharp(file.buffer, { limitInputPixels: MAX_INPUT_PIXELS })
       .rotate()
       .resize({ width: 320, height: 320, fit: 'inside', withoutEnlargement: true })
       .webp({ quality: 75 })
@@ -65,21 +67,36 @@ export class AssetFilesService {
     const { fileName } = await this.storage.save(dir, 'webp', full.data);
     await this.storage.saveAs(dir, thumbName(fileName), thumb);
 
-    const isPrimary = (await this.prisma.assetPhoto.count({ where: { assetId } })) === 0;
-    const row = await this.prisma.assetPhoto.create({
-      data: {
-        assetId,
-        fileName,
-        originalName: sanitizeOriginalName(file.originalname),
-        mimeType: 'image/webp',
-        sizeBytes: full.data.length,
-        width: full.info.width,
-        height: full.info.height,
-        isPrimary,
-        caption: caption || null,
-        uploadedById: actor.id,
-      },
-    });
+    let row;
+    try {
+      // Count and insert in one transaction so two first uploads cannot both become primary.
+      row = await this.prisma.$transaction(
+        async (tx) => {
+          const isPrimary = (await tx.assetPhoto.count({ where: { assetId } })) === 0;
+          return tx.assetPhoto.create({
+            data: {
+              assetId,
+              fileName,
+              originalName: sanitizeOriginalName(file.originalname),
+              mimeType: 'image/webp',
+              sizeBytes: full.data.length,
+              width: full.info.width,
+              height: full.info.height,
+              isPrimary,
+              caption: caption || null,
+              uploadedById: actor.id,
+            },
+          });
+        },
+        { isolationLevel: 'Serializable' },
+      );
+    } catch (error) {
+      // No row, no files: never leave orphans in the uploads folder.
+      await this.storage.remove(dir, fileName);
+      await this.storage.remove(dir, thumbName(fileName));
+      throw error;
+    }
+    const isPrimary = row.isPrimary;
     await this.audit.record({
       action: 'asset.photo_added',
       module: MODULE,
@@ -128,13 +145,15 @@ export class AssetFilesService {
     await this.writableAsset(assetId);
     const photo = await this.prisma.assetPhoto.findFirst({ where: { id: photoId, assetId } });
     if (!photo) throw new NotFoundException(PHOTO_NOT_FOUND);
-    await this.prisma.assetPhoto.delete({ where: { id: photoId } });
+    await this.prisma.$transaction(async (tx) => {
+      await tx.assetPhoto.delete({ where: { id: photoId } });
+      if (photo.isPrimary) {
+        const next = await tx.assetPhoto.findFirst({ where: { assetId }, orderBy: { createdAt: 'asc' } });
+        if (next) await tx.assetPhoto.update({ where: { id: next.id }, data: { isPrimary: true } });
+      }
+    });
     await this.storage.remove(photoDir(assetId), photo.fileName);
     await this.storage.remove(photoDir(assetId), thumbName(photo.fileName));
-    if (photo.isPrimary) {
-      const next = await this.prisma.assetPhoto.findFirst({ where: { assetId }, orderBy: { createdAt: 'asc' } });
-      if (next) await this.prisma.assetPhoto.update({ where: { id: next.id }, data: { isPrimary: true } });
-    }
     await this.audit.record({
       action: 'asset.photo_removed',
       module: MODULE,

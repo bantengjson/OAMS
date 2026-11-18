@@ -46,5 +46,8 @@ export interface AuditLogDto {
   createdAt: Date;
 }
 
+/** Audit row without client metadata, for callers that are not audit-log viewers. */
+export type AuditEntryPublicDto = Omit<AuditLogDto, 'ip' | 'userAgent'>;
+
 /** Modules only Super Admin (audit_logs.view_all) may read. */
 export const RESTRICTED_AUDIT_MODULES: readonly string[] = ['auth', 'users', 'roles', 'settings'];

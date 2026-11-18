@@ -182,7 +182,7 @@ function PrintPage() {
           </Card>
 
           {items.length > 0 ? (
-            <div className="overflow-auto rounded-lg border border-border bg-muted/40 p-4">
+            <div className="no-print overflow-auto rounded-lg border border-border bg-muted/40 p-4">
               {images.isPending ? <PageSpinner label="Membuat QR..." /> : null}
               <PrintSheet items={items} size={size} images={images.data ?? {}} previewOnly />
             </div>

@@ -140,6 +140,9 @@ export interface AuditLog {
   createdAt: string;
 }
 
+/** Audit row as returned by GET /assets/:id/history: no client IP or device. */
+export type AssetHistoryEntry = Omit<AuditLog, 'ip' | 'userAgent'>;
+
 // ---------------------------------------------------------------- Tahap 2
 
 export const OWNERSHIP_TYPES = ['OFFICE', 'THIRD_PARTY'] as const;

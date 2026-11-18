@@ -134,7 +134,7 @@ export class QrController {
   ): Promise<void> {
     const file = await this.qr.publicPhoto(token, variant === 'thumb' ? 'thumb' : 'full');
     res.setHeader('Content-Type', file.mime);
-    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.setHeader('Cache-Control', 'private, max-age=300');
     res.sendFile(file.path, { dotfiles: 'allow' });
   }
 }

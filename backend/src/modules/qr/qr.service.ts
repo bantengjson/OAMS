@@ -14,7 +14,7 @@ import type { AssetDetailDto } from '../assets/dto/asset.dto.js';
 import type { PublicAssetDto } from './dto/public-asset.dto.js';
 import type { BulkQrResultDto, QrFormat, QrInfoDto } from './dto/qr.dto.js';
 import { toPublicAsset } from './public-asset.mapper.js';
-import { generatePublicToken, PUBLIC_TOKEN_PATTERN } from './qr-token.js';
+import { generatePublicToken, PUBLIC_TOKEN_PATTERN, requirePublicBaseUrl } from './qr-token.js';
 
 export const QR_PUBLIC_NOT_FOUND = 'QR Code tidak dikenal atau sudah tidak aktif.';
 const MODULE = 'qr';
@@ -80,7 +80,7 @@ export class QrService {
   async download(assetId: string, format: QrFormat, size: number): Promise<QrDownload> {
     const asset = await this.assets.getRow(assetId);
     const label = await this.ensureLabel(assetId);
-    const url = qrUrl(await this.settings.getPublicBaseUrl(), label.publicToken);
+    const url = qrUrl(requirePublicBaseUrl(await this.settings.getPublicBaseUrl()), label.publicToken);
     const options = { margin: 1, errorCorrectionLevel: 'M' as const, width: size };
     if (format === 'svg') {
       const svg = await QRCode.toString(url, { ...options, type: 'svg' });
@@ -92,7 +92,7 @@ export class QrService {
 
   /** Print data for a set of assets; missing labels are created, inactive ones reactivated. */
   async bulkGenerate(assetIds: string[]): Promise<BulkQrResultDto> {
-    const baseUrl = await this.settings.getPublicBaseUrl();
+    const baseUrl = requirePublicBaseUrl(await this.settings.getPublicBaseUrl());
     const unique = Array.from(new Set(assetIds));
     const rows = await this.prisma.asset.findMany({
       where: { id: { in: unique } },

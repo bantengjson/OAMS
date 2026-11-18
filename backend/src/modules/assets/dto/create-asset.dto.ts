@@ -8,9 +8,13 @@ import {
   IsString,
   IsUUID,
   Matches,
+  Max,
   MaxLength,
   Min,
+  Validate,
+  ValidatorConstraint,
 } from 'class-validator';
+import type { ValidatorConstraintInterface } from 'class-validator';
 import { trim } from '../../../common/dto/transforms.js';
 import {
   AcquisitionMethod,
@@ -30,6 +34,22 @@ export const toNumberOrNull = ({ value }: { value: unknown }): unknown => {
   }
   return value;
 };
+
+/** `YYYY-MM-DD` that exists on the calendar (rejects 2026-02-31 and month 13). */
+@ValidatorConstraint({ name: 'calendarDate', async: false })
+export class IsCalendarDate implements ValidatorConstraintInterface {
+  validate(value: unknown): boolean {
+    if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+    const date = new Date(`${value}T00:00:00Z`);
+    return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+  }
+  defaultMessage(): string {
+    return 'Tanggal perolehan tidak valid';
+  }
+}
+
+/** Decimal(15,2): 13 integer digits. */
+export const MAX_PURCHASE_PRICE = 9_999_999_999_999;
 
 const emptyToNull = ({ value }: { value: unknown }): unknown =>
   typeof value === 'string' && value.trim() === '' ? null : typeof value === 'string' ? value.trim() : value;
@@ -70,6 +90,7 @@ export class CreateAssetDto {
   @IsOptional()
   @Transform(emptyToNull)
   @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'Tanggal perolehan harus berformat YYYY-MM-DD' })
+  @Validate(IsCalendarDate)
   acquisitionDate?: string | null;
 
   @ApiPropertyOptional({ example: 15000000 })
@@ -77,6 +98,7 @@ export class CreateAssetDto {
   @Transform(toNumberOrNull)
   @IsNumber({ maxDecimalPlaces: 2 }, { message: 'Harga perolehan harus berupa angka' })
   @Min(0, { message: 'Harga perolehan tidak boleh negatif' })
+  @Max(MAX_PURCHASE_PRICE, { message: 'Harga perolehan melebihi batas (13 digit)' })
   purchasePrice?: number | null;
 
   @ApiPropertyOptional() @IsOptional() @Transform(emptyToNull) @IsString() @MaxLength(150)

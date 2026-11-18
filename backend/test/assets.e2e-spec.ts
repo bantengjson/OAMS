@@ -331,6 +331,29 @@ describe('assets (e2e)', () => {
       expect.arrayContaining(['asset.created', 'asset.updated', 'asset.archived', 'asset.unarchived']),
     );
     expect(res.body.meta.total).toBeGreaterThanOrEqual(4);
+    // Client metadata stays behind the audit-log permissions (review I-1).
+    expect(res.body.data[0]).not.toHaveProperty('ip');
+    expect(res.body.data[0]).not.toHaveProperty('userAgent');
+    expect(res.body.data[0]).toHaveProperty('actor');
+  });
+
+  it('answers 400, not 500, to null on required fields and impossible values', async () => {
+    const patch = (body: object) => ctx.http().patch(`${URL}/${firstId}`).set(bearer(admin)).send(body);
+    const nullName = await patch({ name: null }).expect(400);
+    expect(nullName.body.errors).toHaveProperty('name');
+    await patch({ status: null }).expect(400);
+    await patch({ categoryId: null }).expect(400);
+    const badDate = await patch({ acquisitionDate: '2026-02-31' }).expect(400);
+    expect(badDate.body.errors).toHaveProperty('acquisitionDate');
+    await patch({ acquisitionDate: '2026-13-01' }).expect(400);
+    const bigPrice = await patch({ purchasePrice: 1e14 }).expect(400);
+    expect(bigPrice.body.errors).toHaveProperty('purchasePrice');
+    await ctx
+      .http()
+      .post(URL)
+      .set(bearer(admin))
+      .send({ ...baseAsset(), name: 'Tanggal Salah', acquisitionDate: '2026-02-30' })
+      .expect(400);
   });
 
   it('reports statistics without archived assets', async () => {
@@ -344,7 +367,8 @@ describe('assets (e2e)', () => {
 
     const res = await ctx.http().get(`${URL}/statistics`).set(bearer(viewer)).expect(200);
     expect(res.body.archived).toBeGreaterThanOrEqual(1);
-    expect(res.body.active).toBe(res.body.total);
+    expect(res.body.total).toBe(res.body.active + res.body.archived);
+    expect(res.body.active).toBeGreaterThanOrEqual(1);
     expect(res.body.byStatus.STORED).toBeGreaterThanOrEqual(1);
     expect(res.body.byStatus.IN_USE).toBeGreaterThanOrEqual(1);
     expect(res.body.byCondition.UNUSABLE ?? 0).toBe(0);

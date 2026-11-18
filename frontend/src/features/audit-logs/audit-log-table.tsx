@@ -16,7 +16,18 @@ function Json({ value }: { value: unknown }) {
   );
 }
 
-export function AuditLogTable({ rows, loading }: { rows: AuditLog[]; loading: boolean }) {
+type Row = Omit<AuditLog, 'ip' | 'userAgent'> & Partial<Pick<AuditLog, 'ip' | 'userAgent'>>;
+
+/** Pass `showClientInfo={false}` for rows that legitimately carry no IP/device (asset history). */
+export function AuditLogTable({
+  rows,
+  loading,
+  showClientInfo = true,
+}: {
+  rows: Row[];
+  loading: boolean;
+  showClientInfo?: boolean;
+}) {
   const [openId, setOpenId] = useState<string | null>(null);
 
   return (
@@ -29,7 +40,7 @@ export function AuditLogTable({ rows, loading }: { rows: AuditLog[]; loading: bo
           <TH>Aksi</TH>
           <TH className="hidden md:table-cell">Modul</TH>
           <TH className="hidden lg:table-cell">Objek</TH>
-          <TH className="hidden xl:table-cell">IP</TH>
+          {showClientInfo ? <TH className="hidden xl:table-cell">IP</TH> : null}
         </TR>
       </THead>
       <TBody>
@@ -66,7 +77,7 @@ export function AuditLogTable({ rows, loading }: { rows: AuditLog[]; loading: bo
                   <TD className="hidden font-mono text-[11px] text-muted-foreground lg:table-cell">
                     {row.entityId ?? '-'}
                   </TD>
-                  <TD className="hidden text-muted-foreground xl:table-cell">{row.ip ?? '-'}</TD>
+                  {showClientInfo ? <TD className="hidden text-muted-foreground xl:table-cell">{row.ip ?? '-'}</TD> : null}
                 </TR>
                 {open ? (
                   <tr className="bg-muted/30">
@@ -81,7 +92,7 @@ export function AuditLogTable({ rows, loading }: { rows: AuditLog[]; loading: bo
                           <Json value={row.after} />
                         </div>
                       </div>
-                      {row.userAgent ? (
+                      {showClientInfo && row.userAgent ? (
                         <p className="mt-3 truncate text-xs text-muted-foreground">Perangkat: {row.userAgent}</p>
                       ) : null}
                     </td>

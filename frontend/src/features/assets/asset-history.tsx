@@ -39,7 +39,7 @@ export function AssetHistory({ assetId }: { assetId: string }) {
   }));
   return (
     <div className="flex flex-col gap-4">
-      <AuditLogTable rows={rows} loading={history.isPending} />
+      <AuditLogTable rows={rows} loading={history.isPending} showClientInfo={false} />
       {history.data ? <Pagination meta={history.data.meta} onPageChange={setPage} /> : null}
     </div>
   );

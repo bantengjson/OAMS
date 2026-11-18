@@ -1,6 +1,6 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import type { AuditLogDto } from '../../common/audit/audit.types.js';
+import type { AuditEntryPublicDto } from '../../common/audit/audit.types.js';
 import type { AuthUser } from '../../common/auth/auth-user.js';
 import { CurrentUser } from '../../common/auth/current-user.decorator.js';
 import { PERMISSIONS } from '../../common/auth/permissions.catalog.js';
@@ -89,7 +89,7 @@ export class AssetsController {
   history(
     @Param('id', ParseUuid) id: string,
     @Query() q: PaginationQueryDto,
-  ): Promise<Paginated<AuditLogDto>> {
+  ): Promise<Paginated<AuditEntryPublicDto>> {
     return this.assets.history(id, q);
   }
 }

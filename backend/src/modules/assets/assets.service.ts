@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service.js';
-import type { AuditLogDto } from '../../common/audit/audit.types.js';
+import type { AuditEntryPublicDto } from '../../common/audit/audit.types.js';
 import type { AuthUser } from '../../common/auth/auth-user.js';
 import { paginate } from '../../common/dto/paginated.js';
 import type { Paginated } from '../../common/dto/paginated.js';
@@ -86,14 +86,17 @@ export class AssetsService {
     return toAssetDetail(row, await this.pathIndex(), await this.settings.getPublicBaseUrl());
   }
 
-  async history(id: string, q: PaginationQueryDto): Promise<Paginated<AuditLogDto>> {
+  async history(id: string, q: PaginationQueryDto): Promise<Paginated<AuditEntryPublicDto>> {
     await this.getRow(id);
-    return this.audit.list({ page: q.page, pageSize: q.pageSize, entityId: id, modules: [MODULE, 'qr'] });
+    const page = await this.audit.list({ page: q.page, pageSize: q.pageSize, entityId: id, modules: [MODULE, 'qr'] });
+    // `assets.view` is not an audit permission: actor IP and device stay with the audit-log pages.
+    const data = page.data.map(({ ip: _ip, userAgent: _ua, ...rest }) => rest);
+    return { ...page, data };
   }
 
   async statistics(): Promise<AssetStatisticsDto> {
     const live = { archivedAt: null };
-    const [total, archived, byStatusRows, byConditionRows, byCategoryRows, byLocationRows] =
+    const [active, archived, byStatusRows, byConditionRows, byCategoryRows, byLocationRows] =
       await Promise.all([
         this.prisma.asset.count({ where: live }),
         this.prisma.asset.count({ where: { archivedAt: { not: null } } }),
@@ -133,7 +136,10 @@ export class AssetsService {
       .map(([id, count]) => ({ id, name: paths.get(id)?.name ?? '-', count }))
       .sort((a, b) => b.count - a.count);
 
-    return { total, active: total, archived, byStatus, byCondition, byCategory, byOffice };
+    return {
+      total: active + archived,
+      active,
+      archived, byStatus, byCondition, byCategory, byOffice };
   }
 
   // -------------------------------------------------------------- mutations

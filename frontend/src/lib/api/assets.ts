@@ -3,11 +3,11 @@ import type {
   AssetCondition,
   AssetDetail,
   AssetDocument,
+  AssetHistoryEntry,
   AssetListItem,
   AssetPhoto,
   AssetStatistics,
   AssetStatus,
-  AuditLog,
   OwnershipType,
   PageQuery,
   Paginated,
@@ -58,7 +58,7 @@ export const assetsApi = {
     api.post<AssetDetail>(`/assets/${id}/archive`, reason ? { reason } : {}),
   unarchive: (id: string) => api.post<AssetDetail>(`/assets/${id}/unarchive`),
   history: (id: string, query: PageQuery = {}) =>
-    api.get<Paginated<AuditLog>>(`/assets/${id}/history`, { query }),
+    api.get<Paginated<AssetHistoryEntry>>(`/assets/${id}/history`, { query }),
 
   uploadPhoto: (id: string, file: File, caption?: string) => {
     const form = new FormData();
