@@ -17,6 +17,10 @@ const envSchema = z.object({
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(7),
   COOKIE_SECURE: booleanString.optional(),
   APP_TIMEZONE: z.string().min(1).default('Asia/Jakarta'),
+  /** Base URL encoded into QR codes, e.g. https://inventaris.kantor.go.id */
+  PUBLIC_BASE_URL: z.url().optional(),
+  /** Folder for uploaded photos/documents (absolute or relative to backend/). */
+  UPLOADS_DIR: z.string().min(1).default('./uploads'),
   SEED_ADMIN_EMAIL: z.email().optional(),
   SEED_ADMIN_USERNAME: z
     .string()

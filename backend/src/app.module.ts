@@ -2,7 +2,9 @@ import { Module } from '@nestjs/common';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AuditModule } from './common/audit/audit.module.js';
 import { PrismaModule } from './common/prisma/prisma.module.js';
+import { SettingsModule } from './common/settings/settings.module.js';
 import { AppConfigModule } from './config/config.module.js';
+import { AssetsModule } from './modules/assets/assets.module.js';
 import { AuditLogsModule } from './modules/audit-logs/audit-logs.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { CategoriesModule } from './modules/categories/categories.module.js';
@@ -16,6 +18,7 @@ import { UsersModule } from './modules/users/users.module.js';
   imports: [
     AppConfigModule,
     PrismaModule,
+    SettingsModule,
     AuditModule,
     // Per-address limits only; they stay loose because an office shares one NAT
     // address. Brute force on a single account is stopped by LoginAttemptLimiter.
@@ -33,6 +36,7 @@ import { UsersModule } from './modules/users/users.module.js';
     DepartmentsModule,
     LocationsModule,
     AuditLogsModule,
+    AssetsModule,
     HealthModule,
   ],
 })

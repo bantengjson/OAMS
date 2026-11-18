@@ -34,6 +34,8 @@ services:
       PORT: "4000"
       DATABASE_URL: postgresql://${POSTGRES_USER:-oams}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-oams}
       COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL}
+      UPLOADS_DIR: /app/uploads
     volumes:
       - uploads:/app/uploads
     networks:
