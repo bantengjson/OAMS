@@ -32,6 +32,18 @@ const ALL_PERMISSIONS = [
 
 const VIEWER = ['dashboard.view', 'assets.view', 'qr.scan', 'reports.view', 'master_data.view'];
 
+const PETUGAS = [
+  'dashboard.view',
+  'assets.view',
+  'qr.scan',
+  'mutations.view',
+  'mutations.request',
+  'stock_opnames.execute',
+  'maintenance.report',
+  'reports.view',
+  'master_data.view',
+];
+
 const ADMIN_INVENTARIS = ALL_PERMISSIONS.filter(
   (p) => !['users.manage', 'roles.manage', 'settings.manage', 'audit_logs.view_all'].includes(p),
 );
@@ -42,13 +54,20 @@ const hasAny = (held: string[]) => (codes: readonly string[]) =>
 const labels = (held: string[]) => visibleNavItems(NAV_ITEMS, hasAny(held)).map((i) => i.label);
 
 describe('visibleNavItems', () => {
-  it('shows a VIEWER only Dashboard and Profil', () => {
-    expect(labels(VIEWER)).toEqual(['Dashboard', 'Profil']);
+  it('shows a VIEWER the dashboard, inventory, scanner and profile', () => {
+    expect(labels(VIEWER)).toEqual(['Dashboard', 'Inventaris', 'Scan QR', 'Profil']);
+  });
+
+  it('shows a PETUGAS the same as a viewer (no printing, no master data)', () => {
+    expect(labels(PETUGAS)).toEqual(['Dashboard', 'Inventaris', 'Scan QR', 'Profil']);
   });
 
   it('shows a SUPER_ADMIN every item, in menu order', () => {
     expect(labels(ALL_PERMISSIONS)).toEqual([
       'Dashboard',
+      'Inventaris',
+      'Scan QR',
+      'Cetak QR',
       'Pengguna',
       'Role & Izin',
       'Kategori',
@@ -62,6 +81,9 @@ describe('visibleNavItems', () => {
   it('shows ADMIN_INVENTARIS everything except Pengguna', () => {
     expect(labels(ADMIN_INVENTARIS)).toEqual([
       'Dashboard',
+      'Inventaris',
+      'Scan QR',
+      'Cetak QR',
       'Role & Izin',
       'Kategori',
       'Lokasi',

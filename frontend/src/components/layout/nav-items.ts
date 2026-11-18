@@ -1,7 +1,10 @@
 import {
+  Boxes,
   Building2,
   LayoutDashboard,
   MapPin,
+  Printer,
+  ScanLine,
   ScrollText,
   ShieldCheck,
   Tags,
@@ -10,9 +13,15 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
-export type NavSection = 'Utama' | 'Data Master' | 'Administrasi' | 'Akun';
+export type NavSection = 'Utama' | 'Inventaris' | 'Data Master' | 'Administrasi' | 'Akun';
 
-export const NAV_SECTIONS: readonly NavSection[] = ['Utama', 'Data Master', 'Administrasi', 'Akun'];
+export const NAV_SECTIONS: readonly NavSection[] = [
+  'Utama',
+  'Inventaris',
+  'Data Master',
+  'Administrasi',
+  'Akun',
+];
 
 export interface NavItem {
   href: string;
@@ -25,6 +34,9 @@ export interface NavItem {
 
 export const NAV_ITEMS: readonly NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, section: 'Utama', permissions: ['dashboard.view'] },
+  { href: '/assets', label: 'Inventaris', icon: Boxes, section: 'Inventaris', permissions: ['assets.view'] },
+  { href: '/scan', label: 'Scan QR', icon: ScanLine, section: 'Inventaris', permissions: ['qr.scan'] },
+  { href: '/qr/print', label: 'Cetak QR', icon: Printer, section: 'Inventaris', permissions: ['qr.generate'] },
   { href: '/users', label: 'Pengguna', icon: Users, section: 'Administrasi', permissions: ['users.manage'] },
   { href: '/roles', label: 'Role & Izin', icon: ShieldCheck, section: 'Administrasi', permissions: ['roles.view'] },
   { href: '/categories', label: 'Kategori', icon: Tags, section: 'Data Master', permissions: ['categories.manage'] },

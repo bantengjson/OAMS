@@ -1,0 +1,244 @@
+'use client';
+
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import { Alert } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input, Textarea } from '@/components/ui/input';
+import { Field, FieldError, FieldHint, Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
+import { categoriesApi } from '@/lib/api/categories';
+import { departmentsApi } from '@/lib/api/departments';
+import { applyApiError } from '@/lib/api/form-errors';
+import {
+  ACQUISITION_LABEL,
+  CONDITION_LABEL,
+  OWNERSHIP_LABEL,
+  STATUS_LABEL,
+} from '@/lib/asset-labels';
+import {
+  ACQUISITION_METHODS,
+  ASSET_CONDITIONS,
+  ASSET_STATUSES,
+  OWNERSHIP_TYPES,
+} from '@/types/api';
+import { assetFormSchema, emptyAssetForm } from './asset-form.schema';
+import type { AssetFormValues } from './asset-form.schema';
+import { LocationSelect } from './location-select';
+import { UserLookup } from './user-lookup';
+
+const FIELDS = Object.keys(emptyAssetForm) as (keyof AssetFormValues)[];
+
+export function AssetForm({
+  initial = emptyAssetForm,
+  initialResponsibleLabel = null,
+  submitLabel,
+  onSubmit,
+  onCancel,
+}: {
+  initial?: AssetFormValues;
+  initialResponsibleLabel?: string | null;
+  submitLabel: string;
+  onSubmit: (values: AssetFormValues) => Promise<void>;
+  onCancel: () => void;
+}) {
+  const [formError, setFormError] = useState<string | null>(null);
+  const [responsibleLabel, setResponsibleLabel] = useState<string | null>(initialResponsibleLabel);
+  const form = useForm<AssetFormValues>({ resolver: zodResolver(assetFormSchema), defaultValues: initial });
+  const { errors, isSubmitting } = form.formState;
+
+  const categories = useQuery({
+    queryKey: ['categories', { isActive: true, pageSize: 100 }],
+    queryFn: () => categoriesApi.list({ isActive: true, pageSize: 100 }),
+    staleTime: 60_000,
+  });
+  const departments = useQuery({
+    queryKey: ['departments', { isActive: true, pageSize: 100 }],
+    queryFn: () => departmentsApi.list({ isActive: true, pageSize: 100 }),
+    staleTime: 60_000,
+  });
+
+  const submit = form.handleSubmit(async (values) => {
+    setFormError(null);
+    try {
+      await onSubmit(values);
+    } catch (error) {
+      setFormError(applyApiError(error, form.setError, FIELDS));
+    }
+  });
+
+  return (
+    <form onSubmit={submit} className="flex flex-col gap-6" noValidate>
+      {formError ? <Alert variant="error">{formError}</Alert> : null}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Identitas barang</CardTitle>
+          <CardDescription>Asset Code dibuat otomatis saat disimpan.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 md:grid-cols-2">
+          <Field className="md:col-span-2">
+            <Label htmlFor="name" required>Nama barang</Label>
+            <Input id="name" aria-invalid={Boolean(errors.name)} {...form.register('name')} />
+            <FieldError>{errors.name?.message}</FieldError>
+          </Field>
+          <Field>
+            <Label htmlFor="categoryId" required>Kategori</Label>
+            <Select id="categoryId" aria-invalid={Boolean(errors.categoryId)} {...form.register('categoryId')}>
+              <option value="">{categories.isPending ? 'Memuat...' : 'Pilih kategori...'}</option>
+              {categories.data?.data.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </Select>
+            <FieldError>{errors.categoryId?.message}</FieldError>
+          </Field>
+          <Field>
+            <Label htmlFor="brand">Merek</Label>
+            <Input id="brand" {...form.register('brand')} />
+            <FieldError>{errors.brand?.message}</FieldError>
+          </Field>
+          <Field>
+            <Label htmlFor="model">Tipe / model</Label>
+            <Input id="model" {...form.register('model')} />
+            <FieldError>{errors.model?.message}</FieldError>
+          </Field>
+          <Field>
+            <Label htmlFor="serialNumber">Nomor seri</Label>
+            <Input id="serialNumber" className="font-mono" {...form.register('serialNumber')} />
+            <FieldError>{errors.serialNumber?.message}</FieldError>
+          </Field>
+          <Field className="md:col-span-2">
+            <Label htmlFor="description">Deskripsi</Label>
+            <Textarea id="description" rows={3} {...form.register('description')} />
+            <FieldError>{errors.description?.message}</FieldError>
+          </Field>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Perolehan dan kepemilikan</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4 md:grid-cols-2">
+          <Field>
+            <Label htmlFor="ownershipType" required>Kepemilikan</Label>
+            <Select id="ownershipType" {...form.register('ownershipType')}>
+              {OWNERSHIP_TYPES.map((v) => (
+                <option key={v} value={v}>{OWNERSHIP_LABEL[v]}</option>
+              ))}
+            </Select>
+          </Field>
+          <Field>
+            <Label htmlFor="acquisitionMethod" required>Metode perolehan</Label>
+            <Select id="acquisitionMethod" {...form.register('acquisitionMethod')}>
+              {ACQUISITION_METHODS.map((v) => (
+                <option key={v} value={v}>{ACQUISITION_LABEL[v]}</option>
+              ))}
+            </Select>
+          </Field>
+          <Field>
+            <Label htmlFor="acquisitionDate">Tanggal perolehan</Label>
+            <Input id="acquisitionDate" type="date" aria-invalid={Boolean(errors.acquisitionDate)} {...form.register('acquisitionDate')} />
+            <FieldError>{errors.acquisitionDate?.message}</FieldError>
+          </Field>
+          <Field>
+            <Label htmlFor="purchasePrice">Harga perolehan (Rp)</Label>
+            <Input id="purchasePrice" inputMode="decimal" placeholder="mis. 1500000" aria-invalid={Boolean(errors.purchasePrice)} {...form.register('purchasePrice')} />
+            <FieldHint>Angka saja, tanpa titik atau koma ribuan.</FieldHint>
+            <FieldError>{errors.purchasePrice?.message}</FieldError>
+          </Field>
+          <Field className="md:col-span-2">
+            <Label htmlFor="vendor">Penyedia / vendor</Label>
+            <Input id="vendor" {...form.register('vendor')} />
+            <FieldError>{errors.vendor?.message}</FieldError>
+          </Field>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Penempatan</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4 md:grid-cols-2">
+          <Field className="md:col-span-2">
+            <Label htmlFor="locationId" required>Lokasi</Label>
+            <LocationSelect id="locationId" aria-invalid={Boolean(errors.locationId)} {...form.register('locationId')} />
+            <FieldError>{errors.locationId?.message}</FieldError>
+          </Field>
+          <Field>
+            <Label htmlFor="departmentId">Unit kerja</Label>
+            <Select id="departmentId" {...form.register('departmentId')}>
+              <option value="">Tidak ada</option>
+              {departments.data?.data.map((d) => (
+                <option key={d.id} value={d.id}>{d.name} ({d.code})</option>
+              ))}
+            </Select>
+            <FieldError>{errors.departmentId?.message}</FieldError>
+          </Field>
+          <Field>
+            <Label htmlFor="responsibleUserId">Penanggung jawab</Label>
+            <Controller
+              control={form.control}
+              name="responsibleUserId"
+              render={({ field }) => (
+                <UserLookup
+                  id="responsibleUserId"
+                  value={field.value}
+                  label={responsibleLabel}
+                  invalid={Boolean(errors.responsibleUserId)}
+                  onChange={(id, label) => {
+                    field.onChange(id);
+                    setResponsibleLabel(label);
+                  }}
+                />
+              )}
+            />
+            <FieldError>{errors.responsibleUserId?.message}</FieldError>
+          </Field>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Kondisi, status, dan catatan</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4 md:grid-cols-2">
+          <Field>
+            <Label htmlFor="condition" required>Kondisi</Label>
+            <Select id="condition" {...form.register('condition')}>
+              {ASSET_CONDITIONS.map((v) => (
+                <option key={v} value={v}>{CONDITION_LABEL[v]}</option>
+              ))}
+            </Select>
+          </Field>
+          <Field>
+            <Label htmlFor="status" required>Status operasional</Label>
+            <Select id="status" {...form.register('status')}>
+              {ASSET_STATUSES.map((v) => (
+                <option key={v} value={v}>{STATUS_LABEL[v]}</option>
+              ))}
+            </Select>
+          </Field>
+          <Field className="md:col-span-2">
+            <Label htmlFor="notes">Catatan internal</Label>
+            <Textarea id="notes" rows={3} {...form.register('notes')} />
+            <FieldHint>Tidak ditampilkan pada halaman publik QR.</FieldHint>
+            <FieldError>{errors.notes?.message}</FieldError>
+          </Field>
+        </CardContent>
+      </Card>
+
+      <div className="flex flex-wrap justify-end gap-2">
+        <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
+          Batal
+        </Button>
+        <Button type="submit" loading={isSubmitting}>
+          {submitLabel}
+        </Button>
+      </div>
+    </form>
+  );
+}

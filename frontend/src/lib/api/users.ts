@@ -1,4 +1,4 @@
-import type { AuditLog, PageQuery, Paginated, User } from '@/types/api';
+import type { AuditLog, PageQuery, Paginated, User, UserLookupItem } from '@/types/api';
 import { api } from './client';
 
 export interface UserQuery extends PageQuery {
@@ -26,6 +26,8 @@ export interface UpdateUserInput {
 
 export const usersApi = {
   list: (query: UserQuery = {}) => api.get<Paginated<User>>('/users', { query }),
+  /** Active users for pickers; available to every staff member. */
+  lookup: (search?: string) => api.get<UserLookupItem[]>('/users/lookup', { query: { search } }),
   get: (id: string) => api.get<User>(`/users/${id}`),
   create: (input: CreateUserInput) => api.post<User>('/users', input),
   update: (id: string, input: UpdateUserInput) => api.patch<User>(`/users/${id}`, input),

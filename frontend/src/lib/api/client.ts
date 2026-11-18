@@ -94,7 +94,9 @@ async function rawFetch(path: string, init: RequestOptions): Promise<Response> {
   const headers = new Headers({ Accept: 'application/json' });
   if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
   let body: BodyInit | undefined;
-  if (init.body !== undefined) {
+  if (init.body instanceof FormData) {
+    body = init.body; // the browser sets the multipart boundary itself
+  } else if (init.body !== undefined) {
     headers.set('Content-Type', 'application/json');
     body = JSON.stringify(init.body);
   }
@@ -152,9 +154,9 @@ export async function refreshAccessToken(): Promise<boolean> {
   return (await refreshSession()) !== null;
 }
 
-export async function apiFetch<T>(path: string, init: RequestOptions = {}): Promise<T> {
+/** Performs the request, transparently refreshing the session once on 401. */
+async function requestWithRefresh(path: string, init: RequestOptions): Promise<Response> {
   let response = await rawFetch(path, init);
-
   if (response.status === 401 && !path.startsWith('/auth/')) {
     const refreshed = await refreshAccessToken();
     if (!refreshed) {
@@ -164,10 +166,26 @@ export async function apiFetch<T>(path: string, init: RequestOptions = {}): Prom
     }
     response = await rawFetch(path, init);
   }
+  return response;
+}
 
+export async function apiFetch<T>(path: string, init: RequestOptions = {}): Promise<T> {
+  const response = await requestWithRefresh(path, init);
   const body = await parseBody(response);
   if (!response.ok) throw toApiError(response.status, body);
   return body as T;
+}
+
+/** Multipart upload (photos, documents). */
+export function apiUpload<T>(path: string, formData: FormData): Promise<T> {
+  return apiFetch<T>(path, { method: 'POST', body: formData });
+}
+
+/** Authenticated binary download (photos, documents, QR files). */
+export async function fetchBlob(path: string, query?: QueryInput): Promise<Blob> {
+  const response = await requestWithRefresh(path, { method: 'GET', query });
+  if (!response.ok) throw toApiError(response.status, await parseBody(response));
+  return response.blob();
 }
 
 export const api = {
