@@ -152,7 +152,8 @@ export class QrService {
     const paths = await this.assets.pathIndex();
     const detail = toAssetDetail(label.asset, paths, await this.settings.getPublicBaseUrl());
     if (user?.permissions.includes(PERMISSIONS.ASSETS_VIEW)) {
-      return { ...detail, isPublicView: false };
+      // `detail` is a fresh plain object from the mapper; tag it instead of spreading a class type
+      return Object.assign(detail, { isPublicView: false as const });
     }
     return toPublicAsset(detail);
   }
