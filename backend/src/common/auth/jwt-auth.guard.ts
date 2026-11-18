@@ -5,6 +5,7 @@ import type { Request } from 'express';
 import { AuthUserLoader } from '../../modules/auth/auth-user.loader.js';
 import { requestContext } from '../context/request-context.js';
 import type { AccessTokenPayload, AuthUser } from './auth-user.js';
+import { IS_OPTIONAL_AUTH_KEY } from './optional-auth.decorator.js';
 import { IS_PUBLIC_KEY } from './public.decorator.js';
 
 export const UNAUTHENTICATED_MESSAGE = 'Autentikasi diperlukan.';
@@ -33,7 +34,14 @@ export class JwtAuthGuard implements CanActivate {
 
     const request = context.switchToHttp().getRequest<Request & { user?: AuthUser }>();
     const token = extractBearer(request.headers.authorization);
-    if (!token) throw new UnauthorizedException(UNAUTHENTICATED_MESSAGE);
+    if (!token) {
+      const optional = this.reflector.getAllAndOverride<boolean>(IS_OPTIONAL_AUTH_KEY, [
+        context.getHandler(),
+        context.getClass(),
+      ]);
+      if (optional) return true;
+      throw new UnauthorizedException(UNAUTHENTICATED_MESSAGE);
+    }
 
     let payload: AccessTokenPayload;
     try {

@@ -12,6 +12,7 @@ import { CategoriesModule } from './modules/categories/categories.module.js';
 import { DepartmentsModule } from './modules/departments/departments.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { LocationsModule } from './modules/locations/locations.module.js';
+import { QrModule } from './modules/qr/qr.module.js';
 import { RolesModule } from './modules/roles/roles.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 
@@ -39,6 +40,7 @@ import { UsersModule } from './modules/users/users.module.js';
     LocationsModule,
     AuditLogsModule,
     AssetsModule,
+    QrModule,
     HealthModule,
   ],
 })
