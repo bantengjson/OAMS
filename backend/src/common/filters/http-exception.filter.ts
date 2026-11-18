@@ -118,6 +118,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
   private fromHttpException(exception: HttpException): Normalized {
     const status = exception.getStatus();
+    if (status === HttpStatus.PAYLOAD_TOO_LARGE) {
+      // multer's size limit; surfaced as a validation-style 400 for the client
+      return { status: HttpStatus.BAD_REQUEST, message: 'Ukuran berkas melebihi batas.' };
+    }
     const payload = exception.getResponse();
     if (typeof payload === 'string') {
       return { status, message: payload };

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AuditModule } from './common/audit/audit.module.js';
+import { FilesModule } from './common/files/files.module.js';
 import { PrismaModule } from './common/prisma/prisma.module.js';
 import { SettingsModule } from './common/settings/settings.module.js';
 import { AppConfigModule } from './config/config.module.js';
@@ -19,6 +20,7 @@ import { UsersModule } from './modules/users/users.module.js';
     AppConfigModule,
     PrismaModule,
     SettingsModule,
+    FilesModule,
     AuditModule,
     // Per-address limits only; they stay loose because an office shares one NAT
     // address. Brute force on a single account is stopped by LoginAttemptLimiter.
