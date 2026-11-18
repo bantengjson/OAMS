@@ -97,6 +97,7 @@ npm run lint
 - Blueprint: [docs/BLUEPRINT.md](docs/BLUEPRINT.md)
 - Desain Tahap 1: [docs/superpowers/specs/2026-11-17-oams-tahap1-foundation-design.md](docs/superpowers/specs/2026-11-17-oams-tahap1-foundation-design.md)
 - Rencana Tahap 1: [docs/superpowers/plans/2026-11-17-oams-tahap1-foundation.md](docs/superpowers/plans/2026-11-17-oams-tahap1-foundation.md)
+- Dokumentasi hasil Tahap 1: [docs/tahap-1-foundation.md](docs/tahap-1-foundation.md)
 
 ## Deployment (server dengan Docker)
 
