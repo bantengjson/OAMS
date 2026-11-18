@@ -12,11 +12,16 @@
     "frontend"
   ],
   "scripts": {
+    "dev": "concurrently -k -n db,api,web -c cyan,green,magenta \"npm run dev:db\" \"wait-on tcp:127.0.0.1:5433 && npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:db": "npm run dev:db -w backend",
     "dev:backend": "npm run start:dev -w backend",
     "dev:frontend": "npm run dev -w frontend",
     "build": "npm run build -w backend && npm run build -w frontend",
     "lint": "npm run lint -w backend && npm run lint -w frontend",
     "test": "npm run test -w backend && npm run test:e2e -w backend && npm run test -w frontend"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.7",
+    "wait-on": "^9.5.1"
   }
 }

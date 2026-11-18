@@ -5,6 +5,8 @@ const API_URL = process.env.API_URL ?? 'http://localhost:4000';
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  // No floating "N" dev-tools bubble during `next dev`.
+  devIndicators: false,
   // Monorepo: trace files from the repository root so the standalone bundle is complete.
   outputFileTracingRoot: fileURLToPath(new URL('..', import.meta.url)),
   turbopack: {

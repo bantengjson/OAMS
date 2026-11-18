@@ -32,7 +32,13 @@ docs/             Blueprint, desain, dan rencana implementasi
 npm install
 ```
 
-Jalankan database lokal (terminal 1):
+Cara termudah, satu perintah untuk database, backend, dan frontend sekaligus (hentikan dengan Ctrl+C):
+
+```bash
+npm run dev
+```
+
+Atau jalankan terpisah bila ingin log masing-masing. Database lokal (terminal 1):
 
 ```bash
 npm run dev:db
