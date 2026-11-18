@@ -2,8 +2,8 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { Building2, MapPin, Tags, Users } from 'lucide-react';
-import { Alert } from '@/components/ui/alert';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { AssetStatisticsPanel } from '@/features/dashboard/asset-statistics';
 import { StatCard } from '@/features/dashboard/stat-card';
 import { categoriesApi } from '@/lib/api/categories';
 import { departmentsApi } from '@/lib/api/departments';
@@ -24,6 +24,7 @@ export default function DashboardPage() {
   const { user, hasPermission } = useAuth();
   const canUsers = hasPermission('users.manage');
   const canMaster = hasPermission('master_data.view');
+  const canAssets = hasPermission('assets.view');
 
   const users = useCount('users', canUsers, () => usersApi.list({ isActive: true, pageSize: 1 }));
   const categories = useCount('categories', canMaster, () =>
@@ -95,21 +96,16 @@ export default function DashboardPage() {
         </div>
       ) : null}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Statistik inventaris</CardTitle>
-          <CardDescription>
-            Ringkasan barang, kondisi, status, dan aktivitas terbaru tersedia pada Tahap 2 setelah
-            modul inventaris dan QR Code selesai.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Alert variant="info">
-            Tahap 1 menyiapkan fondasi: akun pengguna, role dan izin, kategori, lokasi, unit kerja,
-            serta audit log.
-          </Alert>
-        </CardContent>
-      </Card>
+      {canAssets ? (
+        <AssetStatisticsPanel />
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Statistik inventaris</CardTitle>
+            <CardDescription>Akun Anda tidak memiliki izin melihat inventaris.</CardDescription>
+          </CardHeader>
+        </Card>
+      )}
     </>
   );
 }
