@@ -23,8 +23,8 @@ import { CreateUserDto } from './dto/create-user.dto.js';
 import { ResetPasswordDto } from './dto/reset-password.dto.js';
 import { SetUserRolesDto } from './dto/set-user-roles.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
-import { UserDto } from './dto/user.dto.js';
-import { UserQueryDto } from './dto/user-query.dto.js';
+import { UserDto, UserLookupDto } from './dto/user.dto.js';
+import { UserLookupQueryDto, UserQueryDto } from './dto/user-query.dto.js';
 import { UsersService } from './users.service.js';
 
 @ApiTags('users')
@@ -38,6 +38,14 @@ export class UsersController {
   @ApiOperation({ summary: 'Daftar pengguna' })
   list(@Query() q: UserQueryDto): Promise<Paginated<UserDto>> {
     return this.users.list(q);
+  }
+
+  /** Lightweight picker for "penanggung jawab"; any staff may use it. */
+  @Get('lookup')
+  @RequirePermissions(PERMISSIONS.MASTER_DATA_VIEW)
+  @ApiOperation({ summary: 'Cari pengguna aktif (untuk memilih penanggung jawab)' })
+  lookup(@Query() q: UserLookupQueryDto): Promise<UserLookupDto[]> {
+    return this.users.lookup(q.search);
   }
 
   @Post()

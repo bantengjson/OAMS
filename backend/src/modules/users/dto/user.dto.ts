@@ -11,6 +11,13 @@ export class UserRoleDto {
   @ApiProperty() name!: string;
 }
 
+export class UserLookupDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() fullName!: string;
+  @ApiProperty() email!: string;
+  @ApiProperty({ nullable: true }) department!: { name: string } | null;
+}
+
 export class UserDto {
   @ApiProperty() id!: string;
   @ApiProperty() email!: string;

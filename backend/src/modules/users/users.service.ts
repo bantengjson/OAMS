@@ -13,7 +13,7 @@ import { PasswordService } from '../auth/password.service.js';
 import { RefreshTokenService } from '../auth/refresh-token.service.js';
 import type { CreateUserDto } from './dto/create-user.dto.js';
 import type { UpdateUserDto } from './dto/update-user.dto.js';
-import type { UserDto } from './dto/user.dto.js';
+import type { UserDto, UserLookupDto } from './dto/user.dto.js';
 import type { UserQueryDto } from './dto/user-query.dto.js';
 
 export const USER_NOT_FOUND = 'Pengguna tidak ditemukan.';
@@ -103,6 +103,25 @@ export class UsersService {
 
   async get(id: string): Promise<UserDto> {
     return toDto(await this.getRow(id));
+  }
+
+  /** Active users only, trimmed down for pickers. */
+  async lookup(search?: string): Promise<UserLookupDto[]> {
+    const where: Prisma.UserWhereInput = { isActive: true };
+    if (search) {
+      where.OR = [
+        { fullName: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+        { username: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+    const rows = await this.prisma.user.findMany({
+      where,
+      select: { id: true, fullName: true, email: true, department: { select: { name: true } } },
+      orderBy: { fullName: 'asc' },
+      take: 20,
+    });
+    return rows;
   }
 
   async create(dto: CreateUserDto, actor: AuthUser): Promise<UserDto> {

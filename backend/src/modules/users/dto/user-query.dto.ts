@@ -4,6 +4,14 @@ import { IsBoolean, IsOptional, IsString, MaxLength } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/dto/pagination.dto.js';
 import { toBoolean } from '../../../common/dto/transforms.js';
 
+export class UserLookupQueryDto {
+  @ApiPropertyOptional({ description: 'Cari pada nama, email, atau username' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  search?: string;
+}
+
 export class UserQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({ description: 'Cari pada nama atau email' })
   @IsOptional()

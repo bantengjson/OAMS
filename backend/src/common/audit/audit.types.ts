@@ -23,6 +23,8 @@ export interface AuditLogQuery {
   to?: Date;
   /** Modules hidden from the caller (operational scope). */
   excludeModules?: string[];
+  /** Restrict to these modules (e.g. an asset's own history). */
+  modules?: string[];
 }
 
 export interface AuditActorDto {

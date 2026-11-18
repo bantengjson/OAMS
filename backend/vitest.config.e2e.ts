@@ -14,6 +14,8 @@ export default defineConfig({
       NODE_ENV: 'test',
       JWT_ACCESS_SECRET: 'test-only-secret-that-is-at-least-32-chars-long',
       COOKIE_SECURE: 'false',
+      PUBLIC_BASE_URL: 'http://localhost:3000',
+      UPLOADS_DIR: './.test-uploads',
     },
   },
 });

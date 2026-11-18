@@ -54,9 +54,10 @@ export class AuditService {
   async list(q: AuditLogQuery): Promise<Paginated<AuditLogDto>> {
     const where: Prisma.AuditLogWhereInput = {};
     if (q.actorId) where.actorId = q.actorId;
-    if (q.module || q.excludeModules?.length) {
+    if (q.module || q.excludeModules?.length || q.modules?.length) {
       where.module = {
         ...(q.module ? { equals: q.module } : {}),
+        ...(q.modules?.length ? { in: q.modules } : {}),
         ...(q.excludeModules?.length ? { notIn: q.excludeModules } : {}),
       };
     }
