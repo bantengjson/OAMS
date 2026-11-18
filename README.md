@@ -67,6 +67,7 @@ npm run dev:frontend
 - Frontend: http://localhost:3000
 - API: http://localhost:4000/api/v1
 - Dokumentasi API (Swagger): http://localhost:4000/api/docs
+- Foto dan dokumen barang di lokal tersimpan di `backend/uploads/` (diabaikan git); `PUBLIC_BASE_URL` lokal adalah `http://localhost:3000`
 
 Login memakai **email atau username**. Akun Super Admin lokal dibuat oleh seed dari `backend/.env` (bawaan: username `admin`, password `12345678`; hanya untuk pengembangan). Lupa password akun mana pun di lokal maupun server:
 
@@ -98,6 +99,9 @@ npm run lint
 - Desain Tahap 1: [docs/superpowers/specs/2026-11-17-oams-tahap1-foundation-design.md](docs/superpowers/specs/2026-11-17-oams-tahap1-foundation-design.md)
 - Rencana Tahap 1: [docs/superpowers/plans/2026-11-17-oams-tahap1-foundation.md](docs/superpowers/plans/2026-11-17-oams-tahap1-foundation.md)
 - Dokumentasi hasil Tahap 1: [docs/tahap-1-foundation.md](docs/tahap-1-foundation.md)
+- Desain Tahap 2: [docs/superpowers/specs/2026-11-18-oams-tahap2-core-assets-design.md](docs/superpowers/specs/2026-11-18-oams-tahap2-core-assets-design.md)
+- Rencana Tahap 2: [docs/superpowers/plans/2026-11-18-oams-tahap2-core-assets.md](docs/superpowers/plans/2026-11-18-oams-tahap2-core-assets.md)
+- Dokumentasi hasil Tahap 2: [docs/tahap-2-core-assets.md](docs/tahap-2-core-assets.md)
 
 ## Deployment (server dengan Docker)
 
@@ -117,7 +121,7 @@ Internet / Jaringan Kantor -> nginx:443 -> frontend:3000 (/) dan backend:4000 (/
 cp .env.example .env
 ```
 
-   Wajib diisi: `POSTGRES_PASSWORD`, `JWT_ACCESS_SECRET` (minimal 32 karakter), `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`. Buat rahasia acak dengan perintah berikut. Gunakan format heksadesimal untuk `POSTGRES_PASSWORD` karena nilainya disisipkan ke dalam URL koneksi dan tidak boleh mengandung karakter seperti `/`, `@`, `+`, atau `=`:
+   Wajib diisi: `POSTGRES_PASSWORD`, `JWT_ACCESS_SECRET` (minimal 32 karakter), `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`, dan `PUBLIC_BASE_URL` (alamat yang dibuka pengguna, tanpa garis miring di akhir; alamat ini dimasukkan ke setiap QR Code, jadi tetapkan domain final sebelum mencetak stiker). Buat rahasia acak dengan perintah berikut. Gunakan format heksadesimal untuk `POSTGRES_PASSWORD` karena nilainya disisipkan ke dalam URL koneksi dan tidak boleh mengandung karakter seperti `/`, `@`, `+`, atau `=`:
 
 ```bash
 openssl rand -hex 32
@@ -157,6 +161,12 @@ docker compose down
 
 Container `backup` membuat dump setiap 24 jam ke folder `./backups` di server (format custom `pg_dump`, retensi 14 hari, atur lewat `BACKUP_RETENTION_DAYS`). Folder ini harus disalin rutin ke penyimpanan lain di luar server (rsync, rclone, atau NAS kantor) agar backup terpisah dari server utama.
 
+Foto dan dokumen barang (Tahap 2) tersimpan di volume Docker `uploads`, bukan di database, sehingga tidak ikut `pg_dump`. Salin juga folder itu secara rutin:
+
+```bash
+docker compose cp backend:/app/uploads ./backups/uploads
+```
+
 Membuat backup manual kapan saja:
 
 ```bash
@@ -195,3 +205,6 @@ Uji pemulihan secara berkala (disarankan setiap triwulan) pada database kosong, 
 - Nilai `API_URL` untuk rewrite `/api` di frontend dibakukan saat build image (`http://backend:4000`), sesuai nama service di Compose.
 - Mesin pengembangan tidak memiliki Docker, sehingga `docker compose config`/`up` belum pernah dijalankan dari repo ini. Jalankan pertama kali di server dan laporkan log bila ada kegagalan build.
 - Konfigurasi sensitif hanya lewat `.env` di server; file ini tidak pernah di-commit.
+- Pemindaian QR dengan kamera HP hanya berjalan di halaman HTTPS yang sertifikatnya dipercaya perangkat. Dengan sertifikat self-signed, gunakan input manual di halaman Scan QR atau alat pemindai barcode (yang mengetik hasilnya seperti keyboard).
+- Mengubah `PUBLIC_BASE_URL` setelah stiker dicetak membuat stiker lama mengarah ke alamat lama; cetak ulang atau siapkan pengalihan di Nginx dari alamat lama ke yang baru.
+- Cetak stiker: halaman Cetak QR memakai kertas A4 dengan margin 10 mm; di dialog cetak browser pilih skala 100% (bukan "sesuaikan halaman") dan matikan header/footer agar ukuran stiker 30 mm atau 40 mm tepat.
