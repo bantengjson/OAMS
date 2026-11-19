@@ -3,8 +3,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { Archive, ArchiveRestore, ArrowLeft, Pencil, Printer } from 'lucide-react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
-import { useState } from 'react';
+import { useParams, useSearchParams } from 'next/navigation';
+import { Suspense, useState } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -23,10 +23,24 @@ import { useAuth } from '@/lib/auth/use-auth';
 
 type TabKey = 'info' | 'photos' | 'documents' | 'qr' | 'history';
 
+const TAB_KEYS: readonly TabKey[] = ['info', 'photos', 'documents', 'qr', 'history'];
+
 export default function AssetDetailPage() {
+  return (
+    <Suspense fallback={<PageSpinner />}>
+      <AssetDetailContent />
+    </Suspense>
+  );
+}
+
+function AssetDetailContent() {
   const { id } = useParams<{ id: string }>();
   const { hasPermission } = useAuth();
-  const [tab, setTab] = useState<TabKey>('info');
+  const search = useSearchParams();
+  const requested = search.get('tab');
+  const [tab, setTab] = useState<TabKey>(
+    requested && (TAB_KEYS as readonly string[]).includes(requested) ? (requested as TabKey) : 'info',
+  );
   const [archiveOpen, setArchiveOpen] = useState(false);
   const asset = useQuery({ queryKey: ['assets', 'detail', id], queryFn: () => assetsApi.get(id) });
 

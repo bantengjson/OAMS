@@ -11,6 +11,10 @@ const ALL_PERMISSIONS = [
   'mutations.view',
   'mutations.request',
   'mutations.approve',
+  'loans.view',
+  'loans.manage',
+  'conditions.record',
+  'employees.manage',
   'stock_opnames.manage',
   'stock_opnames.execute',
   'maintenance.manage',
@@ -30,7 +34,15 @@ const ALL_PERMISSIONS = [
   'audit_logs.view_operational',
 ];
 
-const VIEWER = ['dashboard.view', 'assets.view', 'qr.scan', 'reports.view', 'master_data.view'];
+const VIEWER = [
+  'dashboard.view',
+  'assets.view',
+  'qr.scan',
+  'mutations.view',
+  'loans.view',
+  'reports.view',
+  'master_data.view',
+];
 
 const PETUGAS = [
   'dashboard.view',
@@ -38,6 +50,9 @@ const PETUGAS = [
   'qr.scan',
   'mutations.view',
   'mutations.request',
+  'loans.view',
+  'loans.manage',
+  'conditions.record',
   'stock_opnames.execute',
   'maintenance.report',
   'reports.view',
@@ -54,12 +69,12 @@ const hasAny = (held: string[]) => (codes: readonly string[]) =>
 const labels = (held: string[]) => visibleNavItems(NAV_ITEMS, hasAny(held)).map((i) => i.label);
 
 describe('visibleNavItems', () => {
-  it('shows a VIEWER the dashboard, inventory, scanner and profile', () => {
-    expect(labels(VIEWER)).toEqual(['Dashboard', 'Inventaris', 'Scan QR', 'Profil']);
+  it('shows a VIEWER the dashboard, inventory, scanner, mutations, loans and profile', () => {
+    expect(labels(VIEWER)).toEqual(['Dashboard', 'Inventaris', 'Scan QR', 'Mutasi', 'Peminjaman', 'Profil']);
   });
 
   it('shows a PETUGAS the same as a viewer (no printing, no master data)', () => {
-    expect(labels(PETUGAS)).toEqual(['Dashboard', 'Inventaris', 'Scan QR', 'Profil']);
+    expect(labels(PETUGAS)).toEqual(['Dashboard', 'Inventaris', 'Scan QR', 'Mutasi', 'Peminjaman', 'Profil']);
   });
 
   it('shows a SUPER_ADMIN every item, in menu order', () => {
@@ -68,11 +83,14 @@ describe('visibleNavItems', () => {
       'Inventaris',
       'Scan QR',
       'Cetak QR',
+      'Mutasi',
+      'Peminjaman',
       'Pengguna',
       'Role & Izin',
       'Kategori',
       'Lokasi',
       'Unit Kerja',
+      'Pegawai',
       'Audit Log',
       'Profil',
     ]);
@@ -84,10 +102,13 @@ describe('visibleNavItems', () => {
       'Inventaris',
       'Scan QR',
       'Cetak QR',
+      'Mutasi',
+      'Peminjaman',
       'Role & Izin',
       'Kategori',
       'Lokasi',
       'Unit Kerja',
+      'Pegawai',
       'Audit Log',
       'Profil',
     ]);

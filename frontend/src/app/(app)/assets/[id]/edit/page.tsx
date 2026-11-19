@@ -7,7 +7,7 @@ import { Alert } from '@/components/ui/alert';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageSpinner } from '@/components/ui/spinner';
 import { AssetForm } from '@/features/assets/asset-form';
-import { fromAssetDetail, toAssetPayload } from '@/features/assets/asset-form.schema';
+import { fromAssetDetail, toAssetUpdatePayload } from '@/features/assets/asset-form.schema';
 import { assetsApi } from '@/lib/api/assets';
 import { getErrorMessage } from '@/lib/api/form-errors';
 import { useAuth } from '@/lib/auth/use-auth';
@@ -44,12 +44,20 @@ export default function EditAssetPage() {
       <PageHeader title={`Ubah ${asset.data.assetCode}`} description={asset.data.name} />
       <AssetForm
         key={asset.data.updatedAt}
+        mode="edit"
         initial={fromAssetDetail(asset.data)}
-        initialResponsibleLabel={asset.data.responsibleUser?.fullName ?? null}
+        initialResponsibleLabel={asset.data.responsibleEmployee?.fullName ?? null}
+        locked={{
+          assetId: id,
+          locationPath: asset.data.location.path,
+          responsibleLabel: asset.data.responsibleEmployee?.fullName ?? null,
+          condition: asset.data.condition,
+          isBorrowed: asset.data.activeLoan !== null,
+        }}
         submitLabel="Simpan perubahan"
         onCancel={() => router.push(`/assets/${id}`)}
         onSubmit={async (values) => {
-          await assetsApi.update(id, toAssetPayload(values));
+          await assetsApi.update(id, toAssetUpdatePayload(values));
           void queryClient.invalidateQueries({ queryKey: ['assets'] });
           toast.success('Perubahan tersimpan.');
           router.push(`/assets/${id}`);

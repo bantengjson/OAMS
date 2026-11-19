@@ -1,4 +1,4 @@
-import { assetFormSchema, emptyAssetForm, toAssetPayload } from './asset-form.schema';
+import { assetFormSchema, emptyAssetForm, toAssetPayload, toAssetUpdatePayload } from './asset-form.schema';
 
 const valid = {
   ...emptyAssetForm,
@@ -42,7 +42,7 @@ describe('toAssetPayload', () => {
       purchasePrice: '1500000',
       acquisitionDate: '',
       departmentId: '',
-      responsibleUserId: '',
+      responsibleEmployeeId: '',
       notes: '',
     });
     expect(payload).toMatchObject({
@@ -52,7 +52,7 @@ describe('toAssetPayload', () => {
       purchasePrice: 1500000,
       acquisitionDate: null,
       departmentId: null,
-      responsibleUserId: null,
+      responsibleEmployeeId: null,
       notes: null,
     });
   });
@@ -61,5 +61,22 @@ describe('toAssetPayload', () => {
     const payload = toAssetPayload({ ...valid, purchasePrice: '250000.75', acquisitionDate: '2026-02-01' });
     expect(payload.purchasePrice).toBe(250000.75);
     expect(payload.acquisitionDate).toBe('2026-02-01');
+  });
+});
+
+describe('toAssetUpdatePayload', () => {
+  it('never sends the fields that only a mutation or a condition check may change', () => {
+    const payload = toAssetUpdatePayload({
+      ...valid,
+      locationId: '22222222-2222-4222-8222-222222222222',
+      responsibleEmployeeId: '33333333-3333-4333-8333-333333333333',
+      condition: 'MINOR_DAMAGE',
+      status: 'STORED',
+      notes: 'disimpan',
+    });
+    expect(payload).not.toHaveProperty('locationId');
+    expect(payload).not.toHaveProperty('responsibleEmployeeId');
+    expect(payload).not.toHaveProperty('condition');
+    expect(payload).toMatchObject({ status: 'STORED', notes: 'disimpan', name: 'Laptop Kerja' });
   });
 });

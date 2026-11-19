@@ -25,26 +25,46 @@ import {
   ASSET_STATUSES,
   OWNERSHIP_TYPES,
 } from '@/types/api';
+import Link from 'next/link';
+import { EmployeeLookup } from '@/features/employees/employee-lookup';
 import { assetFormSchema, emptyAssetForm } from './asset-form.schema';
 import type { AssetFormValues } from './asset-form.schema';
 import { LocationSelect } from './location-select';
-import { UserLookup } from './user-lookup';
+import { AssetConditionBadge } from './asset-table';
 
 const FIELDS = Object.keys(emptyAssetForm) as (keyof AssetFormValues)[];
+/** Statuses a person may set by hand; BORROWED/RETURNED belong to the loan flow. */
+const MANUAL_STATUSES = ASSET_STATUSES.filter((s) => s !== 'BORROWED' && s !== 'RETURNED');
+
+/** What the edit form shows read-only: these change only through a mutation or a condition check. */
+export interface LockedAssetFields {
+  assetId: string;
+  locationPath: string;
+  responsibleLabel: string | null;
+  condition: AssetFormValues['condition'];
+  /** An active loan: the status select is frozen until the asset comes back. */
+  isBorrowed: boolean;
+}
 
 export function AssetForm({
+  mode = 'create',
   initial = emptyAssetForm,
   initialResponsibleLabel = null,
+  locked,
   submitLabel,
   onSubmit,
   onCancel,
 }: {
+  mode?: 'create' | 'edit';
   initial?: AssetFormValues;
   initialResponsibleLabel?: string | null;
+  /** Required when `mode === 'edit'`. */
+  locked?: LockedAssetFields;
   submitLabel: string;
   onSubmit: (values: AssetFormValues) => Promise<void>;
   onCancel: () => void;
 }) {
+  const isEdit = mode === 'edit';
   const [formError, setFormError] = useState<string | null>(null);
   const [responsibleLabel, setResponsibleLabel] = useState<string | null>(initialResponsibleLabel);
   const form = useForm<AssetFormValues>({ resolver: zodResolver(assetFormSchema), defaultValues: initial });
@@ -163,11 +183,23 @@ export function AssetForm({
           <CardTitle>Penempatan</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
-          <Field className="md:col-span-2">
-            <Label htmlFor="locationId" required>Lokasi</Label>
-            <LocationSelect id="locationId" aria-invalid={Boolean(errors.locationId)} {...form.register('locationId')} />
-            <FieldError>{errors.locationId?.message}</FieldError>
-          </Field>
+          {isEdit && locked ? (
+            <Field className="md:col-span-2">
+              <Label>Lokasi</Label>
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-dashed border-border bg-muted/40 px-3 py-2 text-sm">
+                <span>{locked.locationPath}</span>
+                <Link href={`/mutations/new?assetId=${locked.assetId}`} className="text-primary hover:underline">
+                  Ubah lewat mutasi
+                </Link>
+              </div>
+            </Field>
+          ) : (
+            <Field className="md:col-span-2">
+              <Label htmlFor="locationId" required>Lokasi</Label>
+              <LocationSelect id="locationId" aria-invalid={Boolean(errors.locationId)} {...form.register('locationId')} />
+              <FieldError>{errors.locationId?.message}</FieldError>
+            </Field>
+          )}
           <Field>
             <Label htmlFor="departmentId">Unit kerja</Label>
             <Select id="departmentId" {...form.register('departmentId')}>
@@ -178,26 +210,40 @@ export function AssetForm({
             </Select>
             <FieldError>{errors.departmentId?.message}</FieldError>
           </Field>
-          <Field>
-            <Label htmlFor="responsibleUserId">Penanggung jawab</Label>
-            <Controller
-              control={form.control}
-              name="responsibleUserId"
-              render={({ field }) => (
-                <UserLookup
-                  id="responsibleUserId"
-                  value={field.value}
-                  label={responsibleLabel}
-                  invalid={Boolean(errors.responsibleUserId)}
-                  onChange={(id, label) => {
-                    field.onChange(id);
-                    setResponsibleLabel(label);
-                  }}
-                />
-              )}
-            />
-            <FieldError>{errors.responsibleUserId?.message}</FieldError>
-          </Field>
+          {isEdit && locked ? (
+            <Field>
+              <Label>Penanggung jawab</Label>
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-dashed border-border bg-muted/40 px-3 py-2 text-sm">
+                <span>{locked.responsibleLabel ?? '-'}</span>
+                <Link href={`/mutations/new?assetId=${locked.assetId}`} className="text-primary hover:underline">
+                  Ubah lewat mutasi
+                </Link>
+              </div>
+            </Field>
+          ) : (
+            <Field>
+              <Label htmlFor="responsibleEmployeeId">Penanggung jawab</Label>
+              <Controller
+                control={form.control}
+                name="responsibleEmployeeId"
+                render={({ field }) => (
+                  <EmployeeLookup
+                    id="responsibleEmployeeId"
+                    value={field.value}
+                    label={responsibleLabel}
+                    invalid={Boolean(errors.responsibleEmployeeId)}
+                    clearLabel="Hapus penanggung jawab"
+                    onChange={(id, label) => {
+                      field.onChange(id);
+                      setResponsibleLabel(label);
+                    }}
+                  />
+                )}
+              />
+              <FieldHint>Dipilih dari daftar pegawai. Setelah tersimpan, pergantian dilakukan lewat mutasi.</FieldHint>
+              <FieldError>{errors.responsibleEmployeeId?.message}</FieldError>
+            </Field>
+          )}
         </CardContent>
       </Card>
 
@@ -206,21 +252,40 @@ export function AssetForm({
           <CardTitle>Kondisi, status, dan catatan</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
-          <Field>
-            <Label htmlFor="condition" required>Kondisi</Label>
-            <Select id="condition" {...form.register('condition')}>
-              {ASSET_CONDITIONS.map((v) => (
-                <option key={v} value={v}>{CONDITION_LABEL[v]}</option>
-              ))}
-            </Select>
-          </Field>
+          {isEdit && locked ? (
+            <Field>
+              <Label>Kondisi</Label>
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-dashed border-border bg-muted/40 px-3 py-2 text-sm">
+                <AssetConditionBadge condition={locked.condition} />
+                <Link href={`/assets/${locked.assetId}?tab=conditions`} className="text-primary hover:underline">
+                  Catat pemeriksaan
+                </Link>
+              </div>
+            </Field>
+          ) : (
+            <Field>
+              <Label htmlFor="condition" required>Kondisi</Label>
+              <Select id="condition" {...form.register('condition')}>
+                {ASSET_CONDITIONS.map((v) => (
+                  <option key={v} value={v}>{CONDITION_LABEL[v]}</option>
+                ))}
+              </Select>
+              {!isEdit ? <FieldHint>Tercatat sebagai pemeriksaan kondisi awal.</FieldHint> : null}
+            </Field>
+          )}
           <Field>
             <Label htmlFor="status" required>Status operasional</Label>
-            <Select id="status" {...form.register('status')}>
-              {ASSET_STATUSES.map((v) => (
+            <Select id="status" disabled={Boolean(locked?.isBorrowed)} {...form.register('status')}>
+              {locked?.isBorrowed ? <option value="BORROWED">{STATUS_LABEL.BORROWED}</option> : null}
+              {MANUAL_STATUSES.map((v) => (
                 <option key={v} value={v}>{STATUS_LABEL[v]}</option>
               ))}
             </Select>
+            {locked?.isBorrowed ? (
+              <FieldHint>Barang sedang dipinjam; status kembali otomatis saat pengembalian dicatat.</FieldHint>
+            ) : (
+              <FieldHint>Status Dipinjam diatur oleh pencatatan peminjaman.</FieldHint>
+            )}
           </Field>
           <Field className="md:col-span-2">
             <Label htmlFor="notes">Catatan internal</Label>

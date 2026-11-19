@@ -8,6 +8,8 @@ import type {
   AssetPhoto,
   AssetStatistics,
   AssetStatus,
+  Assignment,
+  ConditionLog,
   OwnershipType,
   PageQuery,
   Paginated,
@@ -19,7 +21,7 @@ export interface AssetQuery extends PageQuery {
   categoryId?: string;
   locationId?: string;
   departmentId?: string;
-  responsibleUserId?: string;
+  responsibleEmployeeId?: string;
   condition?: AssetCondition;
   status?: AssetStatus;
   ownershipType?: OwnershipType;
@@ -44,8 +46,17 @@ export interface AssetInput {
   purchasePrice?: number | null;
   vendor?: string | null;
   departmentId?: string | null;
-  responsibleUserId?: string | null;
+  responsibleEmployeeId?: string | null;
   notes?: string | null;
+}
+
+/** Editable fields: location, responsible and condition change only via mutation / condition check. */
+export type AssetUpdateInput = Partial<Omit<AssetInput, 'locationId' | 'responsibleEmployeeId' | 'condition'>>;
+
+export interface ConditionLogInput {
+  condition: AssetCondition;
+  notes?: string | null;
+  checkedAt?: string | null;
 }
 
 export const assetsApi = {
@@ -53,17 +64,24 @@ export const assetsApi = {
   statistics: () => api.get<AssetStatistics>('/assets/statistics'),
   get: (id: string) => api.get<AssetDetail>(`/assets/${id}`),
   create: (input: AssetInput) => api.post<AssetDetail>('/assets', input),
-  update: (id: string, input: Partial<AssetInput>) => api.patch<AssetDetail>(`/assets/${id}`, input),
+  update: (id: string, input: AssetUpdateInput) => api.patch<AssetDetail>(`/assets/${id}`, input),
   archive: (id: string, reason?: string) =>
     api.post<AssetDetail>(`/assets/${id}/archive`, reason ? { reason } : {}),
   unarchive: (id: string) => api.post<AssetDetail>(`/assets/${id}/unarchive`),
   history: (id: string, query: PageQuery = {}) =>
     api.get<Paginated<AssetHistoryEntry>>(`/assets/${id}/history`, { query }),
+  conditionLogs: (id: string, query: PageQuery = {}) =>
+    api.get<Paginated<ConditionLog>>(`/assets/${id}/condition-logs`, { query }),
+  createConditionLog: (id: string, input: ConditionLogInput) =>
+    api.post<ConditionLog>(`/assets/${id}/condition-logs`, input),
+  assignments: (id: string, query: PageQuery = {}) =>
+    api.get<Paginated<Assignment>>(`/assets/${id}/assignments`, { query }),
 
-  uploadPhoto: (id: string, file: File, caption?: string) => {
+  uploadPhoto: (id: string, file: File, caption?: string, conditionLogId?: string) => {
     const form = new FormData();
     form.append('file', file);
     if (caption) form.append('caption', caption);
+    if (conditionLogId) form.append('conditionLogId', conditionLogId);
     return apiUpload<AssetPhoto>(`/assets/${id}/photos`, form);
   },
   setPrimaryPhoto: (id: string, photoId: string) =>

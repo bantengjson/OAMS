@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { AssetInput } from '@/lib/api/assets';
+import type { AssetInput, AssetUpdateInput } from '@/lib/api/assets';
 import {
   ACQUISITION_METHODS,
   ASSET_CONDITIONS,
@@ -36,7 +36,7 @@ export const assetFormSchema = z.object({
       'Harga berupa angka tanpa pemisah ribuan, mis. 1500000',
     ),
   departmentId: z.string(),
-  responsibleUserId: z.string(),
+  responsibleEmployeeId: z.string(),
 });
 
 export type AssetFormValues = z.infer<typeof assetFormSchema>;
@@ -58,7 +58,7 @@ export const emptyAssetForm: AssetFormValues = {
   acquisitionDate: '',
   purchasePrice: '',
   departmentId: '',
-  responsibleUserId: '',
+  responsibleEmployeeId: '',
 };
 
 const textOrNull = (v: string | undefined): string | null => {
@@ -85,8 +85,17 @@ export function toAssetPayload(values: AssetFormValues): AssetInput {
     acquisitionDate: textOrNull(values.acquisitionDate),
     purchasePrice: price ? Number(price) : null,
     departmentId: textOrNull(values.departmentId),
-    responsibleUserId: textOrNull(values.responsibleUserId),
+    responsibleEmployeeId: textOrNull(values.responsibleEmployeeId),
   };
+}
+
+/** Edit payload: the locked fields (location, responsible, condition) are never sent. */
+export function toAssetUpdatePayload(values: AssetFormValues): AssetUpdateInput {
+  const payload: Partial<AssetInput> = toAssetPayload(values);
+  delete payload.locationId;
+  delete payload.responsibleEmployeeId;
+  delete payload.condition;
+  return payload;
 }
 
 export function fromAssetDetail(asset: AssetDetail): AssetFormValues {
@@ -107,6 +116,6 @@ export function fromAssetDetail(asset: AssetDetail): AssetFormValues {
     acquisitionDate: asset.acquisitionDate ?? '',
     purchasePrice: asset.purchasePrice ? String(Number(asset.purchasePrice)) : '',
     departmentId: asset.department?.id ?? '',
-    responsibleUserId: asset.responsibleUser?.id ?? '',
+    responsibleEmployeeId: asset.responsibleEmployee?.id ?? '',
   };
 }

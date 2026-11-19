@@ -179,6 +179,12 @@ export interface AssetUserRef {
   fullName: string;
 }
 
+export interface AssetEmployeeRef {
+  id: string;
+  fullName: string;
+  department: { id: string; name: string } | null;
+}
+
 export interface AssetPhoto {
   id: string;
   isPrimary: boolean;
@@ -187,6 +193,8 @@ export interface AssetPhoto {
   height: number | null;
   sizeBytes: number;
   createdAt: string;
+  /** Set when the photo documents a condition check. */
+  conditionLogId: string | null;
   urls: { full: string; thumb: string };
 }
 
@@ -216,7 +224,7 @@ export interface AssetListItem {
   category: AssetRef;
   location: AssetLocationRef;
   department: AssetRef | null;
-  responsibleUser: AssetUserRef | null;
+  responsibleEmployee: AssetEmployeeRef | null;
   brand: string | null;
   model: string | null;
   condition: AssetCondition;
@@ -243,6 +251,25 @@ export interface AssetDetail extends AssetListItem {
   photos: AssetPhoto[];
   documents: AssetDocument[];
   label: AssetLabel | null;
+  activeLoan: AssetActiveLoan | null;
+  pendingMutation: AssetPendingMutation | null;
+}
+
+export interface AssetActiveLoan {
+  id: string;
+  borrowerName: string;
+  loanedAt: string;
+  dueAt: string;
+  isOverdue: boolean;
+}
+
+export interface AssetPendingMutation {
+  id: string;
+  requestedAt: string;
+  requestedBy: AssetUserRef;
+  toLocation: { id: string; name: string; path: string } | null;
+  changesResponsible: boolean;
+  toResponsibleEmployee: { id: string; fullName: string } | null;
 }
 
 export interface CountByRef {
@@ -259,6 +286,9 @@ export interface AssetStatistics {
   byCondition: Record<AssetCondition, number>;
   byCategory: CountByRef[];
   byOffice: CountByRef[];
+  pendingMutations: number;
+  activeLoans: number;
+  overdueLoans: number;
 }
 
 export interface PublicAsset {
@@ -310,3 +340,117 @@ export const ROLE_LABEL: Record<string, string> = {
   PETUGAS_INVENTARIS: 'Petugas Inventaris',
   VIEWER: 'Viewer',
 };
+
+// ---------------------------------------------------------------- Tahap 3
+
+export interface Employee {
+  id: string;
+  employeeNumber: string | null;
+  fullName: string;
+  department: { id: string; code: string; name: string } | null;
+  position: string | null;
+  phone: string | null;
+  email: string | null;
+  user: { id: string; fullName: string; email: string } | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EmployeeDetail extends Employee {
+  assetCount: number;
+  activeLoanCount: number;
+}
+
+export interface EmployeeLookup {
+  id: string;
+  fullName: string;
+  employeeNumber: string | null;
+  department: { id: string; name: string } | null;
+}
+
+export const MUTATION_STATUSES = ['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'] as const;
+export type MutationStatus = (typeof MUTATION_STATUSES)[number];
+
+export interface MutationLocationRef {
+  id: string;
+  name: string;
+  path: string;
+}
+
+export interface Mutation {
+  id: string;
+  status: MutationStatus;
+  asset: { id: string; assetCode: string; name: string };
+  fromLocation: MutationLocationRef;
+  toLocation: MutationLocationRef | null;
+  changesResponsible: boolean;
+  fromResponsibleEmployee: { id: string; fullName: string } | null;
+  toResponsibleEmployee: { id: string; fullName: string } | null;
+  reason: string;
+  requestedBy: AssetUserRef;
+  requestedAt: string;
+  decidedBy: AssetUserRef | null;
+  decidedAt: string | null;
+  decisionNote: string | null;
+  cancelledAt: string | null;
+  createdAt: string;
+}
+
+export const LOAN_STATES = ['active', 'overdue', 'returned', 'all'] as const;
+export type LoanState = (typeof LOAN_STATES)[number];
+export type LoanStatus = 'ACTIVE' | 'RETURNED';
+export const BORROWER_TYPES = ['EMPLOYEE', 'EXTERNAL'] as const;
+export type BorrowerType = (typeof BORROWER_TYPES)[number];
+
+export interface Loan {
+  id: string;
+  status: LoanStatus;
+  asset: { id: string; assetCode: string; name: string };
+  borrowerType: BorrowerType;
+  borrowerEmployee: { id: string; fullName: string } | null;
+  borrowerName: string;
+  borrowerDepartment: { id: string; name: string } | null;
+  borrowerContact: string | null;
+  guarantorEmployee: { id: string; fullName: string } | null;
+  purpose: string | null;
+  loanedAt: string;
+  dueAt: string;
+  returnedAt: string | null;
+  returnCondition: AssetCondition | null;
+  returnNotes: string | null;
+  previousStatus: AssetStatus;
+  isOverdue: boolean;
+  overdueDays: number;
+  recordedBy: AssetUserRef;
+  returnedBy: AssetUserRef | null;
+  createdAt: string;
+}
+
+export type ConditionSource = 'CREATE' | 'MANUAL' | 'LOAN_RETURN';
+
+export interface ConditionLog {
+  id: string;
+  condition: AssetCondition;
+  previousCondition: AssetCondition | null;
+  notes: string | null;
+  checkedAt: string;
+  source: ConditionSource;
+  loanId: string | null;
+  checkedBy: AssetUserRef;
+  photos: AssetPhoto[];
+  createdAt: string;
+}
+
+export type AssignmentSource = 'CREATE' | 'MUTATION';
+
+export interface Assignment {
+  id: string;
+  fromEmployee: { id: string; fullName: string } | null;
+  toEmployee: { id: string; fullName: string } | null;
+  source: AssignmentSource;
+  mutationId: string | null;
+  note: string | null;
+  changedBy: AssetUserRef;
+  createdAt: string;
+}

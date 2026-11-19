@@ -56,7 +56,7 @@ export function AssetTable({ rows, loading }: { rows: AssetListItem[]; loading: 
               </TD>
               <TD><AssetStatusBadge status={a.status} /></TD>
               <TD className="hidden xl:table-cell"><AssetConditionBadge condition={a.condition} /></TD>
-              <TD className="hidden text-muted-foreground xl:table-cell">{a.responsibleUser?.fullName ?? '-'}</TD>
+              <TD className="hidden text-muted-foreground xl:table-cell">{a.responsibleEmployee?.fullName ?? '-'}</TD>
             </TR>
           ))
         )}

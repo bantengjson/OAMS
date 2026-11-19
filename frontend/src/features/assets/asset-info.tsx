@@ -1,8 +1,10 @@
 'use client';
 
+import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ACQUISITION_LABEL, formatRupiah, OWNERSHIP_LABEL } from '@/lib/asset-labels';
+import { useAuth } from '@/lib/auth/use-auth';
 import { formatDate, formatDateTime } from '@/lib/utils';
 import type { AssetDetail } from '@/types/api';
 import { AssetConditionBadge, AssetStatusBadge } from './asset-table';
@@ -19,6 +21,8 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 const dash = (v: string | null | undefined) => (v && v.trim() ? v : '-');
 
 export function AssetInfo({ asset }: { asset: AssetDetail }) {
+  const { hasPermission } = useAuth();
+  const canEmployees = hasPermission('employees.manage');
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <Card>
@@ -44,7 +48,24 @@ export function AssetInfo({ asset }: { asset: AssetDetail }) {
             <Row label="Kondisi"><AssetConditionBadge condition={asset.condition} /></Row>
             <Row label="Lokasi">{asset.location.path}</Row>
             <Row label="Unit kerja">{asset.department ? `${asset.department.name} (${asset.department.code})` : '-'}</Row>
-            <Row label="Penanggung jawab">{asset.responsibleUser?.fullName ?? '-'}</Row>
+            <Row label="Penanggung jawab">
+              {asset.responsibleEmployee ? (
+                <>
+                  {canEmployees ? (
+                    <Link href={`/employees/${asset.responsibleEmployee.id}`} className="text-primary hover:underline">
+                      {asset.responsibleEmployee.fullName}
+                    </Link>
+                  ) : (
+                    asset.responsibleEmployee.fullName
+                  )}
+                  {asset.responsibleEmployee.department ? (
+                    <span className="text-muted-foreground"> · {asset.responsibleEmployee.department.name}</span>
+                  ) : null}
+                </>
+              ) : (
+                '-'
+              )}
+            </Row>
             <Row label="Catatan internal">{dash(asset.notes)}</Row>
           </dl>
         </CardContent>
