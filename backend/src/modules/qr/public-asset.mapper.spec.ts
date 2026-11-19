@@ -14,7 +14,7 @@ const source = {
   notes: 'catatan internal',
   category: { id: 'c1', code: 'ELEKTRONIK', name: 'Elektronik' },
   location: { id: 'l1', code: 'R1', name: 'Ruang 201', path: 'Kantor / Gedung A / Lantai 2 / Ruang 201' },
-  responsibleUser: { id: 'u1', fullName: 'Budi' },
+  responsibleEmployee: { id: 'e1', fullName: 'Budi', department: null },
   photos: [{ id: 'p1' }],
 };
 

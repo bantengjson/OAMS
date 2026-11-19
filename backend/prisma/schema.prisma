@@ -36,11 +36,17 @@ model User {
   refreshTokens RefreshToken[]
   auditLogs     AuditLog[]     @relation("AuditActor")
 
-  responsibleAssets Asset[]         @relation("AssetResponsible")
-  createdAssets     Asset[]         @relation("AssetCreatedBy")
-  archivedAssets    Asset[]         @relation("AssetArchivedBy")
-  uploadedPhotos    AssetPhoto[]
-  uploadedDocuments AssetDocument[]
+  employee           Employee?
+  createdAssets      Asset[]             @relation("AssetCreatedBy")
+  assignmentsMade    AssetAssignment[]
+  conditionChecks    AssetConditionLog[]
+  mutationsRequested AssetMutation[]     @relation("MutationRequestedBy")
+  mutationsDecided   AssetMutation[]     @relation("MutationDecidedBy")
+  loansRecorded      AssetLoan[]         @relation("LoanRecordedBy")
+  loansReturned      AssetLoan[]         @relation("LoanReturnedBy")
+  archivedAssets     Asset[]             @relation("AssetArchivedBy")
+  uploadedPhotos     AssetPhoto[]
+  uploadedDocuments  AssetDocument[]
 
   @@index([departmentId])
   @@map("users")
@@ -108,8 +114,10 @@ model Department {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  users  User[]
-  assets Asset[]
+  users         User[]
+  assets        Asset[]
+  employees     Employee[]
+  loanBorrowers AssetLoan[]
 
   @@map("departments")
 }
@@ -146,9 +154,11 @@ model Location {
   createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  parent   Location?  @relation("LocationTree", fields: [parentId], references: [id])
-  children Location[] @relation("LocationTree")
-  assets   Asset[]
+  parent        Location?       @relation("LocationTree", fields: [parentId], references: [id])
+  children      Location[]      @relation("LocationTree")
+  assets        Asset[]
+  mutationsFrom AssetMutation[] @relation("MutationFrom")
+  mutationsTo   AssetMutation[] @relation("MutationTo")
 
   @@index([parentId])
   @@index([type])
@@ -240,46 +250,50 @@ enum AssetStatus {
 }
 
 model Asset {
-  id                String            @id @default(uuid()) @db.Uuid
-  assetCode         String            @unique @map("asset_code") @db.VarChar(30)
-  name              String            @db.VarChar(200)
-  categoryId        String            @map("category_id") @db.Uuid
-  brand             String?           @db.VarChar(100)
-  model             String?           @db.VarChar(100)
-  serialNumber      String?           @map("serial_number") @db.VarChar(100)
-  description       String?
-  ownershipType     OwnershipType     @map("ownership_type")
-  acquisitionMethod AcquisitionMethod @map("acquisition_method")
-  acquisitionDate   DateTime?         @map("acquisition_date") @db.Date
-  purchasePrice     Decimal?          @map("purchase_price") @db.Decimal(15, 2)
-  vendor            String?           @db.VarChar(150)
-  locationId        String            @map("location_id") @db.Uuid
-  departmentId      String?           @map("department_id") @db.Uuid
-  condition         AssetCondition
-  status            AssetStatus
-  responsibleUserId String?           @map("responsible_user_id") @db.Uuid
-  notes             String?
-  archivedAt        DateTime?         @map("archived_at") @db.Timestamptz(6)
-  archivedById      String?           @map("archived_by_id") @db.Uuid
-  archiveReason     String?           @map("archive_reason")
-  createdById       String?           @map("created_by_id") @db.Uuid
-  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                    String            @id @default(uuid()) @db.Uuid
+  assetCode             String            @unique @map("asset_code") @db.VarChar(30)
+  name                  String            @db.VarChar(200)
+  categoryId            String            @map("category_id") @db.Uuid
+  brand                 String?           @db.VarChar(100)
+  model                 String?           @db.VarChar(100)
+  serialNumber          String?           @map("serial_number") @db.VarChar(100)
+  description           String?
+  ownershipType         OwnershipType     @map("ownership_type")
+  acquisitionMethod     AcquisitionMethod @map("acquisition_method")
+  acquisitionDate       DateTime?         @map("acquisition_date") @db.Date
+  purchasePrice         Decimal?          @map("purchase_price") @db.Decimal(15, 2)
+  vendor                String?           @db.VarChar(150)
+  locationId            String            @map("location_id") @db.Uuid
+  departmentId          String?           @map("department_id") @db.Uuid
+  condition             AssetCondition
+  status                AssetStatus
+  responsibleEmployeeId String?           @map("responsible_employee_id") @db.Uuid
+  notes                 String?
+  archivedAt            DateTime?         @map("archived_at") @db.Timestamptz(6)
+  archivedById          String?           @map("archived_by_id") @db.Uuid
+  archiveReason         String?           @map("archive_reason")
+  createdById           String?           @map("created_by_id") @db.Uuid
+  createdAt             DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  category        Category        @relation(fields: [categoryId], references: [id])
-  location        Location        @relation(fields: [locationId], references: [id])
-  department      Department?     @relation(fields: [departmentId], references: [id])
-  responsibleUser User?           @relation("AssetResponsible", fields: [responsibleUserId], references: [id])
-  createdBy       User?           @relation("AssetCreatedBy", fields: [createdById], references: [id])
-  archivedBy      User?           @relation("AssetArchivedBy", fields: [archivedById], references: [id])
-  label           AssetLabel?
-  photos          AssetPhoto[]
-  documents       AssetDocument[]
+  category            Category            @relation(fields: [categoryId], references: [id])
+  location            Location            @relation(fields: [locationId], references: [id])
+  department          Department?         @relation(fields: [departmentId], references: [id])
+  responsibleEmployee Employee?           @relation("AssetResponsible", fields: [responsibleEmployeeId], references: [id])
+  createdBy           User?               @relation("AssetCreatedBy", fields: [createdById], references: [id])
+  archivedBy          User?               @relation("AssetArchivedBy", fields: [archivedById], references: [id])
+  label               AssetLabel?
+  photos              AssetPhoto[]
+  documents           AssetDocument[]
+  assignments         AssetAssignment[]
+  mutations           AssetMutation[]
+  loans               AssetLoan[]
+  conditionLogs       AssetConditionLog[]
 
   @@index([categoryId])
   @@index([locationId])
   @@index([departmentId])
-  @@index([responsibleUserId])
+  @@index([responsibleEmployeeId])
   @@index([status])
   @@index([condition])
   @@index([archivedAt])
@@ -311,23 +325,26 @@ model AssetLabel {
 }
 
 model AssetPhoto {
-  id           String   @id @default(uuid()) @db.Uuid
-  assetId      String   @map("asset_id") @db.Uuid
-  fileName     String   @map("file_name") @db.VarChar(255)
-  originalName String   @map("original_name") @db.VarChar(255)
-  mimeType     String   @map("mime_type") @db.VarChar(100)
-  sizeBytes    Int      @map("size_bytes")
-  width        Int?
-  height       Int?
-  isPrimary    Boolean  @default(false) @map("is_primary")
-  caption      String?  @db.VarChar(255)
-  uploadedById String?  @map("uploaded_by_id") @db.Uuid
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  id             String   @id @default(uuid()) @db.Uuid
+  assetId        String   @map("asset_id") @db.Uuid
+  fileName       String   @map("file_name") @db.VarChar(255)
+  originalName   String   @map("original_name") @db.VarChar(255)
+  mimeType       String   @map("mime_type") @db.VarChar(100)
+  sizeBytes      Int      @map("size_bytes")
+  width          Int?
+  height         Int?
+  isPrimary      Boolean  @default(false) @map("is_primary")
+  caption        String?  @db.VarChar(255)
+  uploadedById   String?  @map("uploaded_by_id") @db.Uuid
+  conditionLogId String?  @map("condition_log_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  asset      Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
-  uploadedBy User? @relation(fields: [uploadedById], references: [id])
+  asset        Asset              @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  uploadedBy   User?              @relation(fields: [uploadedById], references: [id])
+  conditionLog AssetConditionLog? @relation(fields: [conditionLogId], references: [id], onDelete: SetNull)
 
   @@index([assetId])
+  @@index([conditionLogId])
   @@map("asset_photos")
 }
 
@@ -347,4 +364,185 @@ model AssetDocument {
 
   @@index([assetId])
   @@map("asset_documents")
+}
+
+// ---------------------------------------------------------------------------
+// Tahap 3: pegawai, penanggung jawab, mutasi, peminjaman, kondisi
+// ---------------------------------------------------------------------------
+
+enum MutationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum LoanStatus {
+  ACTIVE
+  RETURNED
+}
+
+enum BorrowerType {
+  EMPLOYEE
+  EXTERNAL
+}
+
+enum AssignmentSource {
+  CREATE
+  MUTATION
+}
+
+enum ConditionSource {
+  CREATE
+  MANUAL
+  LOAN_RETURN
+}
+
+/// Daftar pegawai (data master), terpisah dari akun login.
+model Employee {
+  id             String   @id @default(uuid()) @db.Uuid
+  employeeNumber String?  @unique @map("employee_number") @db.VarChar(30)
+  fullName       String   @map("full_name") @db.VarChar(150)
+  departmentId   String?  @map("department_id") @db.Uuid
+  position       String?  @db.VarChar(100)
+  phone          String?  @db.VarChar(30)
+  email          String?  @db.VarChar(255)
+  userId         String?  @unique @map("user_id") @db.Uuid
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  department Department? @relation(fields: [departmentId], references: [id])
+  user       User?       @relation(fields: [userId], references: [id])
+
+  responsibleAssets Asset[]           @relation("AssetResponsible")
+  assignmentsFrom   AssetAssignment[] @relation("AssignmentFrom")
+  assignmentsTo     AssetAssignment[] @relation("AssignmentTo")
+  mutationsFrom     AssetMutation[]   @relation("MutationResponsibleFrom")
+  mutationsTo       AssetMutation[]   @relation("MutationResponsibleTo")
+  loansBorrowed     AssetLoan[]       @relation("LoanBorrower")
+  loansGuaranteed   AssetLoan[]       @relation("LoanGuarantor")
+
+  @@index([fullName])
+  @@index([departmentId])
+  @@index([isActive])
+  @@map("employees")
+}
+
+/// Riwayat pergantian penanggung jawab.
+model AssetAssignment {
+  id             String           @id @default(uuid()) @db.Uuid
+  assetId        String           @map("asset_id") @db.Uuid
+  fromEmployeeId String?          @map("from_employee_id") @db.Uuid
+  toEmployeeId   String?          @map("to_employee_id") @db.Uuid
+  source         AssignmentSource
+  mutationId     String?          @map("mutation_id") @db.Uuid
+  note           String?
+  changedById    String           @map("changed_by_id") @db.Uuid
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  asset        Asset          @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  fromEmployee Employee?      @relation("AssignmentFrom", fields: [fromEmployeeId], references: [id])
+  toEmployee   Employee?      @relation("AssignmentTo", fields: [toEmployeeId], references: [id])
+  mutation     AssetMutation? @relation(fields: [mutationId], references: [id])
+  changedBy    User           @relation(fields: [changedById], references: [id])
+
+  @@index([assetId, createdAt])
+  @@index([toEmployeeId])
+  @@map("asset_assignments")
+}
+
+/// Pengajuan mutasi lokasi dan/atau penanggung jawab. Satu PENDING per barang
+/// (indeks unik parsial dibuat lewat SQL migrasi).
+model AssetMutation {
+  id                        String         @id @default(uuid()) @db.Uuid
+  assetId                   String         @map("asset_id") @db.Uuid
+  status                    MutationStatus @default(PENDING)
+  fromLocationId            String         @map("from_location_id") @db.Uuid
+  toLocationId              String?        @map("to_location_id") @db.Uuid
+  changesResponsible        Boolean        @default(false) @map("changes_responsible")
+  fromResponsibleEmployeeId String?        @map("from_responsible_employee_id") @db.Uuid
+  toResponsibleEmployeeId   String?        @map("to_responsible_employee_id") @db.Uuid
+  reason                    String
+  requestedById             String         @map("requested_by_id") @db.Uuid
+  requestedAt               DateTime       @default(now()) @map("requested_at") @db.Timestamptz(6)
+  decidedById               String?        @map("decided_by_id") @db.Uuid
+  decidedAt                 DateTime?      @map("decided_at") @db.Timestamptz(6)
+  decisionNote              String?        @map("decision_note")
+  cancelledAt               DateTime?      @map("cancelled_at") @db.Timestamptz(6)
+  createdAt                 DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                 DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  asset                   Asset             @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  fromLocation            Location          @relation("MutationFrom", fields: [fromLocationId], references: [id])
+  toLocation              Location?         @relation("MutationTo", fields: [toLocationId], references: [id])
+  fromResponsibleEmployee Employee?         @relation("MutationResponsibleFrom", fields: [fromResponsibleEmployeeId], references: [id])
+  toResponsibleEmployee   Employee?         @relation("MutationResponsibleTo", fields: [toResponsibleEmployeeId], references: [id])
+  requestedBy             User              @relation("MutationRequestedBy", fields: [requestedById], references: [id])
+  decidedBy               User?             @relation("MutationDecidedBy", fields: [decidedById], references: [id])
+  assignments             AssetAssignment[]
+
+  @@index([assetId])
+  @@index([status, requestedAt])
+  @@index([requestedById])
+  @@map("asset_mutations")
+}
+
+/// Peminjaman barang kantor keluar. Satu ACTIVE per barang (indeks unik parsial).
+model AssetLoan {
+  id                   String          @id @default(uuid()) @db.Uuid
+  assetId              String          @map("asset_id") @db.Uuid
+  status               LoanStatus      @default(ACTIVE)
+  borrowerType         BorrowerType    @map("borrower_type")
+  borrowerEmployeeId   String?         @map("borrower_employee_id") @db.Uuid
+  borrowerName         String          @map("borrower_name") @db.VarChar(150)
+  borrowerDepartmentId String?         @map("borrower_department_id") @db.Uuid
+  borrowerContact      String?         @map("borrower_contact") @db.VarChar(100)
+  guarantorEmployeeId  String?         @map("guarantor_employee_id") @db.Uuid
+  purpose              String?
+  loanedAt             DateTime        @map("loaned_at") @db.Date
+  dueAt                DateTime        @map("due_at") @db.Date
+  returnedAt           DateTime?       @map("returned_at") @db.Timestamptz(6)
+  returnCondition      AssetCondition? @map("return_condition")
+  returnNotes          String?         @map("return_notes")
+  previousStatus       AssetStatus     @map("previous_status")
+  recordedById         String          @map("recorded_by_id") @db.Uuid
+  returnedById         String?         @map("returned_by_id") @db.Uuid
+  createdAt            DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  asset              Asset               @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  borrowerEmployee   Employee?           @relation("LoanBorrower", fields: [borrowerEmployeeId], references: [id])
+  borrowerDepartment Department?         @relation(fields: [borrowerDepartmentId], references: [id])
+  guarantorEmployee  Employee?           @relation("LoanGuarantor", fields: [guarantorEmployeeId], references: [id])
+  recordedBy         User                @relation("LoanRecordedBy", fields: [recordedById], references: [id])
+  returnedBy         User?               @relation("LoanReturnedBy", fields: [returnedById], references: [id])
+  conditionLogs      AssetConditionLog[]
+
+  @@index([assetId])
+  @@index([status, dueAt])
+  @@index([borrowerEmployeeId])
+  @@map("asset_loans")
+}
+
+/// Riwayat pemeriksaan kondisi; kondisi barang mengikuti baris terakhir.
+model AssetConditionLog {
+  id                String          @id @default(uuid()) @db.Uuid
+  assetId           String          @map("asset_id") @db.Uuid
+  condition         AssetCondition
+  previousCondition AssetCondition? @map("previous_condition")
+  notes             String?
+  checkedAt         DateTime        @map("checked_at") @db.Date
+  source            ConditionSource
+  loanId            String?         @map("loan_id") @db.Uuid
+  checkedById       String          @map("checked_by_id") @db.Uuid
+  createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  asset     Asset        @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  loan      AssetLoan?   @relation(fields: [loanId], references: [id])
+  checkedBy User         @relation(fields: [checkedById], references: [id])
+  photos    AssetPhoto[]
+
+  @@index([assetId, createdAt])
+  @@map("asset_condition_logs")
 }

@@ -1,4 +1,3 @@
-import argon2 from 'argon2';
 import { createTestApp } from './utils/app.js';
 import type { LoginResult, TestContext } from './utils/app.js';
 
@@ -14,7 +13,8 @@ interface Ids {
   room2: string;
   roomInactive: string;
   department: string;
-  inactiveUserId: string;
+  employee: string;
+  inactiveEmployee: string;
 }
 
 describe('assets (e2e)', () => {
@@ -43,7 +43,7 @@ describe('assets (e2e)', () => {
     acquisitionDate: '2026-01-15',
     vendor: 'PT Komputer Jaya',
     departmentId: ids.department,
-    responsibleUserId: undefined as string | undefined,
+    responsibleEmployeeId: undefined as string | undefined,
     notes: 'Unit untuk staf TU',
   });
 
@@ -75,14 +75,8 @@ describe('assets (e2e)', () => {
       data: { code: 'AST_RX', name: 'Ruang Nonaktif', type: 'ROOM', parentId: floor.id, isActive: false },
     });
     const department = await p.department.create({ data: { code: 'AST_TU', name: 'TU Aset' } });
-    const inactiveUser = await p.user.create({
-      data: {
-        email: 'nonaktif-pj@test.local',
-        fullName: 'PJ Nonaktif',
-        isActive: false,
-        passwordHash: await argon2.hash('Nonaktif123', { type: argon2.argon2id }),
-      },
-    });
+    const employee = await p.employee.create({ data: { fullName: 'Pegawai Aset', employeeNumber: 'AST-PEG-1' } });
+    const inactiveEmployee = await p.employee.create({ data: { fullName: 'Pegawai Nonaktif', isActive: false } });
     ids = {
       category: category.id,
       categoryInactive: categoryInactive.id,
@@ -93,7 +87,8 @@ describe('assets (e2e)', () => {
       room2: room2.id,
       roomInactive: roomInactive.id,
       department: department.id,
-      inactiveUserId: inactiveUser.id,
+      employee: employee.id,
+      inactiveEmployee: inactiveEmployee.id,
     };
   });
 
@@ -112,7 +107,7 @@ describe('assets (e2e)', () => {
       .http()
       .post(URL)
       .set(bearer(admin))
-      .send({ ...baseAsset(), responsibleUserId: petugas.userId })
+      .send({ ...baseAsset(), responsibleEmployeeId: ids.employee })
       .expect(201);
     firstId = res.body.id;
     firstCode = res.body.assetCode;
@@ -131,7 +126,7 @@ describe('assets (e2e)', () => {
       category: { code: 'ELEKTRONIK' },
       location: { id: ids.room1, path: 'Kantor Aset / Menara Aset / Lantai Aset / Ruang Aset 1' },
       department: { code: 'AST_TU' },
-      responsibleUser: { id: petugas.userId },
+      responsibleEmployee: { id: ids.employee, fullName: 'Pegawai Aset' },
       createdBy: { id: admin.userId },
       photos: [],
       documents: [],
@@ -181,7 +176,7 @@ describe('assets (e2e)', () => {
       .http()
       .post(URL)
       .set(bearer(admin))
-      .send({ ...baseAsset(), responsibleUserId: ids.inactiveUserId })
+      .send({ ...baseAsset(), responsibleEmployeeId: ids.inactiveEmployee })
       .expect(400);
     expect(pj.body.message).toBe('Penanggung jawab tidak ditemukan atau nonaktif.');
 
@@ -268,12 +263,12 @@ describe('assets (e2e)', () => {
       .http()
       .patch(`${URL}/${firstId}`)
       .set(bearer(admin))
-      .send({ status: 'STORED', locationId: ids.room2, responsibleUserId: null, notes: null })
+      .send({ status: 'STORED', locationId: ids.room2, responsibleEmployeeId: null, notes: null })
       .expect(200);
     expect(res.body).toMatchObject({
       status: 'STORED',
       location: { id: ids.room2 },
-      responsibleUser: null,
+      responsibleEmployee: null,
       notes: null,
       assetCode: firstCode,
     });

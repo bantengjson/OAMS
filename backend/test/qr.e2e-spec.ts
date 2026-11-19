@@ -42,7 +42,6 @@ describe('qr (e2e)', () => {
       purchasePrice: 7500000,
       vendor: 'CV Vendor Rahasia',
       notes: 'catatan internal rahasia',
-      responsibleUserId: viewer.userId,
     };
     const created = await ctx.http().post('/api/v1/assets').set(bearer(admin)).send(base).expect(201);
     assetId = created.body.id;

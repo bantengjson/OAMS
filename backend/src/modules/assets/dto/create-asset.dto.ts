@@ -126,7 +126,7 @@ export class CreateAssetDto {
   @IsOptional()
   @Transform(emptyToNull)
   @IsUUID('all', { message: 'Penanggung jawab tidak valid' })
-  responsibleUserId?: string | null;
+  responsibleEmployeeId?: string | null;
 
   @ApiPropertyOptional() @IsOptional() @Transform(emptyToNull) @IsString() @MaxLength(2000)
   notes?: string | null;

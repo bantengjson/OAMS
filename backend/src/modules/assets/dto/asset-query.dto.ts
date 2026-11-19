@@ -24,7 +24,7 @@ export class AssetQueryDto extends PaginationQueryDto {
   departmentId?: string;
 
   @ApiPropertyOptional({ format: 'uuid' }) @IsOptional() @IsUUID('all')
-  responsibleUserId?: string;
+  responsibleEmployeeId?: string;
 
   @ApiPropertyOptional({ enum: AssetCondition }) @IsOptional() @IsEnum(AssetCondition)
   condition?: AssetCondition;

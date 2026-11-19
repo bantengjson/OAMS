@@ -32,6 +32,18 @@ export class AssetUserRefDto {
   @ApiProperty() fullName!: string;
 }
 
+export class AssetEmployeeDepartmentRefDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() name!: string;
+}
+
+export class AssetEmployeeRefDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() fullName!: string;
+  @ApiProperty({ type: AssetEmployeeDepartmentRefDto, nullable: true })
+  department!: AssetEmployeeDepartmentRefDto | null;
+}
+
 export class AssetPhotoDto {
   @ApiProperty() id!: string;
   @ApiProperty() isPrimary!: boolean;
@@ -70,7 +82,7 @@ export class AssetListItemDto {
   @ApiProperty({ type: AssetCategoryRefDto }) category!: AssetCategoryRefDto;
   @ApiProperty({ type: AssetLocationRefDto }) location!: AssetLocationRefDto;
   @ApiProperty({ type: AssetDepartmentRefDto, nullable: true }) department!: AssetDepartmentRefDto | null;
-  @ApiProperty({ type: AssetUserRefDto, nullable: true }) responsibleUser!: AssetUserRefDto | null;
+  @ApiProperty({ type: AssetEmployeeRefDto, nullable: true }) responsibleEmployee!: AssetEmployeeRefDto | null;
   @ApiProperty({ nullable: true }) brand!: string | null;
   @ApiProperty({ nullable: true }) model!: string | null;
   @ApiProperty() condition!: AssetCondition;

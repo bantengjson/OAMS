@@ -6,7 +6,7 @@ export const assetListInclude = {
   category: { select: { id: true, code: true, name: true } },
   location: { select: { id: true, code: true, name: true, type: true, parentId: true } },
   department: { select: { id: true, code: true, name: true } },
-  responsibleUser: { select: { id: true, fullName: true } },
+  responsibleEmployee: { select: { id: true, fullName: true, department: { select: { id: true, name: true } } } },
   _count: { select: { photos: true } },
 } satisfies Prisma.AssetInclude;
 
@@ -39,7 +39,7 @@ function listFields(row: AssetListRow, paths: PathIndex) {
       path: buildPath(row.location.id, paths),
     },
     department: row.department,
-    responsibleUser: row.responsibleUser,
+    responsibleEmployee: row.responsibleEmployee,
     brand: row.brand,
     model: row.model,
     condition: row.condition,
@@ -139,7 +139,7 @@ export function assetSnapshot(row: AssetDetailRow | AssetListRow) {
     departmentId: r.departmentId,
     condition: r.condition,
     status: r.status,
-    responsibleUserId: r.responsibleUserId,
+    responsibleEmployeeId: r.responsibleEmployeeId,
     notes: r.notes,
     archivedAt: r.archivedAt,
   };

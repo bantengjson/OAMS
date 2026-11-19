@@ -57,7 +57,7 @@ export class AssetsService {
     }
     if (q.categoryId) where.categoryId = q.categoryId;
     if (q.departmentId) where.departmentId = q.departmentId;
-    if (q.responsibleUserId) where.responsibleUserId = q.responsibleUserId;
+    if (q.responsibleEmployeeId) where.responsibleEmployeeId = q.responsibleEmployeeId;
     if (q.condition) where.condition = q.condition;
     if (q.status) where.status = q.status;
     if (q.ownershipType) where.ownershipType = q.ownershipType;
@@ -246,7 +246,7 @@ export class AssetsService {
       departmentId: dto.departmentId ?? null,
       condition: dto.condition,
       status: dto.status,
-      responsibleUserId: dto.responsibleUserId ?? null,
+      responsibleEmployeeId: dto.responsibleEmployeeId ?? null,
       notes: dto.notes ?? null,
     };
   }
@@ -281,7 +281,7 @@ export class AssetsService {
     set('departmentId', dto.departmentId);
     set('condition', dto.condition);
     set('status', dto.status);
-    set('responsibleUserId', dto.responsibleUserId);
+    set('responsibleEmployeeId', dto.responsibleEmployeeId);
     set('notes', dto.notes);
     return data;
   }
@@ -300,8 +300,8 @@ export class AssetsService {
       const ok = await this.prisma.department.findFirst({ where: { id: dto.departmentId, isActive: true } });
       if (!ok) throw new BadRequestException('Unit kerja tidak ditemukan atau nonaktif.');
     }
-    if (dto.responsibleUserId) {
-      const ok = await this.prisma.user.findFirst({ where: { id: dto.responsibleUserId, isActive: true } });
+    if (dto.responsibleEmployeeId) {
+      const ok = await this.prisma.employee.findFirst({ where: { id: dto.responsibleEmployeeId, isActive: true } });
       if (!ok) throw new BadRequestException('Penanggung jawab tidak ditemukan atau nonaktif.');
     }
   }
