@@ -102,6 +102,9 @@ npm run lint
 - Desain Tahap 2: [docs/superpowers/specs/2026-11-18-oams-tahap2-core-assets-design.md](docs/superpowers/specs/2026-11-18-oams-tahap2-core-assets-design.md)
 - Rencana Tahap 2: [docs/superpowers/plans/2026-11-18-oams-tahap2-core-assets.md](docs/superpowers/plans/2026-11-18-oams-tahap2-core-assets.md)
 - Dokumentasi hasil Tahap 2: [docs/tahap-2-core-assets.md](docs/tahap-2-core-assets.md)
+- Desain Tahap 3: [docs/superpowers/specs/2026-11-19-oams-tahap3-asset-operations-design.md](docs/superpowers/specs/2026-11-19-oams-tahap3-asset-operations-design.md)
+- Rencana Tahap 3: [docs/superpowers/plans/2026-11-19-oams-tahap3-asset-operations.md](docs/superpowers/plans/2026-11-19-oams-tahap3-asset-operations.md)
+- Dokumentasi hasil Tahap 3: [docs/tahap-3-asset-operations.md](docs/tahap-3-asset-operations.md)
 
 ## Deployment (server dengan Docker)
 
@@ -208,3 +211,5 @@ Uji pemulihan secara berkala (disarankan setiap triwulan) pada database kosong, 
 - Pemindaian QR dengan kamera HP hanya berjalan di halaman HTTPS yang sertifikatnya dipercaya perangkat. Dengan sertifikat self-signed, gunakan input manual di halaman Scan QR atau alat pemindai barcode (yang mengetik hasilnya seperti keyboard).
 - Mengubah `PUBLIC_BASE_URL` setelah stiker dicetak membuat stiker lama mengarah ke alamat lama; cetak ulang atau siapkan pengalihan di Nginx dari alamat lama ke yang baru.
 - Cetak stiker: halaman Cetak QR memakai kertas A4 dengan margin 10 mm; di dialog cetak browser pilih skala 100% (bukan "sesuaikan halaman") dan matikan header/footer agar ukuran stiker 30 mm atau 40 mm tepat.
+- Operasional barang (Tahap 3): isi menu **Pegawai** lebih dulu, karena penanggung jawab, peminjam, dan penjamin dipilih dari daftar itu (terpisah dari akun login). Lokasi, penanggung jawab, dan kondisi barang tidak diubah dari formulir ubah barang, melainkan lewat **Mutasi** (perpindahan oleh Admin langsung berlaku) dan **Catat kondisi**. Status `Dipinjam` hanya diatur oleh menu **Peminjaman**; barang yang sedang dipinjam atau punya mutasi menunggu tidak bisa diarsipkan.
+- Setelah pembaruan ke Tahap 3, migrasi otomatis memberi role Viewer hak melihat daftar mutasi dan seed menambahkan permission baru (`employees.manage`, `loans.view`, `loans.manage`, `conditions.record`) ke role yang sudah ada. Di mesin pengembangan jalankan `npm run prisma:seed -w backend` sekali setelah `npm run prisma:migrate -w backend`.

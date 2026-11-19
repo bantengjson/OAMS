@@ -4,6 +4,8 @@ Dokumen ini merangkum apa yang dibangun pada Tahap 2, bagaimana memakainya, kepu
 
 Desain singkat: [docs/superpowers/specs/2026-11-18-oams-tahap2-core-assets-design.md](superpowers/specs/2026-11-18-oams-tahap2-core-assets-design.md). Rencana implementasi: [docs/superpowers/plans/2026-11-18-oams-tahap2-core-assets.md](superpowers/plans/2026-11-18-oams-tahap2-core-assets.md).
 
+> Catatan Tahap 3: penanggung jawab barang kini menunjuk ke **pegawai** (`responsibleEmployeeId`, filter `responsibleEmployeeId`), bukan ke akun pengguna seperti yang ditulis di dokumen ini; lokasi, penanggung jawab, dan kondisi tidak lagi diubah lewat `PATCH /assets/:id`. Lihat [docs/tahap-3-asset-operations.md](tahap-3-asset-operations.md).
+
 ---
 
 ## 1. Ringkasan
