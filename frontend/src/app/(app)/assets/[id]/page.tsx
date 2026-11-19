@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { Archive, ArchiveRestore, ArrowLeft, Pencil, Printer } from 'lucide-react';
+import { Archive, ArchiveRestore, ArrowLeft, ArrowLeftRight, Pencil, Printer } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
@@ -14,16 +14,18 @@ import { ArchiveDialog } from '@/features/assets/archive-dialog';
 import { AssetDocuments } from '@/features/assets/asset-documents';
 import { AssetHistory } from '@/features/assets/asset-history';
 import { AssetInfo } from '@/features/assets/asset-info';
+import { AssetMutationsTab } from '@/features/assets/asset-mutations-tab';
 import { AssetPhotos } from '@/features/assets/asset-photos';
 import { AssetQrCard } from '@/features/assets/asset-qr-card';
 import { AssetConditionBadge, AssetStatusBadge } from '@/features/assets/asset-table';
 import { assetsApi } from '@/lib/api/assets';
 import { getErrorMessage } from '@/lib/api/form-errors';
 import { useAuth } from '@/lib/auth/use-auth';
+import { formatDateTime } from '@/lib/utils';
 
-type TabKey = 'info' | 'photos' | 'documents' | 'qr' | 'history';
+type TabKey = 'info' | 'photos' | 'documents' | 'qr' | 'mutations' | 'history';
 
-const TAB_KEYS: readonly TabKey[] = ['info', 'photos', 'documents', 'qr', 'history'];
+const TAB_KEYS: readonly TabKey[] = ['info', 'photos', 'documents', 'qr', 'mutations', 'history'];
 
 export default function AssetDetailPage() {
   return (
@@ -50,6 +52,9 @@ function AssetDetailContent() {
   const canEdit = hasPermission('assets.update');
   const canArchive = hasPermission('assets.archive');
   const canGenerate = hasPermission('qr.generate');
+  const canRequestMutation = hasPermission('mutations.request');
+  const canApproveMutation = hasPermission('mutations.approve');
+  const borrowed = a.activeLoan !== null;
 
   return (
     <>
@@ -73,6 +78,24 @@ function AssetDetailContent() {
               <Link href={`/qr/print?ids=${a.id}`}>
                 <Button variant="outline" leftIcon={<Printer className="h-4 w-4" />}>Cetak QR</Button>
               </Link>
+            ) : null}
+            {canRequestMutation && !a.isArchived ? (
+              borrowed || a.pendingMutation ? (
+                <Button
+                  variant="outline"
+                  disabled
+                  title={borrowed ? 'Barang sedang dipinjam' : 'Sudah ada mutasi yang menunggu persetujuan'}
+                  leftIcon={<ArrowLeftRight className="h-4 w-4" />}
+                >
+                  {canApproveMutation ? 'Pindahkan' : 'Ajukan mutasi'}
+                </Button>
+              ) : (
+                <Link href={`/mutations/new?assetId=${a.id}`}>
+                  <Button variant="outline" leftIcon={<ArrowLeftRight className="h-4 w-4" />}>
+                    {canApproveMutation ? 'Pindahkan' : 'Ajukan mutasi'}
+                  </Button>
+                </Link>
+              )
             ) : null}
             {canEdit && !a.isArchived ? (
               <Link href={`/assets/${a.id}/edit`}>
@@ -98,6 +121,16 @@ function AssetDetailContent() {
         </Alert>
       ) : null}
 
+      {a.pendingMutation ? (
+        <Alert variant="info">
+          Mutasi menunggu persetujuan sejak {formatDateTime(a.pendingMutation.requestedAt)} (diajukan{' '}
+          {a.pendingMutation.requestedBy.fullName}).{' '}
+          <Link href={`/mutations/${a.pendingMutation.id}`} className="font-medium underline">
+            Lihat pengajuan
+          </Link>
+        </Alert>
+      ) : null}
+
       <Tabs<TabKey>
         value={tab}
         onChange={setTab}
@@ -106,6 +139,7 @@ function AssetDetailContent() {
           { key: 'photos', label: 'Foto', badge: a.photos.length },
           { key: 'documents', label: 'Dokumen', badge: a.documents.length },
           { key: 'qr', label: 'QR Code' },
+          { key: 'mutations', label: 'Mutasi', badge: a.pendingMutation ? 1 : undefined },
           { key: 'history', label: 'Riwayat' },
         ]}
       />
@@ -113,6 +147,7 @@ function AssetDetailContent() {
       <TabPanel active={tab === 'photos'}><AssetPhotos asset={a} canEdit={canEdit} /></TabPanel>
       <TabPanel active={tab === 'documents'}><AssetDocuments asset={a} canEdit={canEdit} /></TabPanel>
       <TabPanel active={tab === 'qr'}><AssetQrCard asset={a} canGenerate={canGenerate} /></TabPanel>
+      <TabPanel active={tab === 'mutations'}><AssetMutationsTab assetId={a.id} /></TabPanel>
       <TabPanel active={tab === 'history'}><AssetHistory assetId={a.id} /></TabPanel>
 
       <ArchiveDialog asset={a} open={archiveOpen} onClose={() => setArchiveOpen(false)} />
