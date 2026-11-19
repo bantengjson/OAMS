@@ -18,7 +18,9 @@ describe('asset photos & documents (e2e)', () => {
   let ctx: TestContext;
   let admin: LoginResult;
   let viewer: LoginResult;
+  let petugas: LoginResult;
   let assetId: string;
+  let otherId: string;
   let archivedId: string;
   let firstPhotoId: string;
   let secondPhotoId: string;
@@ -31,6 +33,7 @@ describe('asset photos & documents (e2e)', () => {
     ctx = await createTestApp();
     admin = await ctx.loginAs('ADMIN_INVENTARIS');
     viewer = await ctx.loginAs('VIEWER');
+    petugas = await ctx.loginAs('PETUGAS_INVENTARIS');
     const p = ctx.prisma;
     const category = await p.category.findUniqueOrThrow({ where: { code: 'FURNITURE' } });
     const office = await p.location.create({ data: { code: 'FIL_HQ', name: 'Kantor Berkas', type: 'OFFICE' } });
@@ -53,6 +56,9 @@ describe('asset photos & documents (e2e)', () => {
       status: 'IN_USE',
     };
     assetId = (await ctx.http().post('/api/v1/assets').set(bearer(admin)).send(base).expect(201)).body.id;
+    otherId = (
+      await ctx.http().post('/api/v1/assets').set(bearer(admin)).send({ ...base, name: 'Meja Lain' }).expect(201)
+    ).body.id;
     archivedId = (
       await ctx.http().post('/api/v1/assets').set(bearer(admin)).send({ ...base, name: 'Meja Arsip' }).expect(201)
     ).body.id;
@@ -139,6 +145,52 @@ describe('asset photos & documents (e2e)', () => {
     const stored = readdirSync(join(UPLOAD_ROOT, 'assets', assetId, 'photos'));
     expect(stored.length).toBe(2);
     await ctx.http().get(`${photosUrl()}/${secondPhotoId}/file`).set(bearer(admin)).expect(404);
+  });
+
+  it('lets PETUGAS attach a photo only to a condition check of the same asset', async () => {
+    await ctx.http().post(photosUrl()).set(bearer(petugas)).attach('file', await png(), 'p.png').expect(403);
+
+    const log = (
+      await ctx
+        .http()
+        .post(`/api/v1/assets/${assetId}/condition-logs`)
+        .set(bearer(petugas))
+        .send({ condition: 'MINOR_DAMAGE', notes: 'Goresan di sisi kiri' })
+        .expect(201)
+    ).body;
+    const foreign = (
+      await ctx
+        .http()
+        .post(`/api/v1/assets/${otherId}/condition-logs`)
+        .set(bearer(petugas))
+        .send({ condition: 'GOOD' })
+        .expect(201)
+    ).body;
+
+    const wrong = await ctx
+      .http()
+      .post(photosUrl())
+      .set(bearer(petugas))
+      .field('conditionLogId', foreign.id)
+      .attach('file', await png(), 'p.png')
+      .expect(400);
+    expect(wrong.body.message).toBe('Referensi data tidak valid.');
+
+    const ok = await ctx
+      .http()
+      .post(photosUrl())
+      .set(bearer(petugas))
+      .field('conditionLogId', log.id)
+      .attach('file', await png(), 'p.png')
+      .expect(201);
+    expect(ok.body.conditionLogId).toBe(log.id);
+    expect(ok.body.isPrimary).toBe(false);
+
+    const logs = await ctx.http().get(`/api/v1/assets/${assetId}/condition-logs`).set(bearer(petugas)).expect(200);
+    const mine = logs.body.data.find((l: { id: string }) => l.id === log.id);
+    expect(mine.photos.map((p: { id: string }) => p.id)).toEqual([ok.body.id]);
+
+    await ctx.http().delete(`${photosUrl()}/${ok.body.id}`).set(bearer(petugas)).expect(403);
   });
 
   it('uploads, downloads and deletes documents', async () => {

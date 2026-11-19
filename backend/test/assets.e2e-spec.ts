@@ -177,8 +177,8 @@ describe('assets (e2e)', () => {
       .post(URL)
       .set(bearer(admin))
       .send({ ...baseAsset(), responsibleEmployeeId: ids.inactiveEmployee })
-      .expect(400);
-    expect(pj.body.message).toBe('Penanggung jawab tidak ditemukan atau nonaktif.');
+      .expect(409);
+    expect(pj.body.message).toBe('Pegawai tidak aktif.');
 
     const dept = await ctx
       .http()
@@ -200,6 +200,38 @@ describe('assets (e2e)', () => {
     expect(res.body.errors).toHaveProperty('name');
     expect(res.body.errors).toHaveProperty('status');
     expect(res.body.errors).toHaveProperty('purchasePrice');
+  });
+
+  it('rejects loan-managed statuses on create and locked fields on update', async () => {
+    const borrowed = await ctx
+      .http()
+      .post(URL)
+      .set(bearer(admin))
+      .send({ ...baseAsset(), status: 'BORROWED' })
+      .expect(400);
+    expect(borrowed.body.errors.status).toEqual(['Status ini diatur oleh peminjaman']);
+
+    const locked = await ctx
+      .http()
+      .patch(`${URL}/${firstId}`)
+      .set(bearer(admin))
+      .send({
+        locationId: ids.room2,
+        responsibleEmployeeId: ids.employee,
+        condition: 'MINOR_DAMAGE',
+        status: 'RETURNED',
+      })
+      .expect(400);
+    expect(locked.body.message).toBe('Validasi gagal.');
+    expect(locked.body.errors).toMatchObject({
+      locationId: ['Ubah lewat mutasi'],
+      responsibleEmployeeId: ['Ubah lewat mutasi'],
+      condition: ['Ubah lewat pemeriksaan kondisi'],
+      status: ['Status ini diatur oleh peminjaman'],
+    });
+    const unchanged = await ctx.http().get(`${URL}/${firstId}`).set(bearer(admin)).expect(200);
+    expect(unchanged.body.location.id).toBe(ids.room1);
+    expect(unchanged.body.condition).toBe('GOOD');
   });
 
   it('lists with search and filters, excluding archived by default', async () => {
@@ -263,12 +295,12 @@ describe('assets (e2e)', () => {
       .http()
       .patch(`${URL}/${firstId}`)
       .set(bearer(admin))
-      .send({ status: 'STORED', locationId: ids.room2, responsibleEmployeeId: null, notes: null })
+      .send({ status: 'STORED', brand: 'Lenovo Baru', notes: null })
       .expect(200);
     expect(res.body).toMatchObject({
       status: 'STORED',
-      location: { id: ids.room2 },
-      responsibleEmployee: null,
+      location: { id: ids.room1 },
+      brand: 'Lenovo Baru',
       notes: null,
       assetCode: firstCode,
     });
@@ -277,8 +309,8 @@ describe('assets (e2e)', () => {
       where: { action: 'asset.updated', entityId: firstId },
       orderBy: { createdAt: 'desc' },
     });
-    expect(audit?.before).toMatchObject({ status: 'AVAILABLE', locationId: ids.room1 });
-    expect(audit?.after).toMatchObject({ status: 'STORED', locationId: ids.room2 });
+    expect(audit?.before).toMatchObject({ status: 'AVAILABLE', brand: 'Lenovo' });
+    expect(audit?.after).toMatchObject({ status: 'STORED', brand: 'Lenovo Baru', locationId: ids.room1 });
   });
 
   it('archives, hides, blocks edits, and unarchives', async () => {
@@ -363,6 +395,7 @@ describe('assets (e2e)', () => {
     const res = await ctx.http().get(`${URL}/statistics`).set(bearer(viewer)).expect(200);
     expect(res.body.archived).toBeGreaterThanOrEqual(1);
     expect(res.body.total).toBe(res.body.active + res.body.archived);
+    expect(res.body).toMatchObject({ pendingMutations: 0, activeLoans: 0, overdueLoans: 0 });
     expect(res.body.active).toBeGreaterThanOrEqual(1);
     expect(res.body.byStatus.STORED).toBeGreaterThanOrEqual(1);
     expect(res.body.byStatus.IN_USE).toBeGreaterThanOrEqual(1);

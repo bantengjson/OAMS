@@ -52,8 +52,9 @@ export class AssetFilesController {
 
   // ------------------------------------------------------------------ photos
 
+  // Permission is decided in the service: `assets.update`, or `conditions.record`
+  // together with a `conditionLogId` of this asset (damage photos by Petugas).
   @Post('photos')
-  @RequirePermissions(PERMISSIONS.ASSETS_UPDATE)
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: maxUploadBytes('photo') } }))
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -62,6 +63,7 @@ export class AssetFilesController {
       properties: {
         file: { type: 'string', format: 'binary' },
         caption: { type: 'string' },
+        conditionLogId: { type: 'string', format: 'uuid' },
       },
     },
   })
@@ -73,7 +75,7 @@ export class AssetFilesController {
     @Body() dto: UploadPhotoDto,
     @CurrentUser() actor: AuthUser,
   ): Promise<AssetPhotoDto> {
-    return this.files.addPhoto(id, file, dto.caption, actor);
+    return this.files.addPhoto(id, file, dto.caption, actor, dto.conditionLogId);
   }
 
   @Get('photos/:photoId/file')

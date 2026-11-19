@@ -107,7 +107,7 @@ describe('employees (e2e)', () => {
 
   it('lookup returns active employees only, with number and department', async () => {
     await ctx.http().patch(`${URL}/${sariId}`).set(bearer(admin)).send({ isActive: false }).expect(200);
-    const res = await ctx.http().get(`${URL}/lookup?search=PEG`).set(bearer(petugas)).expect(200);
+    const res = await ctx.http().get(`${URL}/lookup?search=PEG-00`).set(bearer(petugas)).expect(200);
     expect(res.body).toEqual([
       { id: budiId, fullName: 'Budi Santoso', employeeNumber: 'PEG-001', department: { id: departmentId, name: 'Keuangan Pegawai' } },
     ]);

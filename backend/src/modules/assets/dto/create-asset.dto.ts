@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
   IsEnum,
+  IsIn,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -23,8 +24,14 @@ import {
   OwnershipType,
 } from '../../../generated/prisma/client.js';
 
-const enumMessage = (name: string, values: object) =>
+export const enumMessage = (name: string, values: object) =>
   `${name} harus salah satu dari: ${Object.keys(values).join(', ')}`;
+
+export const STATUS_LOAN_MANAGED = 'Status ini diatur oleh peminjaman';
+/** Statuses a person may set by hand; BORROWED/RETURNED belong to the loan flow. */
+export const CREATABLE_STATUSES: readonly AssetStatus[] = Object.values(AssetStatus).filter(
+  (s) => s !== AssetStatus.BORROWED && s !== AssetStatus.RETURNED,
+);
 
 export const toNumberOrNull = ({ value }: { value: unknown }): unknown => {
   if (value === '' || value === null || value === undefined) return value === '' ? null : value;
@@ -51,7 +58,7 @@ export class IsCalendarDate implements ValidatorConstraintInterface {
 /** Decimal(15,2): 13 integer digits. */
 export const MAX_PURCHASE_PRICE = 9_999_999_999_999;
 
-const emptyToNull = ({ value }: { value: unknown }): unknown =>
+export const emptyToNull = ({ value }: { value: unknown }): unknown =>
   typeof value === 'string' && value.trim() === '' ? null : typeof value === 'string' ? value.trim() : value;
 
 export class CreateAssetDto {
@@ -118,8 +125,8 @@ export class CreateAssetDto {
   @IsEnum(AssetCondition, { message: enumMessage('Kondisi', AssetCondition) })
   condition!: AssetCondition;
 
-  @ApiProperty({ enum: AssetStatus })
-  @IsEnum(AssetStatus, { message: enumMessage('Status', AssetStatus) })
+  @ApiProperty({ enum: CREATABLE_STATUSES })
+  @IsIn(CREATABLE_STATUSES, { message: STATUS_LOAN_MANAGED })
   status!: AssetStatus;
 
   @ApiPropertyOptional({ format: 'uuid', nullable: true })

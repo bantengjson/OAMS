@@ -1,3 +1,4 @@
+import { daysOverdue, isoDateOnly } from '../../common/dates/jakarta.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 import { buildPath } from '../locations/locations.rules.js';
 import type { AssetDetailDto, AssetDocumentDto, AssetListItemDto, AssetPhotoDto } from './dto/asset.dto.js';
@@ -17,6 +18,16 @@ export const assetDetailInclude = {
   label: true,
   photos: { orderBy: [{ isPrimary: 'desc' }, { createdAt: 'asc' }] },
   documents: { orderBy: { createdAt: 'asc' } },
+  loans: { where: { status: 'ACTIVE' }, take: 1 },
+  mutations: {
+    where: { status: 'PENDING' },
+    take: 1,
+    include: {
+      requestedBy: { select: { id: true, fullName: true } },
+      toLocation: { select: { id: true, name: true } },
+      toResponsibleEmployee: { select: { id: true, fullName: true } },
+    },
+  },
 } satisfies Prisma.AssetInclude;
 
 export type AssetListRow = Prisma.AssetGetPayload<{ include: typeof assetListInclude }>;
@@ -69,6 +80,7 @@ export function toAssetPhoto(assetId: string, p: AssetDetailRow['photos'][number
     height: p.height,
     sizeBytes: p.sizeBytes,
     createdAt: p.createdAt,
+    conditionLogId: p.conditionLogId,
     urls: photoUrls(assetId, p.id),
   };
 }
@@ -90,7 +102,30 @@ export function qrUrl(baseUrl: string, token: string): string {
 }
 
 export function toAssetDetail(row: AssetDetailRow, paths: PathIndex, baseUrl: string): AssetDetailDto {
+  const loan = row.loans[0];
+  const mutation = row.mutations[0];
   return {
+    activeLoan: loan
+      ? {
+          id: loan.id,
+          borrowerName: loan.borrowerName,
+          loanedAt: isoDateOnly(loan.loanedAt),
+          dueAt: isoDateOnly(loan.dueAt),
+          isOverdue: daysOverdue(loan.dueAt) > 0,
+        }
+      : null,
+    pendingMutation: mutation
+      ? {
+          id: mutation.id,
+          requestedAt: mutation.requestedAt,
+          requestedBy: mutation.requestedBy,
+          toLocation: mutation.toLocation
+            ? { ...mutation.toLocation, path: buildPath(mutation.toLocation.id, paths) }
+            : null,
+          changesResponsible: mutation.changesResponsible,
+          toResponsibleEmployee: mutation.toResponsibleEmployee,
+        }
+      : null,
     ...listFields(row, paths),
     serialNumber: row.serialNumber,
     description: row.description,

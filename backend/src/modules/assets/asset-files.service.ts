@@ -1,7 +1,9 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import sharp from 'sharp';
 import { AuditService } from '../../common/audit/audit.service.js';
 import type { AuthUser } from '../../common/auth/auth-user.js';
+import { PERMISSIONS } from '../../common/auth/permissions.catalog.js';
+import { FORBIDDEN_MESSAGE } from '../../common/auth/permissions.guard.js';
 import { StorageService } from '../../common/files/storage.service.js';
 import {
   detectUpload,
@@ -17,6 +19,7 @@ import type { AssetDocumentDto, AssetPhotoDto } from './dto/asset.dto.js';
 const MODULE = 'assets';
 export const PHOTO_NOT_FOUND = 'Foto tidak ditemukan.';
 export const DOCUMENT_NOT_FOUND = 'Dokumen tidak ditemukan.';
+const REFERENCE_INVALID = 'Referensi data tidak valid.';
 
 export interface StoredFile {
   path: string;
@@ -46,9 +49,17 @@ export class AssetFilesService {
     file: UploadedFileLike | undefined,
     caption: string | undefined,
     actor: AuthUser,
+    conditionLogId?: string,
   ): Promise<AssetPhotoDto> {
+    const canUpdate = actor.permissions.includes(PERMISSIONS.ASSETS_UPDATE);
+    const canRecord = actor.permissions.includes(PERMISSIONS.CONDITIONS_RECORD);
+    if (!canUpdate && !(canRecord && conditionLogId)) throw new ForbiddenException(FORBIDDEN_MESSAGE);
     if (!file) throw new BadRequestException(FILE_REQUIRED_MESSAGE);
     await this.writableAsset(assetId);
+    if (conditionLogId) {
+      const log = await this.prisma.assetConditionLog.findFirst({ where: { id: conditionLogId, assetId } });
+      if (!log) throw new BadRequestException(REFERENCE_INVALID);
+    }
     await detectUpload(file.buffer, 'photo');
 
     // Normalise: auto-rotate from EXIF, cap size, re-encode as WebP (metadata dropped).
@@ -72,7 +83,8 @@ export class AssetFilesService {
       // Count and insert in one transaction so two first uploads cannot both become primary.
       row = await this.prisma.$transaction(
         async (tx) => {
-          const isPrimary = (await tx.assetPhoto.count({ where: { assetId } })) === 0;
+          // Damage photos from a condition check never become the showcase photo by themselves.
+          const isPrimary = !conditionLogId && (await tx.assetPhoto.count({ where: { assetId } })) === 0;
           return tx.assetPhoto.create({
             data: {
               assetId,
@@ -85,6 +97,7 @@ export class AssetFilesService {
               isPrimary,
               caption: caption || null,
               uploadedById: actor.id,
+              conditionLogId: conditionLogId ?? null,
             },
           });
         },

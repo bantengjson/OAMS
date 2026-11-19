@@ -1,7 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service.js';
 import type { AuditEntryPublicDto } from '../../common/audit/audit.types.js';
 import type { AuthUser } from '../../common/auth/auth-user.js';
+import { jakartaToday } from '../../common/dates/jakarta.js';
 import { paginate } from '../../common/dto/paginated.js';
 import type { Paginated } from '../../common/dto/paginated.js';
 import { pageArgs } from '../../common/dto/pagination.dto.js';
@@ -10,8 +11,10 @@ import { PrismaService } from '../../common/prisma/prisma.service.js';
 import { SettingsService } from '../../common/settings/settings.service.js';
 import { AssetCondition, AssetStatus } from '../../generated/prisma/client.js';
 import type { Prisma } from '../../generated/prisma/client.js';
+import { EmployeesService } from '../employees/employees.service.js';
 import { generatePublicToken } from '../qr/qr-token.js';
 import { AssetCodeService } from './asset-code.js';
+import { AssetConditionsService } from './asset-conditions.service.js';
 import {
   assetDetailInclude,
   assetListInclude,
@@ -29,7 +32,12 @@ import type { UpdateAssetDto } from './dto/update-asset.dto.js';
 export const ASSET_NOT_FOUND = 'Barang tidak ditemukan.';
 export const ASSET_ARCHIVED = 'Barang sudah diarsipkan.';
 export const ASSET_NOT_ARCHIVED = 'Barang tidak dalam arsip.';
+export const ASSET_BORROWED = 'Barang sedang dipinjam.';
+export const ARCHIVE_BLOCKED_BY_LOAN = 'Kembalikan pinjaman dulu sebelum mengarsipkan.';
+export const ARCHIVE_BLOCKED_BY_MUTATION = 'Selesaikan mutasi yang menunggu dulu sebelum mengarsipkan.';
 const MODULE = 'assets';
+/** Audit modules whose entries (keyed by asset id) make up an asset's timeline. */
+export const ASSET_HISTORY_MODULES = [MODULE, 'qr', 'assignments', 'condition_logs', 'mutations', 'loans'];
 
 @Injectable()
 export class AssetsService {
@@ -38,6 +46,8 @@ export class AssetsService {
     private readonly audit: AuditService,
     private readonly codes: AssetCodeService,
     private readonly settings: SettingsService,
+    private readonly employees: EmployeesService,
+    private readonly conditions: AssetConditionsService,
   ) {}
 
   // ---------------------------------------------------------------- queries
@@ -88,7 +98,12 @@ export class AssetsService {
 
   async history(id: string, q: PaginationQueryDto): Promise<Paginated<AuditEntryPublicDto>> {
     await this.getRow(id);
-    const page = await this.audit.list({ page: q.page, pageSize: q.pageSize, entityId: id, modules: [MODULE, 'qr'] });
+    const page = await this.audit.list({
+      page: q.page,
+      pageSize: q.pageSize,
+      entityId: id,
+      modules: ASSET_HISTORY_MODULES,
+    });
     // `assets.view` is not an audit permission: actor IP and device stay with the audit-log pages.
     const data = page.data.map(({ ip: _ip, userAgent: _ua, ...rest }) => rest);
     return { ...page, data };
@@ -96,15 +111,28 @@ export class AssetsService {
 
   async statistics(): Promise<AssetStatisticsDto> {
     const live = { archivedAt: null };
-    const [active, archived, byStatusRows, byConditionRows, byCategoryRows, byLocationRows] =
-      await Promise.all([
-        this.prisma.asset.count({ where: live }),
-        this.prisma.asset.count({ where: { archivedAt: { not: null } } }),
-        this.prisma.asset.groupBy({ by: ['status'], where: live, _count: { _all: true } }),
-        this.prisma.asset.groupBy({ by: ['condition'], where: live, _count: { _all: true } }),
-        this.prisma.asset.groupBy({ by: ['categoryId'], where: live, _count: { _all: true } }),
-        this.prisma.asset.groupBy({ by: ['locationId'], where: live, _count: { _all: true } }),
-      ]);
+    const today = new Date(`${jakartaToday()}T00:00:00Z`);
+    const [
+      active,
+      archived,
+      byStatusRows,
+      byConditionRows,
+      byCategoryRows,
+      byLocationRows,
+      pendingMutations,
+      activeLoans,
+      overdueLoans,
+    ] = await Promise.all([
+      this.prisma.asset.count({ where: live }),
+      this.prisma.asset.count({ where: { archivedAt: { not: null } } }),
+      this.prisma.asset.groupBy({ by: ['status'], where: live, _count: { _all: true } }),
+      this.prisma.asset.groupBy({ by: ['condition'], where: live, _count: { _all: true } }),
+      this.prisma.asset.groupBy({ by: ['categoryId'], where: live, _count: { _all: true } }),
+      this.prisma.asset.groupBy({ by: ['locationId'], where: live, _count: { _all: true } }),
+      this.prisma.assetMutation.count({ where: { status: 'PENDING' } }),
+      this.prisma.assetLoan.count({ where: { status: 'ACTIVE' } }),
+      this.prisma.assetLoan.count({ where: { status: 'ACTIVE', dueAt: { lt: today } } }),
+    ]);
 
     const byStatus = Object.fromEntries(Object.keys(AssetStatus).map((k) => [k, 0])) as Record<
       AssetStatus,
@@ -139,13 +167,22 @@ export class AssetsService {
     return {
       total: active + archived,
       active,
-      archived, byStatus, byCondition, byCategory, byOffice };
+      archived,
+      byStatus,
+      byCondition,
+      byCategory,
+      byOffice,
+      pendingMutations,
+      activeLoans,
+      overdueLoans,
+    };
   }
 
   // -------------------------------------------------------------- mutations
 
   async create(dto: CreateAssetDto, actor: AuthUser): Promise<AssetDetailDto> {
     await this.assertReferences(dto);
+    if (dto.responsibleEmployeeId) await this.employees.assertActive(this.prisma, dto.responsibleEmployeeId);
     const { id } = await this.prisma.$transaction(async (tx) => {
       const assetCode = await this.codes.next(tx);
       const asset = await tx.asset.create({
@@ -153,6 +190,19 @@ export class AssetsService {
         select: { id: true },
       });
       await tx.assetLabel.create({ data: { assetId: asset.id, publicToken: generatePublicToken() } });
+      // The form's condition is the first inspection; the first responsible is the first assignment.
+      await this.conditions.record(tx, asset.id, { condition: dto.condition, source: 'CREATE' }, actor);
+      if (dto.responsibleEmployeeId) {
+        await tx.assetAssignment.create({
+          data: {
+            assetId: asset.id,
+            fromEmployeeId: null,
+            toEmployeeId: dto.responsibleEmployeeId,
+            source: 'CREATE',
+            changedById: actor.id,
+          },
+        });
+      }
       return asset;
     });
     const created = await this.getRow(id);
@@ -169,7 +219,8 @@ export class AssetsService {
   async update(id: string, dto: UpdateAssetDto): Promise<AssetDetailDto> {
     const before = await this.getRow(id);
     if (before.archivedAt) throw new BadRequestException(ASSET_ARCHIVED);
-    await this.assertReferences(dto);
+    if (dto.status !== undefined && before.loans.length > 0) throw new ConflictException(ASSET_BORROWED);
+    await this.assertReferences({ categoryId: dto.categoryId, departmentId: dto.departmentId });
     const data = this.toData(dto, true);
     const after = await this.prisma.asset.update({ where: { id }, data, include: assetDetailInclude });
     await this.audit.record({
@@ -185,6 +236,8 @@ export class AssetsService {
   async archive(id: string, reason: string | undefined, actor: AuthUser): Promise<AssetDetailDto> {
     const row = await this.getRow(id);
     if (row.archivedAt) throw new BadRequestException(ASSET_ARCHIVED);
+    if (row.loans.length > 0) throw new ConflictException(ARCHIVE_BLOCKED_BY_LOAN);
+    if (row.mutations.length > 0) throw new ConflictException(ARCHIVE_BLOCKED_BY_MUTATION);
     await this.prisma.asset.update({
       where: { id },
       data: { archivedAt: new Date(), archivedById: actor.id, archiveReason: reason ?? null },
@@ -277,17 +330,18 @@ export class AssetsService {
     );
     set('purchasePrice', dto.purchasePrice);
     set('vendor', dto.vendor);
-    set('locationId', dto.locationId);
     set('departmentId', dto.departmentId);
-    set('condition', dto.condition);
     set('status', dto.status);
-    set('responsibleEmployeeId', dto.responsibleEmployeeId);
     set('notes', dto.notes);
     return data;
   }
 
   /** Every referenced row must exist and be active; the message names the field. */
-  private async assertReferences(dto: UpdateAssetDto): Promise<void> {
+  private async assertReferences(dto: {
+    categoryId?: string | null;
+    locationId?: string | null;
+    departmentId?: string | null;
+  }): Promise<void> {
     if (dto.categoryId) {
       const ok = await this.prisma.category.findFirst({ where: { id: dto.categoryId, isActive: true } });
       if (!ok) throw new BadRequestException('Kategori tidak ditemukan atau nonaktif.');
@@ -299,10 +353,6 @@ export class AssetsService {
     if (dto.departmentId) {
       const ok = await this.prisma.department.findFirst({ where: { id: dto.departmentId, isActive: true } });
       if (!ok) throw new BadRequestException('Unit kerja tidak ditemukan atau nonaktif.');
-    }
-    if (dto.responsibleEmployeeId) {
-      const ok = await this.prisma.employee.findFirst({ where: { id: dto.responsibleEmployeeId, isActive: true } });
-      if (!ok) throw new BadRequestException('Penanggung jawab tidak ditemukan atau nonaktif.');
     }
   }
 }

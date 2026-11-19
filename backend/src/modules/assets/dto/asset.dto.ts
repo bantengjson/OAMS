@@ -52,8 +52,27 @@ export class AssetPhotoDto {
   @ApiProperty({ nullable: true }) height!: number | null;
   @ApiProperty() sizeBytes!: number;
   @ApiProperty() createdAt!: Date;
+  @ApiProperty({ nullable: true, description: 'Pemeriksaan kondisi yang memuat foto ini' })
+  conditionLogId!: string | null;
   @ApiProperty({ description: 'Path API relatif untuk mengambil berkas' })
   urls!: { full: string; thumb: string };
+}
+
+export class AssetActiveLoanDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() borrowerName!: string;
+  @ApiProperty({ example: '2026-11-19' }) loanedAt!: string;
+  @ApiProperty({ example: '2026-11-26' }) dueAt!: string;
+  @ApiProperty() isOverdue!: boolean;
+}
+
+export class AssetPendingMutationDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() requestedAt!: Date;
+  @ApiProperty({ type: AssetUserRefDto }) requestedBy!: AssetUserRefDto;
+  @ApiProperty({ nullable: true }) toLocation!: { id: string; name: string; path: string } | null;
+  @ApiProperty() changesResponsible!: boolean;
+  @ApiProperty({ nullable: true }) toResponsibleEmployee!: { id: string; fullName: string } | null;
 }
 
 export class AssetDocumentDto {
@@ -109,4 +128,8 @@ export class AssetDetailDto extends AssetListItemDto {
   @ApiProperty({ type: [AssetPhotoDto] }) photos!: AssetPhotoDto[];
   @ApiProperty({ type: [AssetDocumentDto] }) documents!: AssetDocumentDto[];
   @ApiProperty({ type: AssetLabelSummaryDto, nullable: true }) label!: AssetLabelSummaryDto | null;
+  @ApiProperty({ type: AssetActiveLoanDto, nullable: true, description: 'Peminjaman yang sedang berjalan' })
+  activeLoan!: AssetActiveLoanDto | null;
+  @ApiProperty({ type: AssetPendingMutationDto, nullable: true, description: 'Mutasi yang menunggu persetujuan' })
+  pendingMutation!: AssetPendingMutationDto | null;
 }
