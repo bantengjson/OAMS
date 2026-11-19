@@ -12,6 +12,7 @@ import { CategoriesModule } from './modules/categories/categories.module.js';
 import { DepartmentsModule } from './modules/departments/departments.module.js';
 import { EmployeesModule } from './modules/employees/employees.module.js';
 import { HealthModule } from './modules/health/health.module.js';
+import { LoansModule } from './modules/loans/loans.module.js';
 import { LocationsModule } from './modules/locations/locations.module.js';
 import { MutationsModule } from './modules/mutations/mutations.module.js';
 import { QrModule } from './modules/qr/qr.module.js';
@@ -42,6 +43,7 @@ import { UsersModule } from './modules/users/users.module.js';
     EmployeesModule,
     LocationsModule,
     MutationsModule,
+    LoansModule,
     AuditLogsModule,
     AssetsModule,
     QrModule,
