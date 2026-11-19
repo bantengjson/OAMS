@@ -33,7 +33,8 @@ export interface AssetQuery extends PageQuery {
 export interface AssetInput {
   name: string;
   categoryId: string;
-  locationId: string;
+  /** Optional; not shown in the single-office UI. */
+  locationId?: string | null;
   ownershipType: OwnershipType;
   acquisitionMethod: AcquisitionMethod;
   condition: AssetCondition;

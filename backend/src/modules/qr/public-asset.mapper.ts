@@ -10,7 +10,7 @@ export interface PublicAssetSource {
   status: AssetStatus;
   condition: AssetCondition;
   category: { name: string };
-  location: { name: string; path: string };
+  location: { name: string; path: string } | null;
   photos: { id: string }[];
 }
 
@@ -34,7 +34,7 @@ export function toPublicAsset(source: PublicAssetSource): PublicAssetDto {
     category: { name: source.category.name },
     brand: source.brand,
     model: source.model,
-    location: { name: source.location.name, path: source.location.path },
+    location: source.location ? { name: source.location.name, path: source.location.path } : null,
     status: source.status,
     condition: source.condition,
     hasPhoto: source.photos.length > 0,

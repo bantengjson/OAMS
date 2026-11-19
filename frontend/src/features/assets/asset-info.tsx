@@ -46,7 +46,6 @@ export function AssetInfo({ asset }: { asset: AssetDetail }) {
           <dl className="grid grid-cols-[9rem_1fr] gap-y-2 text-sm">
             <Row label="Status"><AssetStatusBadge status={asset.status} /></Row>
             <Row label="Kondisi"><AssetConditionBadge condition={asset.condition} /></Row>
-            <Row label="Lokasi">{asset.location.path}</Row>
             <Row label="Unit kerja">{asset.department ? `${asset.department.name} (${asset.department.code})` : '-'}</Row>
             <Row label="Penanggung jawab">
               {asset.responsibleEmployee ? (

@@ -29,7 +29,6 @@ import Link from 'next/link';
 import { EmployeeLookup } from '@/features/employees/employee-lookup';
 import { assetFormSchema, emptyAssetForm } from './asset-form.schema';
 import type { AssetFormValues } from './asset-form.schema';
-import { LocationSelect } from './location-select';
 import { AssetConditionBadge } from './asset-table';
 
 const FIELDS = Object.keys(emptyAssetForm) as (keyof AssetFormValues)[];
@@ -39,7 +38,6 @@ const MANUAL_STATUSES = ASSET_STATUSES.filter((s) => s !== 'BORROWED' && s !== '
 /** What the edit form shows read-only: these change only through a mutation or a condition check. */
 export interface LockedAssetFields {
   assetId: string;
-  locationPath: string;
   responsibleLabel: string | null;
   condition: AssetFormValues['condition'];
   /** An active loan: the status select is frozen until the asset comes back. */
@@ -180,26 +178,9 @@ export function AssetForm({
 
       <Card>
         <CardHeader>
-          <CardTitle>Penempatan</CardTitle>
+          <CardTitle>Unit kerja dan penanggung jawab</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
-          {isEdit && locked ? (
-            <Field className="md:col-span-2">
-              <Label>Lokasi</Label>
-              <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-dashed border-border bg-muted/40 px-3 py-2 text-sm">
-                <span>{locked.locationPath}</span>
-                <Link href={`/mutations/new?assetId=${locked.assetId}`} className="text-primary hover:underline">
-                  Ubah lewat mutasi
-                </Link>
-              </div>
-            </Field>
-          ) : (
-            <Field className="md:col-span-2">
-              <Label htmlFor="locationId" required>Lokasi</Label>
-              <LocationSelect id="locationId" aria-invalid={Boolean(errors.locationId)} {...form.register('locationId')} />
-              <FieldError>{errors.locationId?.message}</FieldError>
-            </Field>
-          )}
           <Field>
             <Label htmlFor="departmentId">Unit kerja</Label>
             <Select id="departmentId" {...form.register('departmentId')}>

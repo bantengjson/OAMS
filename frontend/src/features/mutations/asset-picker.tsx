@@ -11,7 +11,7 @@ import type { AssetListItem } from '@/types/api';
 
 /**
  * Picks one active (non-archived) asset by code or name and hands the parent
- * the full list item, so forms can show the current location and responsible.
+ * the full list item, so forms can show the current responsible person.
  */
 export function AssetPicker({
   value,
@@ -42,9 +42,6 @@ export function AssetPicker({
         <div className="min-w-0">
           <p className="font-medium">
             <span className="font-mono text-xs text-muted-foreground">{value.assetCode}</span> · {value.name}
-          </p>
-          <p className="truncate text-xs text-muted-foreground" title={value.location.path}>
-            {value.location.path}
           </p>
           <p className="text-xs text-muted-foreground">
             PJ: {value.responsibleEmployee?.fullName ?? '-'} · {STATUS_LABEL[value.status]}
@@ -104,7 +101,7 @@ export function AssetPicker({
                     <span className="font-mono text-xs text-muted-foreground">{a.assetCode}</span> · {a.name}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {a.location.path} · {STATUS_LABEL[a.status]}
+                    {a.category.name} · {STATUS_LABEL[a.status]}
                   </span>
                 </button>
               </li>

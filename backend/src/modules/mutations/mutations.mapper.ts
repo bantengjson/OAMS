@@ -20,7 +20,7 @@ export function toMutationDto(row: MutationRow, paths: PathIndex): MutationDto {
     id: row.id,
     status: row.status,
     asset: row.asset,
-    fromLocation: { ...row.fromLocation, path: buildPath(row.fromLocation.id, paths) },
+    fromLocation: row.fromLocation ? { ...row.fromLocation, path: buildPath(row.fromLocation.id, paths) } : null,
     toLocation: row.toLocation ? { ...row.toLocation, path: buildPath(row.toLocation.id, paths) } : null,
     changesResponsible: row.changesResponsible,
     fromResponsibleEmployee: row.fromResponsibleEmployee,

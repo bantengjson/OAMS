@@ -42,13 +42,15 @@ function listFields(row: AssetListRow, paths: PathIndex) {
     assetCode: row.assetCode,
     name: row.name,
     category: row.category,
-    location: {
-      id: row.location.id,
-      code: row.location.code,
-      name: row.location.name,
-      type: row.location.type,
-      path: buildPath(row.location.id, paths),
-    },
+    location: row.location
+      ? {
+          id: row.location.id,
+          code: row.location.code,
+          name: row.location.name,
+          type: row.location.type,
+          path: buildPath(row.location.id, paths),
+        }
+      : null,
     department: row.department,
     responsibleEmployee: row.responsibleEmployee,
     brand: row.brand,

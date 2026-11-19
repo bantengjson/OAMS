@@ -78,8 +78,12 @@ export default function MutationDetailPage() {
           <CardHeader><CardTitle>Perubahan</CardTitle></CardHeader>
           <CardContent>
             <dl className="grid grid-cols-[9rem_1fr] gap-y-2 text-sm">
-              <Row label="Lokasi sebelum">{m.fromLocation.path}</Row>
-              <Row label="Lokasi sesudah">{m.toLocation ? m.toLocation.path : <span className="text-muted-foreground">tidak berubah</span>}</Row>
+              {m.toLocation ? (
+                <>
+                  <Row label="Lokasi sebelum">{m.fromLocation?.path ?? '-'}</Row>
+                  <Row label="Lokasi sesudah">{m.toLocation.path}</Row>
+                </>
+              ) : null}
               <Row label="PJ sebelum">{m.fromResponsibleEmployee?.fullName ?? '-'}</Row>
               <Row label="PJ sesudah">
                 {m.changesResponsible ? (m.toResponsibleEmployee?.fullName ?? <span className="text-muted-foreground">dilepas</span>) : <span className="text-muted-foreground">tidak berubah</span>}

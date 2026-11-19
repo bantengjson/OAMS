@@ -40,3 +40,11 @@ describe('toPublicAsset', () => {
     expect(toPublicAsset({ ...source, photos: [] }).hasPhoto).toBe(false);
   });
 });
+
+describe('toPublicAsset without a location', () => {
+  it('keeps the location key as null', () => {
+    const result = toPublicAsset({ ...source, location: null } as never);
+    expect(result.location).toBeNull();
+    expect(Object.keys(result).sort()).toEqual([...PUBLIC_ASSET_KEYS].sort());
+  });
+});

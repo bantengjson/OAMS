@@ -42,11 +42,11 @@ function NewMutationContent() {
   return (
     <>
       <PageHeader
-        title={canApprove ? 'Pindahkan barang' : 'Ajukan mutasi'}
+        title={canApprove ? 'Ganti penanggung jawab' : 'Ajukan mutasi'}
         description={
           canApprove
-            ? 'Sebagai penyetuju, perpindahan Anda langsung berlaku dan tercatat sebagai mutasi yang disetujui.'
-            : 'Pengajuan menunggu persetujuan Admin; lokasi barang belum berubah sampai disetujui.'
+            ? 'Sebagai penyetuju, pergantian Anda langsung berlaku dan tercatat sebagai mutasi yang disetujui.'
+            : 'Pengajuan menunggu persetujuan Admin; penanggung jawab belum berubah sampai disetujui.'
         }
       />
       <MutationForm

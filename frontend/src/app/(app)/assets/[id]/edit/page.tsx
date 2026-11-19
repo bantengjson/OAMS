@@ -49,7 +49,6 @@ export default function EditAssetPage() {
         initialResponsibleLabel={asset.data.responsibleEmployee?.fullName ?? null}
         locked={{
           assetId: id,
-          locationPath: asset.data.location.path,
           responsibleLabel: asset.data.responsibleEmployee?.fullName ?? null,
           condition: asset.data.condition,
           isBorrowed: asset.data.activeLoan !== null,

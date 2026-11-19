@@ -222,7 +222,8 @@ export interface AssetListItem {
   assetCode: string;
   name: string;
   category: AssetRef;
-  location: AssetLocationRef;
+  /** Optional: single-office setups leave it empty and the UI hides it. */
+  location: AssetLocationRef | null;
   department: AssetRef | null;
   responsibleEmployee: AssetEmployeeRef | null;
   brand: string | null;
@@ -297,7 +298,7 @@ export interface PublicAsset {
   category: { name: string };
   brand: string | null;
   model: string | null;
-  location: { name: string; path: string };
+  location: { name: string; path: string } | null;
   status: AssetStatus;
   condition: AssetCondition;
   hasPhoto: boolean;
@@ -382,7 +383,7 @@ export interface Mutation {
   id: string;
   status: MutationStatus;
   asset: { id: string; assetCode: string; name: string };
-  fromLocation: MutationLocationRef;
+  fromLocation: MutationLocationRef | null;
   toLocation: MutationLocationRef | null;
   changesResponsible: boolean;
   fromResponsibleEmployee: { id: string; fullName: string } | null;

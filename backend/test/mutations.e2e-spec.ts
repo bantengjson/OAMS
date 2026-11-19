@@ -353,6 +353,21 @@ describe('mutations (e2e)', () => {
     expect((await p.assetMutation.findUniqueOrThrow({ where: { id: r3.body.id } })).status).toBe('PENDING');
   });
 
+  it('changes the responsible of an asset that has no location', async () => {
+    const asset = await createAsset('Barang Tanpa Lokasi Mutasi', { locationId: undefined });
+    const res = await ctx
+      .http()
+      .post(URL)
+      .set(bearer(admin))
+      .send({ assetId: asset.id, changesResponsible: true, toResponsibleEmployeeId: emp2, reason: 'PJ baru' })
+      .expect(201);
+    expect(res.body.status).toBe('APPROVED');
+    expect(res.body.fromLocation).toBeNull();
+    const after = await ctx.http().get(`/api/v1/assets/${asset.id}`).set(bearer(viewer)).expect(200);
+    expect(after.body.responsibleEmployee.id).toBe(emp2);
+    expect(after.body.location).toBeNull();
+  });
+
   it('lists with filters for every role that may view', async () => {
     const all = await ctx.http().get(URL).set(bearer(viewer)).expect(200);
     expect(all.body.meta.total).toBeGreaterThanOrEqual(6);

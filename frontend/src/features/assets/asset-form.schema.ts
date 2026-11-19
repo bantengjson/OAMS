@@ -13,7 +13,6 @@ const optionalText = (max: number) => z.string().trim().max(max, `Maksimal ${max
 export const assetFormSchema = z.object({
   name: z.string().trim().min(1, 'Nama barang wajib diisi').max(200, 'Maksimal 200 karakter'),
   categoryId: z.string().min(1, 'Pilih kategori'),
-  locationId: z.string().min(1, 'Pilih lokasi'),
   ownershipType: z.enum(OWNERSHIP_TYPES),
   acquisitionMethod: z.enum(ACQUISITION_METHODS),
   condition: z.enum(ASSET_CONDITIONS),
@@ -44,7 +43,6 @@ export type AssetFormValues = z.infer<typeof assetFormSchema>;
 export const emptyAssetForm: AssetFormValues = {
   name: '',
   categoryId: '',
-  locationId: '',
   ownershipType: 'OFFICE',
   acquisitionMethod: 'PURCHASE',
   condition: 'GOOD',
@@ -71,7 +69,6 @@ export function toAssetPayload(values: AssetFormValues): AssetInput {
   return {
     name: values.name.trim(),
     categoryId: values.categoryId,
-    locationId: values.locationId,
     ownershipType: values.ownershipType,
     acquisitionMethod: values.acquisitionMethod,
     condition: values.condition,
@@ -92,7 +89,6 @@ export function toAssetPayload(values: AssetFormValues): AssetInput {
 /** Edit payload: the locked fields (location, responsible, condition) are never sent. */
 export function toAssetUpdatePayload(values: AssetFormValues): AssetUpdateInput {
   const payload: Partial<AssetInput> = toAssetPayload(values);
-  delete payload.locationId;
   delete payload.responsibleEmployeeId;
   delete payload.condition;
   // A borrowed asset carries the loan-managed status in the form; sending it back would be refused.
@@ -104,7 +100,6 @@ export function fromAssetDetail(asset: AssetDetail): AssetFormValues {
   return {
     name: asset.name,
     categoryId: asset.category.id,
-    locationId: asset.location.id,
     ownershipType: asset.ownershipType,
     acquisitionMethod: asset.acquisitionMethod,
     condition: asset.condition,

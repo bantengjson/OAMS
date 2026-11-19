@@ -8,7 +8,7 @@ export class PublicAssetDto {
   @ApiProperty() category!: { name: string };
   @ApiProperty({ nullable: true }) brand!: string | null;
   @ApiProperty({ nullable: true }) model!: string | null;
-  @ApiProperty() location!: { name: string; path: string };
+  @ApiProperty({ nullable: true }) location!: { name: string; path: string } | null;
   @ApiProperty() status!: AssetStatus;
   @ApiProperty() condition!: AssetCondition;
   @ApiProperty() hasPhoto!: boolean;

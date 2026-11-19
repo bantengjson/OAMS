@@ -54,11 +54,11 @@ function MutationsContent() {
     <>
       <PageHeader
         title="Mutasi barang"
-        description="Perpindahan lokasi dan pergantian penanggung jawab. Berlaku setelah disetujui Admin."
+        description="Pergantian penanggung jawab barang. Berlaku setelah disetujui Admin."
         actions={
           hasPermission('mutations.request') ? (
             <Link href="/mutations/new">
-              <Button leftIcon={<Plus className="h-4 w-4" />}>{canApprove ? 'Pindahkan barang' : 'Ajukan mutasi'}</Button>
+              <Button leftIcon={<Plus className="h-4 w-4" />}>{canApprove ? 'Ganti penanggung jawab' : 'Ajukan mutasi'}</Button>
             </Link>
           ) : null
         }

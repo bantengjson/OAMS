@@ -42,7 +42,7 @@ export const ASSIGNMENT_SOURCE_LABEL: Record<AssignmentSource, string> = {
 /** Human lines for a mutation's changes, e.g. `Lokasi: Ruang 201 → Ruang 305`. */
 export function describeMutationChange(m: Pick<Mutation, 'fromLocation' | 'toLocation' | 'changesResponsible' | 'fromResponsibleEmployee' | 'toResponsibleEmployee'>): string[] {
   const lines: string[] = [];
-  if (m.toLocation) lines.push(`Lokasi: ${m.fromLocation.name} → ${m.toLocation.name}`);
+  if (m.toLocation) lines.push(`Lokasi: ${m.fromLocation?.name ?? '-'} → ${m.toLocation.name}`);
   if (m.changesResponsible) {
     const from = m.fromResponsibleEmployee?.fullName ?? '(kosong)';
     const to = m.toResponsibleEmployee?.fullName ?? '(dilepas)';

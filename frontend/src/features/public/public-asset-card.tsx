@@ -12,7 +12,6 @@ export interface PublicCardData {
   categoryName: string;
   brand: string | null;
   model: string | null;
-  locationPath: string;
   status: AssetStatus;
   condition: AssetCondition;
   hasPhoto: boolean;
@@ -51,7 +50,6 @@ export function PublicAssetCard({ token, data, footer }: { token: string; data: 
         <dl className="grid grid-cols-[7rem_1fr] gap-y-2 text-sm">
           <Row label="Kategori">{data.categoryName}</Row>
           <Row label="Merek / tipe">{brandModel || '-'}</Row>
-          <Row label="Lokasi">{data.locationPath}</Row>
         </dl>
         {footer}
       </CardContent>

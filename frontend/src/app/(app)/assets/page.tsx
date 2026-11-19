@@ -27,7 +27,7 @@ export default function AssetsPage() {
     <>
       <PageHeader
         title="Inventaris"
-        description="Seluruh barang kantor beserta kode, lokasi, status, dan kondisinya."
+        description="Seluruh barang kantor beserta kode, status, kondisi, dan penanggung jawabnya."
         actions={
           <>
             {hasPermission('qr.generate') ? (

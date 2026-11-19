@@ -4,7 +4,6 @@ const valid = {
   ...emptyAssetForm,
   name: 'Laptop Kerja',
   categoryId: '11111111-1111-4111-8111-111111111111',
-  locationId: '22222222-2222-4222-8222-222222222222',
   ownershipType: 'OFFICE' as const,
   acquisitionMethod: 'PURCHASE' as const,
   condition: 'GOOD' as const,
@@ -12,11 +11,13 @@ const valid = {
 };
 
 describe('assetFormSchema', () => {
-  it('requires name, category and location', () => {
-    const result = assetFormSchema.safeParse({ ...valid, name: ' ', categoryId: '', locationId: '' });
+  it('requires name and category but no location', () => {
+    const result = assetFormSchema.safeParse({ ...valid, name: ' ', categoryId: '' });
     expect(result.success).toBe(false);
     const fields = result.success ? [] : result.error.issues.map((i) => i.path[0]);
-    expect(fields).toEqual(expect.arrayContaining(['name', 'categoryId', 'locationId']));
+    expect(fields).toEqual(expect.arrayContaining(['name', 'categoryId']));
+    expect(fields).not.toContain('locationId');
+    expect(assetFormSchema.safeParse({ ...valid, locationId: undefined }).success).toBe(true);
   });
 
   it('accepts a plain numeric price and rejects thousand separators or negatives', () => {
@@ -68,7 +69,6 @@ describe('toAssetUpdatePayload', () => {
   it('never sends the fields that only a mutation or a condition check may change', () => {
     const payload = toAssetUpdatePayload({
       ...valid,
-      locationId: '22222222-2222-4222-8222-222222222222',
       responsibleEmployeeId: '33333333-3333-4333-8333-333333333333',
       condition: 'MINOR_DAMAGE',
       status: 'STORED',

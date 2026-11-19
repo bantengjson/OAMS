@@ -263,7 +263,7 @@ model Asset {
   acquisitionDate       DateTime?         @map("acquisition_date") @db.Date
   purchasePrice         Decimal?          @map("purchase_price") @db.Decimal(15, 2)
   vendor                String?           @db.VarChar(150)
-  locationId            String            @map("location_id") @db.Uuid
+  locationId            String?           @map("location_id") @db.Uuid
   departmentId          String?           @map("department_id") @db.Uuid
   condition             AssetCondition
   status                AssetStatus
@@ -277,7 +277,7 @@ model Asset {
   updatedAt             DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   category            Category            @relation(fields: [categoryId], references: [id])
-  location            Location            @relation(fields: [locationId], references: [id])
+  location            Location?           @relation(fields: [locationId], references: [id])
   department          Department?         @relation(fields: [departmentId], references: [id])
   responsibleEmployee Employee?           @relation("AssetResponsible", fields: [responsibleEmployeeId], references: [id])
   createdBy           User?               @relation("AssetCreatedBy", fields: [createdById], references: [id])
@@ -458,7 +458,7 @@ model AssetMutation {
   id                        String         @id @default(uuid()) @db.Uuid
   assetId                   String         @map("asset_id") @db.Uuid
   status                    MutationStatus @default(PENDING)
-  fromLocationId            String         @map("from_location_id") @db.Uuid
+  fromLocationId            String?        @map("from_location_id") @db.Uuid
   toLocationId              String?        @map("to_location_id") @db.Uuid
   changesResponsible        Boolean        @default(false) @map("changes_responsible")
   fromResponsibleEmployeeId String?        @map("from_responsible_employee_id") @db.Uuid
@@ -474,7 +474,7 @@ model AssetMutation {
   updatedAt                 DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   asset                   Asset             @relation(fields: [assetId], references: [id], onDelete: Cascade)
-  fromLocation            Location          @relation("MutationFrom", fields: [fromLocationId], references: [id])
+  fromLocation            Location?         @relation("MutationFrom", fields: [fromLocationId], references: [id])
   toLocation              Location?         @relation("MutationTo", fields: [toLocationId], references: [id])
   fromResponsibleEmployee Employee?         @relation("MutationResponsibleFrom", fields: [fromResponsibleEmployeeId], references: [id])
   toResponsibleEmployee   Employee?         @relation("MutationResponsibleTo", fields: [toResponsibleEmployeeId], references: [id])

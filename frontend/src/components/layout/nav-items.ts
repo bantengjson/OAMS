@@ -5,7 +5,6 @@ import {
   HandCoins,
   IdCard,
   LayoutDashboard,
-  MapPin,
   Printer,
   ScanLine,
   ScrollText,
@@ -45,7 +44,6 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { href: '/users', label: 'Pengguna', icon: Users, section: 'Administrasi', permissions: ['users.manage'] },
   { href: '/roles', label: 'Role & Izin', icon: ShieldCheck, section: 'Administrasi', permissions: ['roles.view'] },
   { href: '/categories', label: 'Kategori', icon: Tags, section: 'Data Master', permissions: ['categories.manage'] },
-  { href: '/locations', label: 'Lokasi', icon: MapPin, section: 'Data Master', permissions: ['locations.manage'] },
   { href: '/departments', label: 'Unit Kerja', icon: Building2, section: 'Data Master', permissions: ['departments.manage'] },
   { href: '/employees', label: 'Pegawai', icon: IdCard, section: 'Data Master', permissions: ['employees.manage'] },
   {

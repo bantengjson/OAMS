@@ -234,6 +234,19 @@ describe('assets (e2e)', () => {
     expect(unchanged.body.condition).toBe('GOOD');
   });
 
+  it('creates an asset without a location; the public page shows none', async () => {
+    const { locationId: _omit, ...noLocation } = baseAsset();
+    const res = await ctx.http().post(URL).set(bearer(admin)).send({ ...noLocation, name: 'Barang Tanpa Lokasi' }).expect(201);
+    expect(res.body.location).toBeNull();
+    const list = await ctx.http().get(`${URL}?search=Tanpa%20Lokasi`).set(bearer(viewer)).expect(200);
+    expect(list.body.data[0].location).toBeNull();
+    const pub = await ctx.http().get(`/api/v1/qr/public/${res.body.label.token}`).expect(200);
+    expect(pub.body.location).toBeNull();
+    expect(pub.body.assetCode).toBe(res.body.assetCode);
+    const stats = await ctx.http().get(`${URL}/statistics`).set(bearer(viewer)).expect(200);
+    expect(Array.isArray(stats.body.byOffice)).toBe(true);
+  });
+
   it('lists with search and filters, excluding archived by default', async () => {
     const bySuffix = await ctx
       .http()

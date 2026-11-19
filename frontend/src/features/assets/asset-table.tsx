@@ -23,7 +23,6 @@ export function AssetTable({ rows, loading }: { rows: AssetListItem[]; loading: 
           <TH className="w-40">Kode</TH>
           <TH>Nama</TH>
           <TH className="hidden md:table-cell">Kategori</TH>
-          <TH className="hidden lg:table-cell">Lokasi</TH>
           <TH className="w-32">Status</TH>
           <TH className="hidden w-32 xl:table-cell">Kondisi</TH>
           <TH className="hidden xl:table-cell">Penanggung jawab</TH>
@@ -48,12 +47,9 @@ export function AssetTable({ rows, loading }: { rows: AssetListItem[]; loading: 
                   <span className="truncate">{a.name}</span>
                   {a.isArchived ? <Badge variant="muted">Arsip</Badge> : null}
                 </Link>
-                <p className="text-xs text-muted-foreground md:hidden">{a.category.name} · {a.location.name}</p>
+                <p className="text-xs text-muted-foreground md:hidden">{a.category.name}</p>
               </TD>
               <TD className="hidden text-muted-foreground md:table-cell">{a.category.name}</TD>
-              <TD className="hidden max-w-xs truncate text-muted-foreground lg:table-cell" title={a.location.path}>
-                {a.location.path}
-              </TD>
               <TD><AssetStatusBadge status={a.status} /></TD>
               <TD className="hidden xl:table-cell"><AssetConditionBadge condition={a.condition} /></TD>
               <TD className="hidden text-muted-foreground xl:table-cell">{a.responsibleEmployee?.fullName ?? '-'}</TD>

@@ -99,7 +99,8 @@ export class AssetListItemDto {
   @ApiProperty({ example: 'INV-2026-0001' }) assetCode!: string;
   @ApiProperty() name!: string;
   @ApiProperty({ type: AssetCategoryRefDto }) category!: AssetCategoryRefDto;
-  @ApiProperty({ type: AssetLocationRefDto }) location!: AssetLocationRefDto;
+  @ApiProperty({ type: AssetLocationRefDto, nullable: true, description: 'Opsional; disembunyikan di UI kantor tunggal' })
+  location!: AssetLocationRefDto | null;
   @ApiProperty({ type: AssetDepartmentRefDto, nullable: true }) department!: AssetDepartmentRefDto | null;
   @ApiProperty({ type: AssetEmployeeRefDto, nullable: true }) responsibleEmployee!: AssetEmployeeRefDto | null;
   @ApiProperty({ nullable: true }) brand!: string | null;

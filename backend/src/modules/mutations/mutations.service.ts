@@ -31,7 +31,7 @@ type Tx = Prisma.TransactionClient;
 
 interface AssetState {
   id: string;
-  locationId: string;
+  locationId: string | null;
   responsibleEmployeeId: string | null;
   archivedAt: Date | null;
   activeLoans: number;

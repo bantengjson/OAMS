@@ -20,7 +20,7 @@ const COPY: Record<DecisionMode, { title: string; confirm: string; success: stri
     title: 'Setujui mutasi?',
     confirm: 'Setujui',
     success: 'Mutasi disetujui dan barang dipindahkan.',
-    body: 'Lokasi dan/atau penanggung jawab barang berubah saat itu juga dan tercatat di riwayat.',
+    body: 'Penanggung jawab barang berubah saat itu juga dan tercatat di riwayat.',
   },
   reject: {
     title: 'Tolak mutasi?',

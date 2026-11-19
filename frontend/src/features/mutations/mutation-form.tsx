@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/input';
 import { Field, FieldError, FieldHint, Label } from '@/components/ui/label';
-import { LocationSelect } from '@/features/assets/location-select';
 import { EmployeeLookup } from '@/features/employees/employee-lookup';
 import { assetsApi } from '@/lib/api/assets';
 import { applyApiError } from '@/lib/api/form-errors';
@@ -40,8 +39,6 @@ export function MutationForm({
     defaultValues: { ...emptyMutationForm, assetId: initialAssetId ?? '' },
   });
   const { errors, isSubmitting } = form.formState;
-  const moveLocation = useWatch({ control: form.control, name: 'moveLocation' });
-  const changeResponsible = useWatch({ control: form.control, name: 'changeResponsible' });
   const releaseResponsible = useWatch({ control: form.control, name: 'releaseResponsible' });
 
   // Preselected asset (from ?assetId=): load it once to show its current state.
@@ -73,7 +70,7 @@ export function MutationForm({
       <Card>
         <CardHeader>
           <CardTitle>Barang</CardTitle>
-          <CardDescription>Lokasi dan penanggung jawab saat ini ditampilkan sebagai acuan.</CardDescription>
+          <CardDescription>Penanggung jawab saat ini ditampilkan sebagai acuan.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           <Controller
@@ -98,65 +95,43 @@ export function MutationForm({
 
       <Card>
         <CardHeader>
-          <CardTitle>Perubahan yang diajukan</CardTitle>
-          <CardDescription>Pilih satu atau keduanya.</CardDescription>
+          <CardTitle>Penanggung jawab baru</CardTitle>
+          <CardDescription>
+            {shownAsset ? `Saat ini: ${shownAsset.responsibleEmployee?.fullName ?? 'tidak ada'}.` : 'Pilih barang terlebih dahulu.'}
+          </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <label className="flex items-center gap-2 text-sm font-medium">
-            <input type="checkbox" className="h-4 w-4" {...form.register('moveLocation')} />
-            Pindah lokasi
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" className="h-4 w-4" {...form.register('releaseResponsible')} />
+            Lepaskan tanpa penanggung jawab baru
           </label>
-          <FieldError>{errors.moveLocation?.message}</FieldError>
-          {moveLocation ? (
-            <Field className="pl-6">
-              <Label htmlFor="toLocationId" required>Lokasi tujuan</Label>
-              <LocationSelect id="toLocationId" aria-invalid={Boolean(errors.toLocationId)} {...form.register('toLocationId')} />
-              {shownAsset ? <FieldHint>Saat ini: {shownAsset.location.path}</FieldHint> : null}
-              <FieldError>{errors.toLocationId?.message}</FieldError>
-            </Field>
-          ) : null}
-
-          <label className="flex items-center gap-2 text-sm font-medium">
-            <input type="checkbox" className="h-4 w-4" {...form.register('changeResponsible')} />
-            Ganti penanggung jawab
-          </label>
-          {changeResponsible ? (
-            <div className="flex flex-col gap-3 pl-6">
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" className="h-4 w-4" {...form.register('releaseResponsible')} />
-                Lepaskan tanpa penanggung jawab baru
-              </label>
-              {!releaseResponsible ? (
-                <Field>
-                  <Label htmlFor="toResponsibleEmployeeId" required>Penanggung jawab baru</Label>
-                  <Controller
-                    control={form.control}
-                    name="toResponsibleEmployeeId"
-                    render={({ field }) => (
-                      <EmployeeLookup
-                        id="toResponsibleEmployeeId"
-                        value={field.value}
-                        label={employeeLabel}
-                        invalid={Boolean(errors.toResponsibleEmployeeId)}
-                        onChange={(id, label) => {
-                          field.onChange(id);
-                          setEmployeeLabel(label);
-                        }}
-                      />
-                    )}
+          {!releaseResponsible ? (
+            <Field>
+              <Label htmlFor="toResponsibleEmployeeId" required>Penanggung jawab baru</Label>
+              <Controller
+                control={form.control}
+                name="toResponsibleEmployeeId"
+                render={({ field }) => (
+                  <EmployeeLookup
+                    id="toResponsibleEmployeeId"
+                    value={field.value}
+                    label={employeeLabel}
+                    invalid={Boolean(errors.toResponsibleEmployeeId)}
+                    onChange={(id, label) => {
+                      field.onChange(id);
+                      setEmployeeLabel(label);
+                    }}
                   />
-                  {shownAsset ? (
-                    <FieldHint>Saat ini: {shownAsset.responsibleEmployee?.fullName ?? 'tidak ada'}</FieldHint>
-                  ) : null}
-                  <FieldError>{errors.toResponsibleEmployeeId?.message}</FieldError>
-                </Field>
-              ) : null}
-            </div>
+                )}
+              />
+              <FieldHint>Dipilih dari daftar pegawai aktif.</FieldHint>
+              <FieldError>{errors.toResponsibleEmployeeId?.message}</FieldError>
+            </Field>
           ) : null}
 
           <Field>
             <Label htmlFor="reason" required>Alasan</Label>
-            <Textarea id="reason" rows={3} placeholder="Mis. ruang rapat lantai 1 butuh proyektor tetap" {...form.register('reason')} />
+            <Textarea id="reason" rows={3} placeholder="Mis. serah terima karena rotasi tugas" {...form.register('reason')} />
             <FieldError>{errors.reason?.message}</FieldError>
           </Field>
         </CardContent>
@@ -165,7 +140,7 @@ export function MutationForm({
       <div className="flex flex-wrap justify-end gap-2">
         <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>Batal</Button>
         <Button type="submit" loading={isSubmitting} disabled={Boolean(blocked)}>
-          {canApprove ? 'Pindahkan sekarang' : 'Ajukan mutasi'}
+          {canApprove ? 'Ganti sekarang' : 'Ajukan mutasi'}
         </Button>
       </div>
     </form>

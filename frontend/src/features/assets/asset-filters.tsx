@@ -9,12 +9,10 @@ import type { AssetQuery } from '@/lib/api/assets';
 import { CONDITION_LABEL, OWNERSHIP_LABEL, STATUS_LABEL } from '@/lib/asset-labels';
 import { ASSET_CONDITIONS, ASSET_STATUSES, OWNERSHIP_TYPES } from '@/types/api';
 import type { AssetCondition, AssetStatus, OwnershipType } from '@/types/api';
-import { useActiveLocations } from './location-select';
 
 export interface AssetFilterState {
   search: string;
   categoryId: string;
-  locationId: string;
   status: '' | AssetStatus;
   condition: '' | AssetCondition;
   ownershipType: '' | OwnershipType;
@@ -24,7 +22,6 @@ export interface AssetFilterState {
 export const emptyAssetFilters: AssetFilterState = {
   search: '',
   categoryId: '',
-  locationId: '',
   status: '',
   condition: '',
   ownershipType: '',
@@ -35,7 +32,6 @@ export function toAssetQuery(f: AssetFilterState, debouncedSearch: string): Asse
   return {
     search: debouncedSearch.trim() || undefined,
     categoryId: f.categoryId || undefined,
-    locationId: f.locationId || undefined,
     status: f.status || undefined,
     condition: f.condition || undefined,
     ownershipType: f.ownershipType || undefined,
@@ -55,7 +51,6 @@ export function AssetFilters({
     queryFn: () => categoriesApi.list({ isActive: true, pageSize: 100 }),
     staleTime: 60_000,
   });
-  const locations = useActiveLocations();
   const set = <K extends keyof AssetFilterState>(key: K, v: AssetFilterState[K]) =>
     onChange({ ...value, [key]: v });
 
@@ -75,12 +70,6 @@ export function AssetFilters({
         <option value="">Semua kategori</option>
         {categories.data?.data.map((c) => (
           <option key={c.id} value={c.id}>{c.name}</option>
-        ))}
-      </Select>
-      <Select value={value.locationId} onChange={(e) => set('locationId', e.target.value)} aria-label="Filter lokasi">
-        <option value="">Semua lokasi</option>
-        {locations.data?.map((l) => (
-          <option key={l.id} value={l.id}>{l.path}</option>
         ))}
       </Select>
       <Select value={value.status} onChange={(e) => set('status', e.target.value as AssetFilterState['status'])} aria-label="Filter status">

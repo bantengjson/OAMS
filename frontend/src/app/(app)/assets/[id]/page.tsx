@@ -78,7 +78,7 @@ function AssetDetailContent() {
               <AssetStatusBadge status={a.status} />
               <AssetConditionBadge condition={a.condition} />
               {a.isArchived ? <Badge variant="muted">Diarsipkan</Badge> : null}
-              <span className="text-sm text-muted-foreground">{a.category.name} · {a.location.path}</span>
+              <span className="text-sm text-muted-foreground">{a.category.name}</span>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -115,12 +115,12 @@ function AssetDetailContent() {
                   title={borrowed ? 'Barang sedang dipinjam' : 'Sudah ada mutasi yang menunggu persetujuan'}
                   leftIcon={<ArrowLeftRight className="h-4 w-4" />}
                 >
-                  {canApproveMutation ? 'Pindahkan' : 'Ajukan mutasi'}
+                  {canApproveMutation ? 'Ganti PJ' : 'Ajukan mutasi'}
                 </Button>
               ) : (
                 <Link href={`/mutations/new?assetId=${a.id}`}>
                   <Button variant="outline" leftIcon={<ArrowLeftRight className="h-4 w-4" />}>
-                    {canApproveMutation ? 'Pindahkan' : 'Ajukan mutasi'}
+                    {canApproveMutation ? 'Ganti PJ' : 'Ajukan mutasi'}
                   </Button>
                 </Link>
               )

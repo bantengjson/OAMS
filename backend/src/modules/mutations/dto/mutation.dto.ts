@@ -27,7 +27,7 @@ export class MutationDto {
   @ApiProperty() id!: string;
   @ApiProperty({ enum: ['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'] }) status!: MutationStatus;
   @ApiProperty({ type: MutationAssetRefDto }) asset!: MutationAssetRefDto;
-  @ApiProperty({ type: MutationLocationRefDto }) fromLocation!: MutationLocationRefDto;
+  @ApiProperty({ type: MutationLocationRefDto, nullable: true }) fromLocation!: MutationLocationRefDto | null;
   @ApiProperty({ type: MutationLocationRefDto, nullable: true }) toLocation!: MutationLocationRefDto | null;
   @ApiProperty() changesResponsible!: boolean;
   @ApiProperty({ type: MutationEmployeeRefDto, nullable: true })

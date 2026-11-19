@@ -157,6 +157,7 @@ export class AssetsService {
     const paths = await this.pathIndex();
     const officeCounts = new Map<string, number>();
     for (const r of byLocationRows) {
+      if (!r.locationId) continue; // single-office setups leave the location empty
       const root = rootOf(r.locationId, paths);
       officeCounts.set(root, (officeCounts.get(root) ?? 0) + r._count._all);
     }
@@ -295,7 +296,7 @@ export class AssetsService {
       acquisitionDate: dto.acquisitionDate ? new Date(`${dto.acquisitionDate}T00:00:00Z`) : null,
       purchasePrice: dto.purchasePrice ?? null,
       vendor: dto.vendor ?? null,
-      locationId: dto.locationId,
+      locationId: dto.locationId ?? null,
       departmentId: dto.departmentId ?? null,
       condition: dto.condition,
       status: dto.status,

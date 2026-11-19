@@ -111,9 +111,11 @@ export class CreateAssetDto {
   @ApiPropertyOptional() @IsOptional() @Transform(emptyToNull) @IsString() @MaxLength(150)
   vendor?: string | null;
 
-  @ApiProperty({ format: 'uuid' })
+  @ApiPropertyOptional({ format: 'uuid', nullable: true, description: 'Opsional; kantor tunggal tidak memakainya' })
+  @IsOptional()
+  @Transform(emptyToNull)
   @IsUUID('all', { message: 'Lokasi tidak valid' })
-  locationId!: string;
+  locationId?: string | null;
 
   @ApiPropertyOptional({ format: 'uuid', nullable: true })
   @IsOptional()
