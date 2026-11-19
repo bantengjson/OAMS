@@ -80,3 +80,12 @@ describe('toAssetUpdatePayload', () => {
     expect(payload).toMatchObject({ status: 'STORED', notes: 'disimpan', name: 'Laptop Kerja' });
   });
 });
+
+describe('toAssetUpdatePayload while borrowed', () => {
+  it('drops a loan-managed status so the rest of the form can still be saved', () => {
+    const payload = toAssetUpdatePayload({ ...valid, status: 'BORROWED', notes: 'masih dipinjam' });
+    expect(payload).not.toHaveProperty('status');
+    expect(payload).toMatchObject({ notes: 'masih dipinjam' });
+    expect(toAssetUpdatePayload({ ...valid, status: 'STORED' })).toMatchObject({ status: 'STORED' });
+  });
+});

@@ -305,6 +305,25 @@ describe('loans (e2e)', () => {
     expect(m.body.message).toBe('Sudah ada mutasi yang menunggu persetujuan.');
   });
 
+  it('accepts a same-day return recorded before 07:00 WIB and refuses one before the loan date', async () => {
+    const asset = await createAsset('Jam Dinding Pinjam');
+    const loan = (await ctx.http().post(URL).set(bearer(admin)).send(employeeLoan(asset.id)).expect(201)).body;
+    const early = await ctx
+      .http()
+      .post(`${URL}/${loan.id}/return`)
+      .set(bearer(admin))
+      .send({ returnedAt: `${shift(-1)}T23:30:00+07:00` })
+      .expect(400);
+    expect(early.body.errors.returnedAt).toBeDefined();
+    const ok = await ctx
+      .http()
+      .post(`${URL}/${loan.id}/return`)
+      .set(bearer(admin))
+      .send({ returnedAt: `${today()}T00:30:00+07:00` })
+      .expect(200);
+    expect(ok.body.status).toBe('RETURNED');
+  });
+
   it('VIEWER may list and read but not write', async () => {
     const list = await ctx.http().get(`${URL}?state=all`).set(bearer(viewer)).expect(200);
     expect(list.body.meta.total).toBeGreaterThanOrEqual(5);

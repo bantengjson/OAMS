@@ -95,6 +95,8 @@ export function toAssetUpdatePayload(values: AssetFormValues): AssetUpdateInput 
   delete payload.locationId;
   delete payload.responsibleEmployeeId;
   delete payload.condition;
+  // A borrowed asset carries the loan-managed status in the form; sending it back would be refused.
+  if (payload.status === 'BORROWED' || payload.status === 'RETURNED') delete payload.status;
   return payload;
 }
 

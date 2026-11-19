@@ -298,6 +298,61 @@ describe('mutations (e2e)', () => {
     expect(blocked.body.message).toBe('Barang sudah diarsipkan.');
   });
 
+  it('refuses to approve when the target employee or location went inactive, or the asset got borrowed', async () => {
+    const p = ctx.prisma;
+    const tempEmp = await p.employee.create({ data: { fullName: 'Pegawai Sementara' } });
+    const tempRoom = await p.location.create({ data: { code: 'MUT_TMP', name: 'Ruang Sementara', type: 'ROOM', parentId: (await p.location.findUniqueOrThrow({ where: { code: 'MUT_F' } })).id } });
+
+    const a1 = await createAsset('Lemari Mutasi 1');
+    const r1 = await ctx
+      .http()
+      .post(URL)
+      .set(bearer(petugas))
+      .send({ assetId: a1.id, changesResponsible: true, toResponsibleEmployeeId: tempEmp.id, reason: 'PJ baru' })
+      .expect(201);
+    await p.employee.update({ where: { id: tempEmp.id }, data: { isActive: false } });
+    const e1 = await ctx.http().post(`${URL}/${r1.body.id}/approve`).set(bearer(admin)).send({}).expect(409);
+    expect(e1.body.message).toBe('Pegawai tidak aktif.');
+    expect((await p.asset.findUniqueOrThrow({ where: { id: a1.id } })).responsibleEmployeeId).toBe(emp1);
+
+    const a2 = await createAsset('Lemari Mutasi 2');
+    const r2 = await ctx
+      .http()
+      .post(URL)
+      .set(bearer(petugas))
+      .send({ assetId: a2.id, toLocationId: tempRoom.id, reason: 'Pindah' })
+      .expect(201);
+    await p.location.update({ where: { id: tempRoom.id }, data: { isActive: false } });
+    const e2 = await ctx.http().post(`${URL}/${r2.body.id}/approve`).set(bearer(admin)).send({}).expect(409);
+    expect(e2.body.message).toBe('Lokasi tujuan tidak aktif.');
+    expect((await p.asset.findUniqueOrThrow({ where: { id: a2.id } })).locationId).toBe(room1);
+
+    const a3 = await createAsset('Lemari Mutasi 3');
+    const r3 = await ctx
+      .http()
+      .post(URL)
+      .set(bearer(petugas))
+      .send({ assetId: a3.id, toLocationId: room2, reason: 'Pindah' })
+      .expect(201);
+    await p.assetLoan.create({
+      data: {
+        assetId: a3.id,
+        borrowerType: 'EMPLOYEE',
+        borrowerEmployeeId: emp1,
+        borrowerName: 'Pemegang Mutasi',
+        loanedAt: new Date(),
+        dueAt: new Date(),
+        previousStatus: 'IN_USE',
+        recordedById: admin.userId,
+      },
+    });
+    await p.asset.update({ where: { id: a3.id }, data: { status: 'BORROWED' } });
+    const e3 = await ctx.http().post(`${URL}/${r3.body.id}/approve`).set(bearer(admin)).send({}).expect(409);
+    expect(e3.body.message).toBe('Barang sedang dipinjam.');
+    expect((await p.asset.findUniqueOrThrow({ where: { id: a3.id } })).locationId).toBe(room1);
+    expect((await p.assetMutation.findUniqueOrThrow({ where: { id: r3.body.id } })).status).toBe('PENDING');
+  });
+
   it('lists with filters for every role that may view', async () => {
     const all = await ctx.http().get(URL).set(bearer(viewer)).expect(200);
     expect(all.body.meta.total).toBeGreaterThanOrEqual(6);

@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service.js';
 import type { AuthUser } from '../../common/auth/auth-user.js';
-import { jakartaToday } from '../../common/dates/jakarta.js';
+import { isoDateOnly, jakartaToday } from '../../common/dates/jakarta.js';
 import { paginate } from '../../common/dto/paginated.js';
 import type { Paginated } from '../../common/dto/paginated.js';
 import { pageArgs } from '../../common/dto/pagination.dto.js';
@@ -183,7 +183,8 @@ export class LoansService {
   async return(id: string, dto: ReturnLoanDto, actor: AuthUser): Promise<LoanDto> {
     const loan = await this.getActive(id);
     const returnedAt = dto.returnedAt ? new Date(dto.returnedAt) : new Date();
-    if (returnedAt < loan.loanedAt) {
+    // Compare calendar days in Jakarta: `loanedAt` is a date column (UTC midnight = 07:00 WIB).
+    if (jakartaToday(returnedAt) < isoDateOnly(loan.loanedAt)) {
       throw validationError({ returnedAt: ['Waktu pengembalian tidak boleh sebelum tanggal pinjam'] });
     }
     const restored: AssetStatus =

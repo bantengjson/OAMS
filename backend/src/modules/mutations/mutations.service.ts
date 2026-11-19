@@ -209,6 +209,14 @@ export class MutationsService {
       asset.locationId !== mutation.fromLocationId ||
       (mutation.changesResponsible && asset.responsibleEmployeeId !== mutation.fromResponsibleEmployeeId);
     if (moved) throw new ConflictException(MUTATION_ASSET_MOVED);
+    // Targets may have gone inactive while the request waited.
+    if (mutation.toLocationId) {
+      const loc = await tx.location.findUnique({ where: { id: mutation.toLocationId }, select: { isActive: true } });
+      if (!loc?.isActive) throw new ConflictException(LOCATION_INACTIVE);
+    }
+    if (mutation.changesResponsible && mutation.toResponsibleEmployeeId) {
+      await this.employees.assertActive(tx, mutation.toResponsibleEmployeeId);
+    }
 
     const data: Prisma.AssetUncheckedUpdateManyInput = {};
     if (mutation.toLocationId) data.locationId = mutation.toLocationId;
