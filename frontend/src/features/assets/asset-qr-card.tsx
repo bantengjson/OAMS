@@ -15,6 +15,8 @@ import { PageSpinner } from '@/components/ui/spinner';
 import { getErrorMessage } from '@/lib/api/form-errors';
 import { qrApi } from '@/lib/api/qr';
 import { qrDataUrl } from '@/lib/qr-image';
+import { framedStickerPng } from '@/lib/sticker-image';
+import { FramedSticker } from '@/features/qr/framed-sticker';
 import { formatDateTime } from '@/lib/utils';
 import type { AssetDetail } from '@/types/api';
 
@@ -49,6 +51,15 @@ export function AssetQrCard({ asset, canGenerate }: { asset: AssetDetail; canGen
     },
     onError: (e) => toast.error(getErrorMessage(e)),
   });
+
+  const downloadFramed = async () => {
+    if (!info.data) return;
+    try {
+      downloadBlob(await framedStickerPng(info.data.url, asset.assetCode), `${asset.assetCode}-stiker.png`);
+    } catch (e) {
+      toast.error(getErrorMessage(e));
+    }
+  };
 
   const download = async (format: 'png' | 'svg') => {
     try {
@@ -100,9 +111,18 @@ export function AssetQrCard({ asset, canGenerate }: { asset: AssetDetail; canGen
             <Alert variant="info">QR nonaktif: pemindaian menampilkan pesan &ldquo;tidak dikenal&rdquo;. Aktifkan kembali bila stiker masih dipakai.</Alert>
           ) : null}
 
+          <div className="flex flex-col gap-2">
+            <p className="text-sm font-medium">Stiker berbingkai (90 × 60 mm)</p>
+            <div className="w-fit overflow-hidden rounded-md border border-border bg-white shadow-sm">
+              <FramedSticker widthMm={90} qrSrc={image.data ?? null} assetCode={asset.assetCode} />
+            </div>
+            <p className="text-xs text-muted-foreground">QR dan kode tertempel otomatis pada bingkai kantor; cetak massal lewat halaman Cetak QR.</p>
+          </div>
+
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={() => void download('png')} leftIcon={<Download className="h-4 w-4" />}>Unduh PNG</Button>
-            <Button variant="outline" size="sm" onClick={() => void download('svg')} leftIcon={<Download className="h-4 w-4" />}>Unduh SVG</Button>
+            <Button size="sm" onClick={() => void downloadFramed()} disabled={!info.data} leftIcon={<Download className="h-4 w-4" />}>Unduh stiker berbingkai</Button>
+            <Button variant="outline" size="sm" onClick={() => void download('png')} leftIcon={<Download className="h-4 w-4" />}>Unduh QR PNG</Button>
+            <Button variant="outline" size="sm" onClick={() => void download('svg')} leftIcon={<Download className="h-4 w-4" />}>Unduh QR SVG</Button>
             {canGenerate ? (
               <>
                 <Link href={`/qr/print?ids=${asset.id}`}>

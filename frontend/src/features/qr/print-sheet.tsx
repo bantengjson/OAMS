@@ -1,9 +1,10 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { chunk, sheetLayout, type StickerSize } from '@/lib/print-layout';
+import { chunk, sheetLayoutFor, stickerDims, type StickerSpec } from '@/lib/print-layout';
 import { qrDataUrl } from '@/lib/qr-image';
 import type { BulkQrItem } from '@/types/api';
+import { FramedSticker } from './framed-sticker';
 
 /** One QR image per label URL, rendered in the browser so printing needs no further API calls. */
 export function useQrImages(items: BulkQrItem[]) {
@@ -20,17 +21,18 @@ export function useQrImages(items: BulkQrItem[]) {
 
 export function PrintSheet({
   items,
-  size,
+  spec,
   images,
   previewOnly = false,
 }: {
   items: BulkQrItem[];
-  size: StickerSize;
+  spec: StickerSpec;
   images: Record<string, string>;
   /** Render just the first page (for the on-screen preview). */
   previewOnly?: boolean;
 }) {
-  const layout = sheetLayout(size);
+  const { widthMm, heightMm } = stickerDims(spec);
+  const layout = sheetLayoutFor(widthMm, heightMm);
   const pages = chunk(items, layout.perPage);
   const shown = previewOnly ? pages.slice(0, 1) : pages;
   return (
@@ -40,22 +42,32 @@ export function PrintSheet({
           key={index}
           className="sheet"
           style={{
-            gridTemplateColumns: `repeat(${layout.columns}, ${size}mm)`,
-            gridAutoRows: `${size}mm`,
+            gridTemplateColumns: `repeat(${layout.columns}, ${widthMm}mm)`,
+            gridAutoRows: `${heightMm}mm`,
           }}
           aria-label={`Lembar ${index + 1} dari ${pages.length}`}
         >
-          {page.map((item) => (
-            <div key={item.assetId} className="sticker" style={{ width: `${size}mm`, height: `${size}mm` }}>
-              {images[item.token] ? (
-                // eslint-disable-next-line @next/next/no-img-element -- data URL generated client-side
-                <img src={images[item.token]} alt={`QR ${item.assetCode}`} />
-              ) : (
-                <span className="text-[2.5mm] text-slate-400">...</span>
-              )}
-              <span className="code">{item.assetCode}</span>
-            </div>
-          ))}
+          {page.map((item) =>
+            spec.kind === 'framed' ? (
+              <FramedSticker
+                key={item.assetId}
+                className="sticker framed"
+                widthMm={spec.widthMm}
+                qrSrc={images[item.token] ?? null}
+                assetCode={item.assetCode}
+              />
+            ) : (
+              <div key={item.assetId} className="sticker" style={{ width: `${widthMm}mm`, height: `${heightMm}mm` }}>
+                {images[item.token] ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- data URL generated client-side
+                  <img src={images[item.token]} alt={`QR ${item.assetCode}`} />
+                ) : (
+                  <span className="text-[2.5mm] text-slate-400">...</span>
+                )}
+                <span className="code">{item.assetCode}</span>
+              </div>
+            ),
+          )}
         </section>
       ))}
     </div>

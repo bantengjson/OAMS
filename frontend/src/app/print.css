@@ -77,3 +77,9 @@
     display: none !important;
   }
 }
+
+/* Framed stickers are self-contained artwork: no dashed guide border, no padding. */
+.sticker.framed {
+  display: block;
+  border: none;
+}

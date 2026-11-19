@@ -15,7 +15,7 @@ import { PrintSheet, useQrImages } from '@/features/qr/print-sheet';
 import { assetsApi } from '@/lib/api/assets';
 import { getErrorMessage } from '@/lib/api/form-errors';
 import { qrApi } from '@/lib/api/qr';
-import { sheetLayout, STICKER_SIZES, type StickerSize } from '@/lib/print-layout';
+import { sheetLayoutFor, STICKER_OPTIONS, stickerDims, type StickerOption } from '@/lib/print-layout';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import type { BulkQrResult } from '@/types/api';
 import '@/app/print.css';
@@ -31,7 +31,8 @@ function PrintPage() {
   const [selected, setSelected] = useState<Set<string>>(() => new Set(preselected));
   const [search, setSearch] = useState('');
   const debounced = useDebouncedValue(search, 300);
-  const [size, setSize] = useState<StickerSize>(40);
+  const [optionKey, setOptionKey] = useState<StickerOption['key']>('F90');
+  const option = STICKER_OPTIONS.find((o) => o.key === optionKey) ?? STICKER_OPTIONS[3];
   const [prepared, setPrepared] = useState<BulkQrResult | null>(null);
 
   const assets = useQuery({
@@ -55,7 +56,8 @@ function PrintPage() {
 
   const items = useMemo(() => prepared?.items ?? [], [prepared]);
   const images = useQrImages(items);
-  const layout = sheetLayout(size);
+  const dims = stickerDims(option.spec);
+  const layout = sheetLayoutFor(dims.widthMm, dims.heightMm);
   const pageCount = Math.ceil(items.length / layout.perPage);
 
   // The browser fires `afterprint` whether the user printed or cancelled; counting both is the
@@ -139,14 +141,20 @@ function PrintPage() {
               <CardDescription>A4, margin 10 mm, jarak antar stiker 4 mm.</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
-              <fieldset className="flex flex-wrap gap-4 text-sm">
-                <legend className="mb-2 text-sm font-medium">Ukuran stiker</legend>
-                {STICKER_SIZES.map((s) => {
-                  const l = sheetLayout(s);
+              <fieldset className="grid gap-2 text-sm sm:grid-cols-2">
+                <legend className="mb-2 text-sm font-medium">Jenis dan ukuran stiker</legend>
+                {STICKER_OPTIONS.map((o) => {
+                  const d = stickerDims(o.spec);
+                  const l = sheetLayoutFor(d.widthMm, d.heightMm);
                   return (
-                    <label key={s} className="inline-flex items-center gap-2">
-                      <input type="radio" name="size" value={s} checked={size === s} onChange={() => setSize(s)} />
-                      {s} × {s} mm <span className="text-muted-foreground">({l.columns} × {l.rows} = {l.perPage}/lembar)</span>
+                    <label key={o.key} className="flex items-start gap-2 rounded-md border border-border px-3 py-2 has-checked:border-primary">
+                      <input type="radio" name="sticker" value={o.key} checked={optionKey === o.key} onChange={() => setOptionKey(o.key)} className="mt-1" />
+                      <span>
+                        <span className="font-medium">{o.label}</span>
+                        <span className="block text-xs text-muted-foreground">
+                          {o.hint} · {l.columns} × {l.rows} = {l.perPage}/lembar
+                        </span>
+                      </span>
                     </label>
                   );
                 })}
@@ -184,7 +192,7 @@ function PrintPage() {
           {items.length > 0 ? (
             <div className="no-print overflow-auto rounded-lg border border-border bg-muted/40 p-4">
               {images.isPending ? <PageSpinner label="Membuat QR..." /> : null}
-              <PrintSheet items={items} size={size} images={images.data ?? {}} previewOnly />
+              <PrintSheet items={items} spec={option.spec} images={images.data ?? {}} previewOnly />
             </div>
           ) : null}
         </div>
@@ -192,7 +200,7 @@ function PrintPage() {
       {/* Hidden full copy used only by the printer: every page, not just the preview. */}
       {items.length > 0 && images.data ? (
         <div className="hidden print:block">
-          <PrintSheet items={items} size={size} images={images.data} />
+          <PrintSheet items={items} spec={option.spec} images={images.data} />
         </div>
       ) : null}
     </>
