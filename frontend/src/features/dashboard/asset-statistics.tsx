@@ -1,12 +1,13 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { Archive, Boxes, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, Archive, ArrowLeftRight, Boxes, CheckCircle2, HandCoins } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { assetsApi } from '@/lib/api/assets';
 import { getErrorMessage } from '@/lib/api/form-errors';
 import { CONDITION_LABEL, STATUS_LABEL } from '@/lib/asset-labels';
+import { useAuth } from '@/lib/auth/use-auth';
 import { ASSET_CONDITIONS, ASSET_STATUSES } from '@/types/api';
 import { StatCard } from './stat-card';
 
@@ -57,6 +58,9 @@ export function BarList({
 }
 
 export function AssetStatisticsPanel() {
+  const { hasPermission } = useAuth();
+  const canMutations = hasPermission('mutations.view');
+  const canLoans = hasPermission('loans.view');
   const stats = useQuery({ queryKey: ['assets', 'statistics'], queryFn: assetsApi.statistics });
   const s = stats.data;
 
@@ -67,6 +71,34 @@ export function AssetStatisticsPanel() {
         <StatCard label="Aktif" icon={CheckCircle2} href="/assets" value={s?.active} loading={stats.isPending} error={stats.isError} />
         <StatCard label="Diarsipkan" icon={Archive} value={s?.archived} loading={stats.isPending} error={stats.isError} />
       </div>
+
+      {canMutations || canLoans ? (
+        <div className="grid gap-4 sm:grid-cols-3">
+          {canMutations ? (
+            <StatCard
+              label="Mutasi menunggu"
+              icon={ArrowLeftRight}
+              href="/mutations?status=PENDING"
+              value={s?.pendingMutations}
+              loading={stats.isPending}
+              error={stats.isError}
+            />
+          ) : null}
+          {canLoans ? (
+            <>
+              <StatCard label="Pinjaman aktif" icon={HandCoins} href="/loans" value={s?.activeLoans} loading={stats.isPending} error={stats.isError} />
+              <StatCard
+                label="Pinjaman terlambat"
+                icon={AlertTriangle}
+                href="/loans?state=overdue"
+                value={s?.overdueLoans}
+                loading={stats.isPending}
+                error={stats.isError}
+              />
+            </>
+          ) : null}
+        </div>
+      ) : null}
 
       {stats.isError ? <Alert variant="error">{getErrorMessage(stats.error)}</Alert> : null}
 

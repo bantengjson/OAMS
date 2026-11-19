@@ -23,6 +23,15 @@ export const ASSET_ACTION_LABEL: Record<string, string> = {
   'qr.deactivated': 'QR Code dinonaktifkan',
   'qr.activated': 'QR Code diaktifkan',
   'qr.printed': 'Stiker dicetak',
+  'asset.assigned': 'Penanggung jawab diganti',
+  'asset.condition_recorded': 'Kondisi diperiksa',
+  'mutation.requested': 'Mutasi diajukan',
+  'mutation.approved': 'Mutasi disetujui',
+  'mutation.rejected': 'Mutasi ditolak',
+  'mutation.cancelled': 'Mutasi dibatalkan',
+  'loan.created': 'Dipinjamkan',
+  'loan.updated': 'Peminjaman diubah',
+  'loan.returned': 'Dikembalikan',
 };
 
 export function AssetHistory({ assetId }: { assetId: string }) {

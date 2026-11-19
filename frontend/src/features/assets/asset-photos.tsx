@@ -71,6 +71,9 @@ export function AssetPhotos({ asset, canEdit }: { asset: AssetDetail; canEdit: b
               {p.isPrimary ? (
                 <Badge className="absolute left-2 top-2" variant="default">Utama</Badge>
               ) : null}
+              {p.conditionLogId ? (
+                <Badge className="absolute right-2 top-2" variant="warning">Pemeriksaan</Badge>
+              ) : null}
               <figcaption className="flex items-center justify-between gap-1 px-2 py-1.5 text-xs text-muted-foreground">
                 <span className="truncate">{p.caption || `${p.width ?? '?'}×${p.height ?? '?'}`}</span>
                 {canEdit && !asset.isArchived ? (
