@@ -22,14 +22,16 @@ export function LoanTable({
   onExtend: (loan: Loan) => void;
   showAsset?: boolean;
 }) {
-  const cols = showAsset ? 6 : 5;
+  const cols = showAsset ? 8 : 7;
   return (
     <Table>
       <THead>
         <TR>
           {showAsset ? <TH>Barang</TH> : null}
           <TH>Peminjam</TH>
-          <TH className="hidden w-56 md:table-cell">Pinjam → rencana kembali</TH>
+          <TH className="hidden w-28 md:table-cell">Pinjam</TH>
+          <TH className="hidden w-32 md:table-cell">Rencana kembali</TH>
+          <TH className="hidden w-28 md:table-cell">Kembali</TH>
           <TH className="w-36">Status</TH>
           <TH className="hidden lg:table-cell">Keperluan</TH>
           <TH className="w-44"><span className="sr-only">Aksi</span></TH>
@@ -57,10 +59,11 @@ export function LoanTable({
                     : l.borrowerDepartment?.name ?? 'Karyawan'}
                 </p>
               </TD>
-              <TD className="hidden text-muted-foreground md:table-cell">
-                {formatDate(l.loanedAt)} → <span className={l.isOverdue ? 'text-destructive' : undefined}>{formatDate(l.dueAt)}</span>
-                {l.returnedAt ? <p className="text-xs">Kembali {formatDate(l.returnedAt)}</p> : null}
+              <TD className="hidden text-muted-foreground md:table-cell">{formatDate(l.loanedAt)}</TD>
+              <TD className={`hidden md:table-cell ${l.isOverdue ? 'text-destructive' : 'text-muted-foreground'}`}>
+                {formatDate(l.dueAt)}
               </TD>
+              <TD className="hidden text-muted-foreground md:table-cell">{l.returnedAt ? formatDate(l.returnedAt) : '-'}</TD>
               <TD><LoanStateBadge loan={l} /></TD>
               <TD className="hidden max-w-xs truncate text-muted-foreground lg:table-cell" title={l.purpose ?? undefined}>
                 {l.purpose ?? '-'}
