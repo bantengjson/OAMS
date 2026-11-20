@@ -244,4 +244,76 @@ describe('stock opname (e2e)', () => {
     const stats = await ctx.http().get('/api/v1/assets/statistics').set(bearer(admin)).expect(200);
     expect(stats.body.openOpname).toBeNull();
   });
+
+  describe('close racing with scanners', () => {
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    const openSession = async (name: string) =>
+      (await ctx.http().post(URL).set(bearer(admin)).send({ name, plannedDate: today() }).expect(201)).body.id as string;
+    const itemOf = async (opnameId: string, assetId: string) =>
+      (await ctx.prisma.stockOpnameItem.findFirstOrThrow({ where: { opnameId, assetId } })).id;
+
+    it('a scan that commits while close is judging is not overwritten', async () => {
+      const asset = await createAsset('raceScan');
+      const id = await openSession('Opname Balapan Pindai');
+      const itemId = await itemOf(id, asset.id);
+      let closeRes: { status: number } | undefined;
+      // Hold the row like an in-flight scan, let close reach it, then commit the scan.
+      await ctx.prisma.$transaction(
+        async (tx) => {
+          await tx.$queryRaw`SELECT id FROM stock_opname_items WHERE id = ${itemId}::uuid FOR UPDATE`;
+          const closing = ctx
+            .http()
+            .post(`${URL}/${id}/close`)
+            .set(bearer(admin))
+            .then((r) => (closeRes = r));
+          void closing;
+          await sleep(400);
+          await tx.stockOpnameItem.update({
+            where: { id: itemId },
+            data: { result: 'MATCHED', scannedAt: new Date(), scannedById: petugas.userId, observedCondition: 'GOOD' },
+          });
+        },
+        { timeout: 10_000 },
+      );
+      for (let i = 0; i < 50 && !closeRes; i++) await sleep(100);
+      expect(closeRes?.status).toBe(200);
+      const row = await ctx.prisma.stockOpnameItem.findUniqueOrThrow({ where: { id: itemId } });
+      expect(row.result).toBe('MATCHED');
+    });
+
+    it('a confirmation in flight when close starts is counted by close, never written after it', async () => {
+      const asset = await createAsset('raceConfirm');
+      const id = await openSession('Opname Balapan Konfirmasi');
+      const itemId = await itemOf(id, asset.id);
+      await ctx.http().post(`${URL}/${id}/scan`).set(bearer(petugas)).send({ value: asset.assetCode }).expect(200);
+      let confirmRes: { status: number } | undefined;
+      let closeRes: { status: number; body: { counts: Record<string, number> } } | undefined;
+      await ctx.prisma.$transaction(
+        async (tx) => {
+          await tx.$queryRaw`SELECT id FROM stock_opname_items WHERE id = ${itemId}::uuid FOR UPDATE`;
+          void ctx
+            .http()
+            .post(`${URL}/${id}/items/${itemId}/confirm`)
+            .set(bearer(petugas))
+            .send({ observedCondition: 'UNUSABLE' })
+            .then((r) => (confirmRes = r));
+          await sleep(400);
+          void ctx
+            .http()
+            .post(`${URL}/${id}/close`)
+            .set(bearer(admin))
+            .then((r) => (closeRes = r));
+          await sleep(400);
+        },
+        { timeout: 10_000 },
+      );
+      for (let i = 0; i < 50 && (!confirmRes || !closeRes); i++) await sleep(100);
+      expect(closeRes?.status).toBe(200);
+      const final = await ctx.http().get(`${URL}/${id}`).set(bearer(admin)).expect(200);
+      // Whatever order won, the counts close reported are the counts the session keeps.
+      expect(closeRes?.body.counts).toEqual(final.body.counts);
+      if (confirmRes?.status === 200) expect(final.body.counts.CONDITION_DIFFERS).toBe(1);
+      else expect(confirmRes?.status).toBe(409);
+    });
+  });
 });

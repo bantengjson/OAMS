@@ -27,23 +27,27 @@ import {
 } from '@/types/api';
 import Link from 'next/link';
 import { EmployeeLookup } from '@/features/employees/employee-lookup';
-import { assetFormSchema, emptyAssetForm } from './asset-form.schema';
+import { FLOW_STATUSES, assetFormSchema, emptyAssetForm } from './asset-form.schema';
 import type { AssetFormValues } from './asset-form.schema';
 import { AssetConditionBadge } from './asset-table';
 
 const FIELDS = Object.keys(emptyAssetForm) as (keyof AssetFormValues)[];
-/** Statuses a person may set by hand; BORROWED/RETURNED belong to the loan flow. */
 /** Statuses a person may set by hand; the others belong to loans, repairs and disposals. */
-const FLOW_STATUSES = ['BORROWED', 'RETURNED', 'UNDER_MAINTENANCE', 'MISSING', 'DISPOSED'];
 const MANUAL_STATUSES = ASSET_STATUSES.filter((s) => !FLOW_STATUSES.includes(s));
+
+const FLOW_STATUS_HINT: Partial<Record<AssetFormValues['status'], string>> = {
+  BORROWED: 'Barang sedang dipinjam; status kembali otomatis saat pengembalian dicatat.',
+  UNDER_MAINTENANCE: 'Barang sedang diperbaiki; status kembali otomatis saat perbaikan selesai atau dibatalkan.',
+  DISPOSED: 'Barang sudah dilepas; batalkan pelepasan untuk mengembalikannya.',
+};
 
 /** What the edit form shows read-only: these change only through a mutation or a condition check. */
 export interface LockedAssetFields {
   assetId: string;
   responsibleLabel: string | null;
   condition: AssetFormValues['condition'];
-  /** An active loan: the status select is frozen until the asset comes back. */
-  isBorrowed: boolean;
+  /** The current status when a loan, repair or disposal owns it: the status select is frozen meanwhile. */
+  flowStatus: AssetFormValues['status'] | null;
 }
 
 export function AssetForm({
@@ -258,14 +262,14 @@ export function AssetForm({
           )}
           <Field>
             <Label htmlFor="status" required>Status operasional</Label>
-            <Select id="status" disabled={Boolean(locked?.isBorrowed)} {...form.register('status')}>
-              {locked?.isBorrowed ? <option value="BORROWED">{STATUS_LABEL.BORROWED}</option> : null}
+            <Select id="status" disabled={Boolean(locked?.flowStatus)} {...form.register('status')}>
+              {locked?.flowStatus ? <option value={locked.flowStatus}>{STATUS_LABEL[locked.flowStatus]}</option> : null}
               {MANUAL_STATUSES.map((v) => (
                 <option key={v} value={v}>{STATUS_LABEL[v]}</option>
               ))}
             </Select>
-            {locked?.isBorrowed ? (
-              <FieldHint>Barang sedang dipinjam; status kembali otomatis saat pengembalian dicatat.</FieldHint>
+            {locked?.flowStatus ? (
+              <FieldHint>{FLOW_STATUS_HINT[locked.flowStatus] ?? 'Status ini diatur oleh alurnya sendiri.'}</FieldHint>
             ) : (
               <FieldHint>Status Dipinjam, Dalam perbaikan, dan Dihapuskan diatur oleh peminjaman, pemeliharaan, dan pelepasan.</FieldHint>
             )}

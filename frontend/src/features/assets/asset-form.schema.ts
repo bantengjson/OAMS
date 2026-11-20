@@ -86,13 +86,16 @@ export function toAssetPayload(values: AssetFormValues): AssetInput {
   };
 }
 
+/** Statuses set only by loans, repairs and disposals; never chosen by hand or sent back from the form. */
+export const FLOW_STATUSES: readonly string[] = ['BORROWED', 'RETURNED', 'UNDER_MAINTENANCE', 'MISSING', 'DISPOSED'];
+
 /** Edit payload: the locked fields (location, responsible, condition) are never sent. */
 export function toAssetUpdatePayload(values: AssetFormValues): AssetUpdateInput {
   const payload: Partial<AssetInput> = toAssetPayload(values);
   delete payload.responsibleEmployeeId;
   delete payload.condition;
-  // A borrowed asset carries the loan-managed status in the form; sending it back would be refused.
-  if (payload.status === 'BORROWED' || payload.status === 'RETURNED') delete payload.status;
+  // An asset on loan, in repair or disposed carries that flow's status in the form; sending it back would be refused.
+  if (payload.status && FLOW_STATUSES.includes(payload.status)) delete payload.status;
   return payload;
 }
 

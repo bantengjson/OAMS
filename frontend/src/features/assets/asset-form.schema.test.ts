@@ -89,3 +89,11 @@ describe('toAssetUpdatePayload while borrowed', () => {
     expect(toAssetUpdatePayload({ ...valid, status: 'STORED' })).toMatchObject({ status: 'STORED' });
   });
 });
+
+describe('toAssetUpdatePayload while a repair or disposal owns the status', () => {
+  it.each(['UNDER_MAINTENANCE', 'MISSING', 'DISPOSED'] as const)('drops %s so other fields can still be saved', (status) => {
+    const payload = toAssetUpdatePayload({ ...valid, status, name: 'Printer Lantai 1' });
+    expect(payload).not.toHaveProperty('status');
+    expect(payload).toMatchObject({ name: 'Printer Lantai 1' });
+  });
+});

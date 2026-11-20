@@ -167,6 +167,13 @@ export class StockOpnamesService {
     const session = await this.getRow(id);
     if (session.status !== 'OPEN') throw new ConflictException(OPNAME_NOT_OPEN);
     await this.prisma.$transaction(async (tx) => {
+      // Claiming the session first waits for scans and confirmations in flight (they hold it FOR SHARE)
+      // and makes every later one see a closed session.
+      const closed = await tx.stockOpname.updateMany({
+        where: { id, status: 'OPEN' },
+        data: { status: 'CLOSED', closedById: actor.id, closedAt: new Date() },
+      });
+      if (closed.count !== 1) throw new ConflictException(OPNAME_NOT_OPEN);
       const pending = await tx.stockOpnameItem.findMany({
         where: { opnameId: id, result: 'PENDING' },
         select: {
@@ -192,13 +199,8 @@ export class StockOpnamesService {
         byResult.set(result, [...(byResult.get(result) ?? []), row.id]);
       }
       for (const [result, ids] of byResult) {
-        await tx.stockOpnameItem.updateMany({ where: { id: { in: ids } }, data: { result } });
+        await tx.stockOpnameItem.updateMany({ where: { id: { in: ids }, result: 'PENDING', scannedAt: null }, data: { result } });
       }
-      const closed = await tx.stockOpname.updateMany({
-        where: { id, status: 'OPEN' },
-        data: { status: 'CLOSED', closedById: actor.id, closedAt: new Date() },
-      });
-      if (closed.count !== 1) throw new ConflictException(OPNAME_NOT_OPEN);
     });
     const result = await this.toDto(await this.getRow(id));
     await this.audit.record({ action: 'opname.closed', module: MODULE, entityId: id, after: { counts: result.counts } });
@@ -271,10 +273,13 @@ export class StockOpnamesService {
       throw new ConflictException('Barang ini belum dipindai.');
     }
     const result: OpnameResult = dto.observedCondition === row.expectedCondition ? 'MATCHED' : 'CONDITION_DIFFERS';
-    const updated = await this.prisma.stockOpnameItem.update({
-      where: { id: itemId },
-      data: { observedCondition: dto.observedCondition, note: dto.note ?? null, result },
-      include: itemInclude,
+    const updated = await this.prisma.$transaction(async (tx) => {
+      await this.lockOpen(tx, id);
+      return tx.stockOpnameItem.update({
+        where: { id: itemId },
+        data: { observedCondition: dto.observedCondition, note: dto.note ?? null, result },
+        include: itemInclude,
+      });
     });
     await this.audit.record({
       action: 'opname.confirmed',
@@ -328,14 +333,17 @@ export class StockOpnamesService {
 
   private async markFound(row: ItemRow, actor: AuthUser): Promise<ScanResultDto> {
     if (row.scannedAt) return { item: toItemDto(row), alreadyScanned: true };
-    const claimed = await this.prisma.stockOpnameItem.updateMany({
-      where: { id: row.id, scannedAt: null },
-      data: {
-        scannedAt: new Date(),
-        scannedById: actor.id,
-        observedCondition: row.expectedCondition,
-        result: 'MATCHED',
-      },
+    const claimed = await this.prisma.$transaction(async (tx) => {
+      await this.lockOpen(tx, row.opnameId);
+      return tx.stockOpnameItem.updateMany({
+        where: { id: row.id, scannedAt: null, result: 'PENDING' },
+        data: {
+          scannedAt: new Date(),
+          scannedById: actor.id,
+          observedCondition: row.expectedCondition,
+          result: 'MATCHED',
+        },
+      });
     });
     const fresh = await this.prisma.stockOpnameItem.findUniqueOrThrow({ where: { id: row.id }, include: itemInclude });
     if (claimed.count !== 1) return { item: toItemDto(fresh), alreadyScanned: true };
@@ -356,9 +364,12 @@ export class StockOpnamesService {
     note: string,
   ): Promise<ScanResultDto> {
     try {
-      const row = await this.prisma.stockOpnameItem.create({
-        data: { opnameId, assetId, rawValue, note, result: 'UNREGISTERED', scannedAt: new Date(), scannedById: actor.id },
-        include: itemInclude,
+      const row = await this.prisma.$transaction(async (tx) => {
+        await this.lockOpen(tx, opnameId);
+        return tx.stockOpnameItem.create({
+          data: { opnameId, assetId, rawValue, note, result: 'UNREGISTERED', scannedAt: new Date(), scannedById: actor.id },
+          include: itemInclude,
+        });
       });
       await this.audit.record({
         action: 'opname.unregistered',
@@ -378,6 +389,16 @@ export class StockOpnamesService {
       }
       throw error;
     }
+  }
+
+  /**
+   * Holds the session row FOR SHARE for the rest of the transaction and refuses a session that is no
+   * longer open. Close and cancel update that row, so they wait for writers already past this point.
+   */
+  private async lockOpen(tx: Prisma.TransactionClient, opnameId: string): Promise<void> {
+    const rows = await tx.$queryRaw<{ status: string }[]>`
+      SELECT status::text AS status FROM stock_opnames WHERE id = ${opnameId}::uuid FOR SHARE`;
+    if (rows[0]?.status !== 'OPEN') throw new ConflictException(OPNAME_NOT_OPEN);
   }
 
   private assertCanView(actor: AuthUser): void {

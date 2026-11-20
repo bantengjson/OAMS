@@ -7,7 +7,7 @@ import { Alert } from '@/components/ui/alert';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageSpinner } from '@/components/ui/spinner';
 import { AssetForm } from '@/features/assets/asset-form';
-import { fromAssetDetail, toAssetUpdatePayload } from '@/features/assets/asset-form.schema';
+import { FLOW_STATUSES, fromAssetDetail, toAssetUpdatePayload } from '@/features/assets/asset-form.schema';
 import { assetsApi } from '@/lib/api/assets';
 import { getErrorMessage } from '@/lib/api/form-errors';
 import { useAuth } from '@/lib/auth/use-auth';
@@ -51,7 +51,7 @@ export default function EditAssetPage() {
           assetId: id,
           responsibleLabel: asset.data.responsibleEmployee?.fullName ?? null,
           condition: asset.data.condition,
-          isBorrowed: asset.data.activeLoan !== null,
+          flowStatus: FLOW_STATUSES.includes(asset.data.status) ? asset.data.status : null,
         }}
         submitLabel="Simpan perubahan"
         onCancel={() => router.push(`/assets/${id}`)}
