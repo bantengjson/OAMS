@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { AlertTriangle, Archive, ArrowLeftRight, Boxes, CheckCircle2, ClipboardList, HandCoins, Hammer, Wrench } from 'lucide-react';
+import { AlertTriangle, Archive, ArrowLeftRight, Boxes, CheckCircle2, ClipboardList, HandCoins, Hammer, PackageX, Wrench } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { assetsApi } from '@/lib/api/assets';
@@ -68,10 +68,11 @@ export function AssetStatisticsPanel() {
 
   return (
     <>
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Total barang" icon={Boxes} href="/assets" value={s?.total} loading={stats.isPending} error={stats.isError} />
         <StatCard label="Aktif" icon={CheckCircle2} href="/assets" value={s?.active} loading={stats.isPending} error={stats.isError} />
         <StatCard label="Diarsipkan" icon={Archive} value={s?.archived} loading={stats.isPending} error={stats.isError} />
+        <StatCard label="Dilepas" icon={PackageX} href="/disposals" value={s?.disposed} loading={stats.isPending} error={stats.isError} />
       </div>
 
       {canMutations || canLoans ? (

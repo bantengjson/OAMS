@@ -8,7 +8,7 @@ export class CountByRefDto {
 }
 
 export class AssetStatisticsDto {
-  @ApiProperty({ description: 'Barang tidak diarsipkan' }) total!: number;
+  @ApiProperty({ description: 'Semua barang: aktif + diarsipkan + dilepas' }) total!: number;
   @ApiProperty() active!: number;
   @ApiProperty() archived!: number;
   @ApiProperty({ description: 'Barang yang sudah dilepas (tidak diarsipkan)' }) disposed!: number;

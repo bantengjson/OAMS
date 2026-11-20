@@ -14,7 +14,7 @@ Tahap 4 membuat kantor bisa **memeriksa fisik seluruh barang**, **mengurus perba
 - **Pemeliharaan**: siapa pun dengan izin melapor kerusakan (deskripsi + foto). Admin memulai perbaikan (teknisi, tanggal) sehingga barang berstatus **Dalam perbaikan**, lalu menyelesaikan (biaya, catatan teknisi, kondisi setelah perbaikan) atau membatalkan dengan alasan. Status barang dipulihkan seperti sebelum diperbaiki.
 - **Pelepasan barang**: Admin melepas barang (rusak total, hilang, dijual, dihibahkan, lainnya) dengan tanggal, keterangan, nilai jual dan penerima opsional, serta dokumen pendukung. Barang menjadi **Dihapuskan**, QR-nya nonaktif, dan barang hilang dari daftar inventaris aktif. Pelepasan yang keliru bisa dibatalkan dengan alasan; status dan QR dipulihkan.
 - **Pengaman lintas alur**: pinjam, mutasi, pemeliharaan, pelepasan, arsip, dan ubah status kini memakai satu aturan yang sama dan pembaruan bersyarat, sehingga dua alur yang berjalan bersamaan pada satu barang tidak bisa sama-sama berhasil (menutup temuan Minor #1 Tahap 3).
-- **Riwayat barang, dashboard**: label riwayat untuk semua aksi baru; kartu dashboard "Dalam perbaikan", "Laporan kerusakan baru", dan "Stock opname berjalan".
+- **Riwayat barang, dashboard**: label riwayat untuk semua aksi baru; kartu dashboard "Dilepas" (ikut dihitung di Total barang: Total = Aktif + Diarsipkan + Dilepas), "Dalam perbaikan", "Laporan kerusakan baru", dan "Stock opname berjalan".
 
 Yang **bukan** bagian Tahap 4 (sesuai desain): lokasi dalam opname (lokasi disembunyikan), persetujuan berjenjang untuk pelepasan/pemeliharaan, penjadwalan opname otomatis, notifikasi, laporan PDF/Excel (Tahap 5; laporan opname tampil di layar dan dicetak dari browser), penandaan otomatis "Hilang" untuk barang tidak ditemukan, pemindaian offline.
 
@@ -120,7 +120,7 @@ Menu baru di bagian Inventaris: **Stock Opname** (`/stock-opnames`), **Pemelihar
 - **Pemeliharaan** `/maintenance`: tab Dilaporkan | Dikerjakan | Selesai | Dibatalkan | Semua (bisa dibuka lewat `?status=`), pencarian, tombol Mulai / Selesaikan / Batalkan, dialog lapor kerusakan dengan foto. `/maintenance/[id]`: rincian, foto, aksi.
 - **Pelepasan** `/disposals`: daftar dengan filter alasan dan "tampilkan yang dibatalkan". `/disposals/new?assetId=`: formulir dengan konfirmasi tegas. `/disposals/[id]`: rincian, dokumen pendukung (unggah/unduh), **Batalkan pelepasan**.
 - **Detail barang**: tombol **Lapor kerusakan** dan **Lepaskan** (nonaktif dengan keterangan bila barang dipinjam/diperbaiki), pinjam dan mutasi nonaktif selama diperbaiki, tombol Ubah disembunyikan untuk barang yang dilepas; banner "Ada laporan kerusakan" / "Sedang diperbaiki" / "Barang sudah dilepas"; tab baru **Pemeliharaan**; label riwayat baru. Formulir barang tidak menawarkan status Dalam perbaikan / Hilang / Dihapuskan.
-- **Dashboard**: kartu Dalam perbaikan (→ `/maintenance?status=IN_PROGRESS`), Laporan kerusakan baru (→ `/maintenance?status=REPORTED`), dan Stock opname berjalan (progres, → sesi) bila ada sesi terbuka. Kartu jumlah lokasi dihapus karena lokasi disembunyikan.
+- **Dashboard**: kartu **Dilepas** (jumlah barang yang sudah dilepas, ikut dihitung di Total barang; → `/disposals` untuk melihat barangnya), kartu Dalam perbaikan (→ `/maintenance?status=IN_PROGRESS`), Laporan kerusakan baru (→ `/maintenance?status=REPORTED`), dan Stock opname berjalan (progres, → sesi) bila ada sesi terbuka. Kartu jumlah lokasi dihapus karena lokasi disembunyikan.
 
 ---
 
@@ -180,13 +180,12 @@ Temuan Minor yang **ditunda**:
 2. Setelah pelepasan, daftar pemeliharaan di layar tidak langsung diperbarui (laporan yang ikut dibatalkan tampil lama sampai dimuat ulang).
 3. Laporan kerusakan yang dikirim tepat saat barang dilepas/diarsipkan, atau laporan yang sudah ada saat barang diarsipkan, tetap terbuka dan terhitung di kartu "Laporan kerusakan baru".
 4. Pengajuan mutasi bisa dibuat bersamaan dengan pelepasan/perbaikan (persetujuannya nanti gagal dengan benar; Admin menolaknya manual).
-5. Dashboard: "Total barang" kini termasuk barang dilepas, tetapi belum ada kartu "Dilepas", sehingga Total ≠ Aktif + Diarsipkan.
-6. Daftar inventaris: centang "Tampilkan barang yang diarsipkan" juga menampilkan barang dilepas, labelnya belum diperbarui.
-7. Dialog lapor kerusakan: bila unggah foto gagal setelah laporan dibuat, mengirim ulang menghasilkan 409 dan foto tidak terlampir.
-8. Tombol "Lepaskan" belum dinonaktifkan saat ada mutasi menunggu (ditolak backend setelah formulir diisi).
-9. Setiap pindaian memuat ulang seluruh daftar barang sesi; terasa di HP lewat koneksi lambat bila barang ratusan.
-10. Tanggal mulai/selesai perbaikan belum divalidasi terhadap satu sama lain dan masa depan; log kondisi setelah perbaikan bertanggal hari ini, bukan tanggal selesai.
-11. Pelepasan yang tepat bersamaan dengan mengaktifkan QR bisa menyisakan label aktif (jendela sangat sempit).
+5. Daftar inventaris: centang "Tampilkan barang yang diarsipkan" juga menampilkan barang dilepas, labelnya belum diperbarui.
+6. Dialog lapor kerusakan: bila unggah foto gagal setelah laporan dibuat, mengirim ulang menghasilkan 409 dan foto tidak terlampir.
+7. Tombol "Lepaskan" belum dinonaktifkan saat ada mutasi menunggu (ditolak backend setelah formulir diisi).
+8. Setiap pindaian memuat ulang seluruh daftar barang sesi; terasa di HP lewat koneksi lambat bila barang ratusan.
+9. Tanggal mulai/selesai perbaikan belum divalidasi terhadap satu sama lain dan masa depan; log kondisi setelah perbaikan bertanggal hari ini, bukan tanggal selesai.
+10. Pelepasan yang tepat bersamaan dengan mengaktifkan QR bisa menyisakan label aktif (jendela sangat sempit).
 
 Hal yang reviewer kesampingkan dan diterima apa adanya: lokasi disembunyikan, petugas yang ditunjuk tanpa izin pemindaian, stiker lama setelah QR dibuat ulang terbaca "tidak terdaftar", batas 2000 baris per sesi, arsip atas barang yang dilepas, API catat kondisi pada barang dilepas (UI menyembunyikannya).
 
