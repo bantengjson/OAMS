@@ -189,6 +189,8 @@ export class AssetsService {
       activeLoans,
       overdueLoans,
       openOpname: await this.openOpname(),
+      openMaintenance: await this.prisma.maintenanceRecord.count({ where: { status: 'REPORTED' } }),
+      inMaintenance: await this.prisma.maintenanceRecord.count({ where: { status: 'IN_PROGRESS' } }),
     };
   }
 

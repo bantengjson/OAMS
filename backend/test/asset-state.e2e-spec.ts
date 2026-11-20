@@ -88,5 +88,27 @@ describe('asset state guard (e2e)', () => {
     }
   });
 
-  it.todo('loan vs maintenance start vs disposal: exactly one status changer wins (Tasks 4 and 5)');
+  it('loan vs maintenance start at the same instant: exactly one status changer wins', async () => {
+    for (let round = 0; round < 3; round++) {
+      const asset = await createAsset(`Balapan Servis ${round}`);
+      const rep = await ctx
+        .http()
+        .post('/api/v1/maintenance')
+        .set(bearer(admin))
+        .send({ assetId: asset.id, description: 'Uji balapan' })
+        .expect(201);
+      const [l, m] = await Promise.all([
+        loan(asset.id),
+        ctx.http().post(`/api/v1/maintenance/${rep.body.id}/start`).set(bearer(admin)).send({}),
+      ]);
+      expect([l.status, m.status].filter((s) => s < 300)).toHaveLength(1);
+      const row = await ctx.prisma.asset.findUniqueOrThrow({ where: { id: asset.id } });
+      const activeLoans = await ctx.prisma.assetLoan.count({ where: { assetId: asset.id, status: 'ACTIVE' } });
+      const inRepair = await ctx.prisma.maintenanceRecord.count({ where: { assetId: asset.id, status: 'IN_PROGRESS' } });
+      expect(activeLoans + inRepair).toBe(1);
+      expect(row.status).toBe(activeLoans === 1 ? 'BORROWED' : 'UNDER_MAINTENANCE');
+    }
+  });
+
+  it.todo('loan vs disposal: exactly one wins (Task 5)');
 });

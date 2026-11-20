@@ -18,6 +18,11 @@ export class UploadPhotoDto {
   @IsOptional()
   @IsUUID('all', { message: 'Pemeriksaan kondisi tidak valid' })
   conditionLogId?: string;
+
+  @ApiPropertyOptional({ format: 'uuid', description: 'Tautkan ke laporan pemeliharaan barang ini; cukup dengan izin maintenance.report' })
+  @IsOptional()
+  @IsUUID('all', { message: 'Pemeliharaan tidak valid' })
+  maintenanceId?: string;
 }
 
 export class UploadDocumentDto {

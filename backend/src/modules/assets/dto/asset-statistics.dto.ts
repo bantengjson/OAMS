@@ -22,4 +22,6 @@ export class AssetStatisticsDto {
   overdueLoans!: number;
   @ApiProperty({ nullable: true, description: 'Sesi stock opname yang sedang berjalan' })
   openOpname!: { id: string; name: string; scanned: number; total: number } | null;
+  @ApiProperty({ description: 'Laporan kerusakan yang belum dikerjakan' }) openMaintenance!: number;
+  @ApiProperty({ description: 'Barang yang sedang diperbaiki' }) inMaintenance!: number;
 }

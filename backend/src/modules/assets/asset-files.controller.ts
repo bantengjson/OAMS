@@ -64,6 +64,7 @@ export class AssetFilesController {
         file: { type: 'string', format: 'binary' },
         caption: { type: 'string' },
         conditionLogId: { type: 'string', format: 'uuid' },
+        maintenanceId: { type: 'string', format: 'uuid' },
       },
     },
   })
@@ -75,7 +76,10 @@ export class AssetFilesController {
     @Body() dto: UploadPhotoDto,
     @CurrentUser() actor: AuthUser,
   ): Promise<AssetPhotoDto> {
-    return this.files.addPhoto(id, file, dto.caption, actor, dto.conditionLogId);
+    return this.files.addPhoto(id, file, dto.caption, actor, {
+      conditionLogId: dto.conditionLogId,
+      maintenanceId: dto.maintenanceId,
+    });
   }
 
   @Get('photos/:photoId/file')

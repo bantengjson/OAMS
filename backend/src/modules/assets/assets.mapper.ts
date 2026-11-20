@@ -19,6 +19,7 @@ export const assetDetailInclude = {
   photos: { orderBy: [{ isPrimary: 'desc' }, { createdAt: 'asc' }] },
   documents: { orderBy: { createdAt: 'asc' } },
   loans: { where: { status: 'ACTIVE' }, take: 1 },
+  maintenance: { where: { status: { in: ['REPORTED', 'IN_PROGRESS'] } }, take: 1 },
   mutations: {
     where: { status: 'PENDING' },
     take: 1,
@@ -105,8 +106,17 @@ export function qrUrl(baseUrl: string, token: string): string {
 
 export function toAssetDetail(row: AssetDetailRow, paths: PathIndex, baseUrl: string): AssetDetailDto {
   const loan = row.loans[0];
+  const maint = row.maintenance[0];
   const mutation = row.mutations[0];
   return {
+    openMaintenance: maint
+      ? {
+          id: maint.id,
+          status: maint.status as 'REPORTED' | 'IN_PROGRESS',
+          description: maint.description,
+          reportedAt: maint.reportedAt,
+        }
+      : null,
     activeLoan: loan
       ? {
           id: loan.id,

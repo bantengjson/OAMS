@@ -133,4 +133,6 @@ export class AssetDetailDto extends AssetListItemDto {
   activeLoan!: AssetActiveLoanDto | null;
   @ApiProperty({ type: AssetPendingMutationDto, nullable: true, description: 'Mutasi yang menunggu persetujuan' })
   pendingMutation!: AssetPendingMutationDto | null;
+  @ApiProperty({ nullable: true, description: 'Laporan pemeliharaan yang masih terbuka' })
+  openMaintenance!: { id: string; status: 'REPORTED' | 'IN_PROGRESS'; description: string; reportedAt: Date } | null;
 }

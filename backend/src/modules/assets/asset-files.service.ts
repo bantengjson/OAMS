@@ -49,16 +49,25 @@ export class AssetFilesService {
     file: UploadedFileLike | undefined,
     caption: string | undefined,
     actor: AuthUser,
-    conditionLogId?: string,
+    link: { conditionLogId?: string; maintenanceId?: string } = {},
   ): Promise<AssetPhotoDto> {
-    const canUpdate = actor.permissions.includes(PERMISSIONS.ASSETS_UPDATE);
-    const canRecord = actor.permissions.includes(PERMISSIONS.CONDITIONS_RECORD);
-    if (!canUpdate && !(canRecord && conditionLogId)) throw new ForbiddenException(FORBIDDEN_MESSAGE);
+    const { conditionLogId, maintenanceId } = link;
+    const has = (code: string) => actor.permissions.includes(code);
+    // Damage photos: a condition check or a repair report may carry photos without assets.update.
+    const allowed =
+      has(PERMISSIONS.ASSETS_UPDATE) ||
+      (has(PERMISSIONS.CONDITIONS_RECORD) && Boolean(conditionLogId)) ||
+      (has(PERMISSIONS.MAINTENANCE_REPORT) && Boolean(maintenanceId));
+    if (!allowed) throw new ForbiddenException(FORBIDDEN_MESSAGE);
     if (!file) throw new BadRequestException(FILE_REQUIRED_MESSAGE);
     await this.writableAsset(assetId);
     if (conditionLogId) {
       const log = await this.prisma.assetConditionLog.findFirst({ where: { id: conditionLogId, assetId } });
       if (!log) throw new BadRequestException(REFERENCE_INVALID);
+    }
+    if (maintenanceId) {
+      const rec = await this.prisma.maintenanceRecord.findFirst({ where: { id: maintenanceId, assetId } });
+      if (!rec) throw new BadRequestException(REFERENCE_INVALID);
     }
     await detectUpload(file.buffer, 'photo');
 
@@ -84,7 +93,7 @@ export class AssetFilesService {
       row = await this.prisma.$transaction(
         async (tx) => {
           // Damage photos from a condition check never become the showcase photo by themselves.
-          const isPrimary = !conditionLogId && (await tx.assetPhoto.count({ where: { assetId } })) === 0;
+          const isPrimary = !conditionLogId && !maintenanceId && (await tx.assetPhoto.count({ where: { assetId } })) === 0;
           return tx.assetPhoto.create({
             data: {
               assetId,
@@ -98,6 +107,7 @@ export class AssetFilesService {
               caption: caption || null,
               uploadedById: actor.id,
               conditionLogId: conditionLogId ?? null,
+              maintenanceId: maintenanceId ?? null,
             },
           });
         },
