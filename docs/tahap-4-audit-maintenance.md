@@ -160,7 +160,7 @@ Aksi baru: `opname.created|closed|cancelled` (entityId = id sesi), `opname.scann
 | QR saat dilepas | Nonaktif; pembatalan hanya mengaktifkan bila sebelumnya aktif | Label yang sengaja dinonaktifkan tidak boleh hidup lagi |
 | Pelepasan dan laporan kerusakan | Laporan `REPORTED` ikut dibatalkan; perbaikan yang sedang dikerjakan harus diselesaikan/dibatalkan dulu | Tidak menyisakan laporan terbuka untuk barang yang sudah keluar |
 | Ubah barang yang dilepas / diperbaiki | Tombol Ubah disembunyikan untuk barang yang dilepas; barang yang diperbaiki tetap bisa diubah, dengan status hanya-baca | Status diatur alurnya sendiri; pembatalan pelepasan adalah jalan kembali |
-| Pelepasan dan laporan kerusakan baru | Laporan berstatus Dilaporkan ikut dibatalkan, bukan ditolak 409 seperti tertulis di desain §8.3 | Alur alami Admin: laporan → "tidak layak diperbaiki" → lepaskan. **Perlu konfirmasi pemilik** |
+| Pelepasan dan laporan kerusakan baru | Laporan berstatus Dilaporkan ikut dibatalkan, bukan ditolak 409 (desain §8.3 diperbarui) | Alur alami Admin: laporan → "tidak layak diperbaiki" → lepaskan. Disetujui pemilik (20 Nov 2026) |
 | Pemindai kamera | Nilai yang sama diabaikan selama masih terlihat kamera (jendela 3 detik bergeser); input ketik selalu dikirim | Memegang HP di depan stiker sambil memilih kondisi tidak memicu pindaian ulang |
 
 ---

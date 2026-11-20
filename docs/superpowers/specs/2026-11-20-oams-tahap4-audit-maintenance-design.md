@@ -154,7 +154,7 @@ Bila sesi menunjuk petugas, hanya petugas itu (dan pemegang `manage`) yang boleh
 |---|---|---|---|
 | GET | `/disposals` | `assets.view` | filter `reason`, `search`, `includeReverted` |
 | GET | `/disposals/:id` | `assets.view` | |
-| POST | `/disposals` | `disposals.manage` (baru) | `{assetId, reason, disposedAt, description, value?, recipient?}`; 409 bila dipinjam, mutasi menunggu, pemeliharaan terbuka, sudah dilepas, atau arsip; status barang → `DISPOSED` (semua alasan, termasuk `LOST`), QR dinonaktifkan |
+| POST | `/disposals` | `disposals.manage` (baru) | `{assetId, reason, disposedAt, description, value?, recipient?}`; 409 bila dipinjam, mutasi menunggu, sedang diperbaiki (`IN_PROGRESS`), sudah dilepas, atau arsip; laporan kerusakan yang masih `REPORTED` ikut dibatalkan ("Barang dilepas", disetujui pemilik 20 Nov 2026); status barang → `DISPOSED` (semua alasan, termasuk `LOST`), QR dinonaktifkan |
 | POST | `/disposals/:id/revert` | `disposals.manage` | `{reason}`; status barang dipulihkan, QR diaktifkan kembali |
 | POST | `/assets/:id/documents` | | menerima `disposalId` opsional |
 
