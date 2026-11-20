@@ -169,6 +169,7 @@ Aksi baru (semua dengan `entityId` = id barang agar muncul di tab Riwayat): modu
 | Arsip | Ditolak saat ada pinjaman aktif / mutasi menunggu | Mencegah barang arsip berstatus Dipinjam |
 | Foto pemeriksaan oleh Petugas | Boleh, lewat `conditionLogId`; hapus/utama tetap Admin | Matriks: Petugas mencatat kondisi dengan foto |
 | Kode status arsip | Aksi Tahap 3 memakai 409; rute Tahap 2 tetap 400 | Konsistensi dengan konflik lain di Tahap 3 tanpa mengubah kontrak Tahap 2 |
+| Stiker berbingkai (20 Nov 2026) | QR + kode inventaris ditempel otomatis pada bingkai kantor DPC PDI Perjuangan; ukuran 70×47 dan 90×60 mm di samping QR polos 30/40 mm; unduhan PNG gabungan | Pemilik: QR dan desain bingkai menjadi satu kesatuan saat dicetak. Mengubah catatan blueprint "stiker hanya QR tanpa teks" |
 | Lokasi (19 Nov 2026, setelah review) | **Disembunyikan**: `assets.location_id` dan `asset_mutations.from_location_id` menjadi opsional (migrasi `20261119081609_optional_location`); formulir, tabel, filter, detail, halaman publik QR, dan formulir mutasi tidak lagi memakai lokasi; menu Lokasi dihapus dari navigasi; mutasi menjadi pergantian penanggung jawab saja. API, tabel, dan halaman `/locations` tetap ada sehingga bisa dinyalakan lagi | Pemilik: kantor tunggal (home office) dengan satu gedung; ruangan bukan acuan penempatan barang |
 
 ---
