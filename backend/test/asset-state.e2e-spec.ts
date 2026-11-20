@@ -110,5 +110,4 @@ describe('asset state guard (e2e)', () => {
     }
   });
 
-  it.todo('loan vs disposal: exactly one wins (Task 5)');
 });

@@ -3,6 +3,7 @@ import type {
   AcquisitionMethod,
   AssetCondition,
   AssetStatus,
+  DisposalReason,
   LocationType,
   OwnershipType,
 } from '../../../generated/prisma/client.js';
@@ -135,4 +136,6 @@ export class AssetDetailDto extends AssetListItemDto {
   pendingMutation!: AssetPendingMutationDto | null;
   @ApiProperty({ nullable: true, description: 'Laporan pemeliharaan yang masih terbuka' })
   openMaintenance!: { id: string; status: 'REPORTED' | 'IN_PROGRESS'; description: string; reportedAt: Date } | null;
+  @ApiProperty({ nullable: true, description: 'Pelepasan yang berlaku' })
+  activeDisposal!: { id: string; reason: DisposalReason; disposedAt: string } | null;
 }

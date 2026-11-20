@@ -129,6 +129,7 @@ export class AssetFilesController {
       properties: {
         file: { type: 'string', format: 'binary' },
         title: { type: 'string' },
+        disposalId: { type: 'string', format: 'uuid' },
       },
     },
   })
@@ -140,7 +141,7 @@ export class AssetFilesController {
     @Body() dto: UploadDocumentDto,
     @CurrentUser() actor: AuthUser,
   ): Promise<AssetDocumentDto> {
-    return this.files.addDocument(id, file, dto.title, actor);
+    return this.files.addDocument(id, file, dto.title, actor, dto.disposalId);
   }
 
   @Get('documents/:documentId/file')

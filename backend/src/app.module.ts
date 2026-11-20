@@ -10,6 +10,7 @@ import { AuditLogsModule } from './modules/audit-logs/audit-logs.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { CategoriesModule } from './modules/categories/categories.module.js';
 import { DepartmentsModule } from './modules/departments/departments.module.js';
+import { DisposalsModule } from './modules/disposals/disposals.module.js';
 import { EmployeesModule } from './modules/employees/employees.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { LoansModule } from './modules/loans/loans.module.js';
@@ -48,6 +49,7 @@ import { UsersModule } from './modules/users/users.module.js';
     LoansModule,
     StockOpnamesModule,
     MaintenanceModule,
+    DisposalsModule,
     AuditLogsModule,
     AssetsModule,
     QrModule,

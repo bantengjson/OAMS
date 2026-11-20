@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import QRCode from 'qrcode';
 import { AuditService } from '../../common/audit/audit.service.js';
 import type { AuthUser } from '../../common/auth/auth-user.js';
@@ -7,6 +7,7 @@ import { PrismaService } from '../../common/prisma/prisma.service.js';
 import { SettingsService } from '../../common/settings/settings.service.js';
 import type { AssetLabel } from '../../generated/prisma/client.js';
 import { AssetFilesService } from '../assets/asset-files.service.js';
+import { MSG_DISPOSED } from '../assets/asset-state.guard.js';
 import type { StoredFile } from '../assets/asset-files.service.js';
 import { assetDetailInclude, qrUrl, toAssetDetail } from '../assets/assets.mapper.js';
 import { ASSET_ARCHIVED, AssetsService } from '../assets/assets.service.js';
@@ -46,6 +47,7 @@ export class QrService {
   async regenerate(assetId: string): Promise<QrInfoDto> {
     const asset = await this.assets.getRow(assetId);
     if (asset.archivedAt) throw new BadRequestException(ASSET_ARCHIVED);
+    await this.assertNotDisposed(assetId);
     await this.ensureLabel(assetId);
     const label = await this.prisma.assetLabel.update({
       where: { assetId },
@@ -64,6 +66,7 @@ export class QrService {
 
   async setActive(assetId: string, isActive: boolean): Promise<QrInfoDto> {
     await this.assets.getRow(assetId);
+    if (isActive) await this.assertNotDisposed(assetId);
     await this.ensureLabel(assetId);
     const label = await this.prisma.assetLabel.update({
       where: { assetId },
@@ -96,7 +99,7 @@ export class QrService {
     const unique = Array.from(new Set(assetIds));
     const rows = await this.prisma.asset.findMany({
       where: { id: { in: unique } },
-      select: { id: true, assetCode: true, name: true, archivedAt: true, label: true },
+      select: { id: true, assetCode: true, name: true, archivedAt: true, status: true, label: true },
     });
     const byId = new Map(rows.map((r) => [r.id, r]));
     const result: BulkQrResultDto = { items: [], skipped: [] };
@@ -108,6 +111,10 @@ export class QrService {
       }
       if (row.archivedAt) {
         result.skipped.push({ assetId: id, reason: 'Barang diarsipkan.' });
+        continue;
+      }
+      if (row.status === 'DISPOSED') {
+        result.skipped.push({ assetId: id, reason: MSG_DISPOSED });
         continue;
       }
       let label = row.label ?? (await this.ensureLabel(id));
@@ -127,6 +134,12 @@ export class QrService {
       });
     }
     return result;
+  }
+
+  /** A disposed asset's sticker stays off until the disposal is reverted. */
+  private async assertNotDisposed(assetId: string): Promise<void> {
+    const active = await this.prisma.assetDisposal.findFirst({ where: { assetId, revertedAt: null }, select: { id: true } });
+    if (active) throw new ConflictException(MSG_DISPOSED);
   }
 
   async markPrinted(assetIds: string[]): Promise<{ updated: number }> {

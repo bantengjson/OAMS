@@ -32,4 +32,9 @@ export class UploadDocumentDto {
   @IsString()
   @MaxLength(200)
   title?: string;
+
+  @ApiPropertyOptional({ format: 'uuid', description: 'Tautkan ke pelepasan barang ini (berita acara, dsb.)' })
+  @IsOptional()
+  @IsUUID('all', { message: 'Pelepasan tidak valid' })
+  disposalId?: string;
 }

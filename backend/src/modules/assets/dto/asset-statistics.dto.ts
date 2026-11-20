@@ -11,6 +11,7 @@ export class AssetStatisticsDto {
   @ApiProperty({ description: 'Barang tidak diarsipkan' }) total!: number;
   @ApiProperty() active!: number;
   @ApiProperty() archived!: number;
+  @ApiProperty({ description: 'Barang yang sudah dilepas (tidak diarsipkan)' }) disposed!: number;
   @ApiProperty({ type: Object }) byStatus!: Record<AssetStatus, number>;
   @ApiProperty({ type: Object }) byCondition!: Record<AssetCondition, number>;
   @ApiProperty({ type: [CountByRefDto] }) byCategory!: CountByRefDto[];

@@ -192,9 +192,14 @@ export class AssetFilesService {
     file: UploadedFileLike | undefined,
     title: string | undefined,
     actor: AuthUser,
+    disposalId?: string,
   ): Promise<AssetDocumentDto> {
     if (!file) throw new BadRequestException(FILE_REQUIRED_MESSAGE);
     await this.writableAsset(assetId);
+    if (disposalId) {
+      const d = await this.prisma.assetDisposal.findFirst({ where: { id: disposalId, assetId } });
+      if (!d) throw new BadRequestException(REFERENCE_INVALID);
+    }
     const { mime, ext } = await detectUpload(file.buffer, 'document');
     const { fileName } = await this.storage.save(documentDir(assetId), ext, file.buffer);
     const row = await this.prisma.assetDocument.create({
@@ -206,6 +211,7 @@ export class AssetFilesService {
         sizeBytes: file.buffer.length,
         title: title || null,
         uploadedById: actor.id,
+        disposalId: disposalId ?? null,
       },
     });
     await this.audit.record({

@@ -67,6 +67,8 @@ export class AssetsService {
   async list(q: AssetQueryDto): Promise<Paginated<AssetListItemDto>> {
     const where: Prisma.AssetWhereInput = {};
     if (!q.includeArchived) where.archivedAt = null;
+    // Disposed items leave the working list; ask for them by status (or with the archive toggle).
+    if (!q.includeArchived && !q.status) where.status = { not: 'DISPOSED' };
     if (q.search) {
       const contains = { contains: q.search, mode: 'insensitive' as const };
       where.OR = [
@@ -122,11 +124,12 @@ export class AssetsService {
   }
 
   async statistics(): Promise<AssetStatisticsDto> {
-    const live = { archivedAt: null };
+    const live: Prisma.AssetWhereInput = { archivedAt: null, status: { not: 'DISPOSED' } };
     const today = new Date(`${jakartaToday()}T00:00:00Z`);
     const [
       active,
       archived,
+      disposed,
       byStatusRows,
       byConditionRows,
       byCategoryRows,
@@ -137,6 +140,7 @@ export class AssetsService {
     ] = await Promise.all([
       this.prisma.asset.count({ where: live }),
       this.prisma.asset.count({ where: { archivedAt: { not: null } } }),
+      this.prisma.asset.count({ where: { archivedAt: null, status: 'DISPOSED' } }),
       this.prisma.asset.groupBy({ by: ['status'], where: live, _count: { _all: true } }),
       this.prisma.asset.groupBy({ by: ['condition'], where: live, _count: { _all: true } }),
       this.prisma.asset.groupBy({ by: ['categoryId'], where: live, _count: { _all: true } }),
@@ -178,7 +182,8 @@ export class AssetsService {
       .sort((a, b) => b.count - a.count);
 
     return {
-      total: active + archived,
+      total: active + archived + disposed,
+      disposed,
       active,
       archived,
       byStatus,
