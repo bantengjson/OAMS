@@ -105,6 +105,9 @@ npm run lint
 - Desain Tahap 3: [docs/superpowers/specs/2026-11-19-oams-tahap3-asset-operations-design.md](docs/superpowers/specs/2026-11-19-oams-tahap3-asset-operations-design.md)
 - Rencana Tahap 3: [docs/superpowers/plans/2026-11-19-oams-tahap3-asset-operations.md](docs/superpowers/plans/2026-11-19-oams-tahap3-asset-operations.md)
 - Dokumentasi hasil Tahap 3: [docs/tahap-3-asset-operations.md](docs/tahap-3-asset-operations.md)
+- Desain Tahap 4: [docs/superpowers/specs/2026-11-20-oams-tahap4-audit-maintenance-design.md](docs/superpowers/specs/2026-11-20-oams-tahap4-audit-maintenance-design.md)
+- Rencana Tahap 4: [docs/superpowers/plans/2026-11-20-oams-tahap4-audit-maintenance.md](docs/superpowers/plans/2026-11-20-oams-tahap4-audit-maintenance.md)
+- Dokumentasi hasil Tahap 4: [docs/tahap-4-audit-maintenance.md](docs/tahap-4-audit-maintenance.md)
 
 ## Deployment (server dengan Docker)
 
@@ -215,3 +218,4 @@ Uji pemulihan secara berkala (disarankan setiap triwulan) pada database kosong, 
 - Operasional barang (Tahap 3): isi menu **Pegawai** lebih dulu, karena penanggung jawab, peminjam, dan penjamin dipilih dari daftar itu (terpisah dari akun login). Penanggung jawab dan kondisi barang tidak diubah dari formulir ubah barang, melainkan lewat **Mutasi** (pergantian penanggung jawab; oleh Admin langsung berlaku) dan **Catat kondisi**.
 - Lokasi disembunyikan karena kantor tunggal: kolom lokasi pada barang bersifat opsional dan tidak muncul di formulir, tabel, detail, maupun halaman QR publik; menu Lokasi tidak ditampilkan. Struktur Kantor → Gedung → Lantai → Ruangan dari blueprint tetap ada di API dan basis data bila suatu saat dibutuhkan. Status `Dipinjam` hanya diatur oleh menu **Peminjaman**; barang yang sedang dipinjam atau punya mutasi menunggu tidak bisa diarsipkan.
 - Setelah pembaruan ke Tahap 3, migrasi otomatis memberi role Viewer hak melihat daftar mutasi dan seed menambahkan permission baru (`employees.manage`, `loans.view`, `loans.manage`, `conditions.record`) ke role yang sudah ada. Di mesin pengembangan jalankan `npm run prisma:seed -w backend` sekali setelah `npm run prisma:migrate -w backend`.
+- Audit dan pemeliharaan (Tahap 4): **Stock Opname** dibuka Admin (satu sesi pada satu waktu) lalu dipindai Petugas dari HP; hasilnya tidak mengubah barang kecuali Admin menekan "Terapkan kondisi" di laporan. Status `Dalam perbaikan` hanya diatur menu **Pemeliharaan** dan `Dihapuskan` hanya oleh **Pelepasan**; barang yang dilepas keluar dari daftar inventaris aktif, QR-nya nonaktif, dan pelepasan bisa dibatalkan. Setelah pembaruan ke Tahap 4, seed menambahkan `disposals.manage` ke Super Admin dan Admin Inventaris.
