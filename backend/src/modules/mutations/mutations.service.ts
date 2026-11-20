@@ -9,7 +9,8 @@ import { pageArgs } from '../../common/dto/pagination.dto.js';
 import { isSerializationFailure, isUniqueViolation } from '../../common/prisma/prisma-errors.js';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
 import type { Prisma } from '../../generated/prisma/client.js';
-import { ASSET_BORROWED, ASSET_NOT_FOUND, AssetsService } from '../assets/assets.service.js';
+import { AssetStateGuard } from '../assets/asset-state.guard.js';
+import { ASSET_NOT_FOUND, AssetsService } from '../assets/assets.service.js';
 import { EmployeesService } from '../employees/employees.service.js';
 import type { CreateMutationDto } from './dto/create-mutation.dto.js';
 import type { MutationQueryDto } from './dto/mutation-query.dto.js';
@@ -34,7 +35,6 @@ interface AssetState {
   locationId: string | null;
   responsibleEmployeeId: string | null;
   archivedAt: Date | null;
-  activeLoans: number;
 }
 
 @Injectable()
@@ -44,6 +44,7 @@ export class MutationsService {
     private readonly audit: AuditService,
     private readonly assets: AssetsService,
     private readonly employees: EmployeesService,
+    private readonly guard: AssetStateGuard,
   ) {}
 
   async list(q: MutationQueryDto): Promise<Paginated<MutationDto>> {
@@ -85,7 +86,7 @@ export class MutationsService {
     const autoApprove = actor.permissions.includes(PERMISSIONS.MUTATIONS_APPROVE);
 
     const asset = await this.assetState(this.prisma, dto.assetId);
-    this.assertMutable(asset);
+    this.guard.assertFree(await this.guard.load(this.prisma, dto.assetId), ['pendingMutation']);
     if (await this.prisma.assetMutation.findFirst({ where: { assetId: asset.id, status: 'PENDING' }, select: { id: true } })) {
       throw new ConflictException(MUTATION_PENDING_EXISTS);
     }
@@ -204,7 +205,8 @@ export class MutationsService {
    */
   private async applyApproval(tx: Tx, mutation: MutationRow, actor: AuthUser, note: string | null): Promise<void> {
     const asset = await this.assetState(tx, mutation.assetId);
-    this.assertMutable(asset);
+    const state = await this.guard.load(tx, mutation.assetId);
+    this.guard.assertFree(state, ['pendingMutation']);
     const moved =
       asset.locationId !== mutation.fromLocationId ||
       (mutation.changesResponsible && asset.responsibleEmployeeId !== mutation.fromResponsibleEmployeeId);
@@ -222,7 +224,8 @@ export class MutationsService {
     if (mutation.toLocationId) data.locationId = mutation.toLocationId;
     if (mutation.changesResponsible) data.responsibleEmployeeId = mutation.toResponsibleEmployeeId;
     const updated = await tx.asset.updateMany({
-      where: { id: asset.id, archivedAt: null, locationId: mutation.fromLocationId },
+      // Same status as read: a loan, repair or disposal that won the race makes this 0 rows.
+      where: { id: asset.id, archivedAt: null, locationId: mutation.fromLocationId, status: state.status },
       data,
     });
     if (updated.count !== 1) throw new ConflictException(MUTATION_ASSET_MOVED);
@@ -269,17 +272,12 @@ export class MutationsService {
         locationId: true,
         responsibleEmployeeId: true,
         archivedAt: true,
-        _count: { select: { loans: { where: { status: 'ACTIVE' } } } },
       },
     });
     if (!row) throw new NotFoundException(ASSET_NOT_FOUND);
-    return { ...row, activeLoans: row._count.loans };
+    return row;
   }
 
-  private assertMutable(asset: AssetState): void {
-    if (asset.archivedAt) throw new ConflictException(ASSET_ARCHIVED_CONFLICT);
-    if (asset.activeLoans > 0) throw new ConflictException(ASSET_BORROWED);
-  }
 
   private async auditAssignment(row: MutationRow): Promise<void> {
     await this.audit.record({

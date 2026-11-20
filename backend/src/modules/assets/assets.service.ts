@@ -15,6 +15,7 @@ import { EmployeesService } from '../employees/employees.service.js';
 import { generatePublicToken } from '../qr/qr-token.js';
 import { AssetCodeService } from './asset-code.js';
 import { AssetConditionsService } from './asset-conditions.service.js';
+import { AssetStateGuard, MSG_IN_MAINTENANCE, MSG_STATUS_CHANGED } from './asset-state.guard.js';
 import {
   assetDetailInclude,
   assetListInclude,
@@ -48,6 +49,7 @@ export class AssetsService {
     private readonly settings: SettingsService,
     private readonly employees: EmployeesService,
     private readonly conditions: AssetConditionsService,
+    private readonly guard: AssetStateGuard,
   ) {}
 
   // ---------------------------------------------------------------- queries
@@ -220,10 +222,20 @@ export class AssetsService {
   async update(id: string, dto: UpdateAssetDto): Promise<AssetDetailDto> {
     const before = await this.getRow(id);
     if (before.archivedAt) throw new BadRequestException(ASSET_ARCHIVED);
-    if (dto.status !== undefined && before.loans.length > 0) throw new ConflictException(ASSET_BORROWED);
+    const statusChanges = dto.status !== undefined && dto.status !== before.status;
+    if (dto.status !== undefined) {
+      // A flow (loan, repair, disposal) owns the status while it runs.
+      this.guard.assertFree(await this.guard.load(this.prisma, id), ['pendingMutation', 'archived']);
+    }
     await this.assertReferences({ categoryId: dto.categoryId, departmentId: dto.departmentId });
     const data = this.toData(dto, true);
-    const after = await this.prisma.asset.update({ where: { id }, data, include: assetDetailInclude });
+    const after = await this.prisma.$transaction(async (tx) => {
+      if (statusChanges) {
+        await this.guard.setStatus(tx, id, before.status, dto.status!);
+        delete data.status;
+      }
+      return tx.asset.update({ where: { id }, data, include: assetDetailInclude });
+    });
     await this.audit.record({
       action: 'asset.updated',
       module: MODULE,
@@ -239,10 +251,14 @@ export class AssetsService {
     if (row.archivedAt) throw new BadRequestException(ASSET_ARCHIVED);
     if (row.loans.length > 0) throw new ConflictException(ARCHIVE_BLOCKED_BY_LOAN);
     if (row.mutations.length > 0) throw new ConflictException(ARCHIVE_BLOCKED_BY_MUTATION);
-    await this.prisma.asset.update({
-      where: { id },
+    const state = await this.guard.load(this.prisma, id);
+    if (state.openMaintenance?.status === 'IN_PROGRESS') throw new ConflictException(MSG_IN_MAINTENANCE);
+    // Conditional on the status just read: a loan or repair that starts concurrently wins or loses cleanly.
+    const archived = await this.prisma.asset.updateMany({
+      where: { id, archivedAt: null, status: state.status },
       data: { archivedAt: new Date(), archivedById: actor.id, archiveReason: reason ?? null },
     });
+    if (archived.count !== 1) throw new ConflictException(MSG_STATUS_CHANGED);
     await this.audit.record({
       action: 'asset.archived',
       module: MODULE,

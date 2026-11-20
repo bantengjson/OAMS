@@ -9,9 +9,9 @@ import { isUniqueViolation } from '../../common/prisma/prisma-errors.js';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
 import type { AssetStatus, Prisma } from '../../generated/prisma/client.js';
 import { AssetConditionsService } from '../assets/asset-conditions.service.js';
-import { ASSET_BORROWED, ASSET_NOT_FOUND } from '../assets/assets.service.js';
+import { AssetStateGuard, restorableStatus } from '../assets/asset-state.guard.js';
+import { ASSET_BORROWED } from '../assets/assets.service.js';
 import { EmployeesService } from '../employees/employees.service.js';
-import { MUTATION_PENDING_EXISTS } from '../mutations/mutations.service.js';
 import type { CreateLoanDto, UpdateLoanDto } from './dto/create-loan.dto.js';
 import type { LoanQueryDto } from './dto/loan-query.dto.js';
 import type { LoanDto } from './dto/loan.dto.js';
@@ -39,6 +39,7 @@ export class LoansService {
     private readonly audit: AuditService,
     private readonly employees: EmployeesService,
     private readonly conditions: AssetConditionsService,
+    private readonly guard: AssetStateGuard,
   ) {}
 
   async list(q: LoanQueryDto): Promise<Paginated<LoanDto>> {
@@ -90,19 +91,8 @@ export class LoansService {
     if (dto.dueAt < dto.loanedAt) errors.dueAt = ['Rencana kembali tidak boleh sebelum tanggal pinjam'];
     if (Object.keys(errors).length > 0) throw validationError(errors);
 
-    const asset = await this.prisma.asset.findUnique({
-      where: { id: dto.assetId },
-      select: {
-        id: true,
-        status: true,
-        archivedAt: true,
-        _count: { select: { loans: { where: { status: 'ACTIVE' } }, mutations: { where: { status: 'PENDING' } } } },
-      },
-    });
-    if (!asset) throw new NotFoundException(ASSET_NOT_FOUND);
-    if (asset.archivedAt) throw new ConflictException(ASSET_ARCHIVED_CONFLICT);
-    if (asset._count.loans > 0) throw new ConflictException(ASSET_BORROWED);
-    if (asset._count.mutations > 0) throw new ConflictException(MUTATION_PENDING_EXISTS);
+    const asset = await this.guard.load(this.prisma, dto.assetId);
+    this.guard.assertFree(asset);
 
     let borrowerName = dto.borrowerName ?? '';
     let borrowerDepartmentId = dto.borrowerDepartmentId ?? null;
@@ -126,7 +116,8 @@ export class LoansService {
     let id: string;
     try {
       id = await this.prisma.$transaction(async (tx) => {
-        const current = await tx.asset.findUniqueOrThrow({ where: { id: asset.id }, select: { status: true } });
+        const current = await this.guard.load(tx, asset.id);
+        this.guard.assertFree(current);
         const loan = await tx.assetLoan.create({
           data: {
             assetId: asset.id,
@@ -144,7 +135,7 @@ export class LoansService {
           },
           select: { id: true },
         });
-        await tx.asset.update({ where: { id: asset.id }, data: { status: 'BORROWED' } });
+        await this.guard.setStatus(tx, asset.id, current.status, 'BORROWED');
         return loan.id;
       });
     } catch (error) {
@@ -187,8 +178,7 @@ export class LoansService {
     if (jakartaToday(returnedAt) < isoDateOnly(loan.loanedAt)) {
       throw validationError({ returnedAt: ['Waktu pengembalian tidak boleh sebelum tanggal pinjam'] });
     }
-    const restored: AssetStatus =
-      loan.previousStatus === 'BORROWED' || loan.previousStatus === 'RETURNED' ? 'AVAILABLE' : loan.previousStatus;
+    const restored: AssetStatus = restorableStatus(loan.previousStatus);
 
     const result = await this.prisma.$transaction(async (tx: Tx) => {
       const closed = await tx.assetLoan.updateMany({
@@ -202,7 +192,7 @@ export class LoansService {
         },
       });
       if (closed.count !== 1) throw new ConflictException(LOAN_FINISHED);
-      await tx.asset.update({ where: { id: loan.assetId }, data: { status: restored } });
+      await this.guard.setStatus(tx, loan.assetId, 'BORROWED', restored, { allowArchived: true });
       if (dto.condition) {
         return this.conditions.record(
           tx,
