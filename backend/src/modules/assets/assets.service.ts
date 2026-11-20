@@ -38,7 +38,17 @@ export const ARCHIVE_BLOCKED_BY_LOAN = 'Kembalikan pinjaman dulu sebelum mengars
 export const ARCHIVE_BLOCKED_BY_MUTATION = 'Selesaikan mutasi yang menunggu dulu sebelum mengarsipkan.';
 const MODULE = 'assets';
 /** Audit modules whose entries (keyed by asset id) make up an asset's timeline. */
-export const ASSET_HISTORY_MODULES = [MODULE, 'qr', 'assignments', 'condition_logs', 'mutations', 'loans'];
+export const ASSET_HISTORY_MODULES = [
+  MODULE,
+  'qr',
+  'assignments',
+  'condition_logs',
+  'mutations',
+  'loans',
+  'stock_opnames',
+  'maintenance',
+  'disposals',
+];
 
 @Injectable()
 export class AssetsService {
@@ -178,6 +188,7 @@ export class AssetsService {
       pendingMutations,
       activeLoans,
       overdueLoans,
+      openOpname: await this.openOpname(),
     };
   }
 
@@ -292,6 +303,17 @@ export class AssetsService {
     const row = await this.prisma.asset.findUnique({ where: { id }, include: assetDetailInclude });
     if (!row) throw new NotFoundException(ASSET_NOT_FOUND);
     return row;
+  }
+
+  /** Progress of the session being counted right now, for the dashboard. */
+  private async openOpname(): Promise<{ id: string; name: string; scanned: number; total: number } | null> {
+    const session = await this.prisma.stockOpname.findFirst({ where: { status: 'OPEN' }, select: { id: true, name: true } });
+    if (!session) return null;
+    const [scanned, total] = await Promise.all([
+      this.prisma.stockOpnameItem.count({ where: { opnameId: session.id, result: { in: ['MATCHED', 'CONDITION_DIFFERS'] } } }),
+      this.prisma.stockOpnameItem.count({ where: { opnameId: session.id, result: { notIn: ['UNREGISTERED', 'REMOVED'] } } }),
+    ]);
+    return { ...session, scanned, total };
   }
 
   async pathIndex(): Promise<PathIndex> {

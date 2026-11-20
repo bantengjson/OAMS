@@ -17,6 +17,7 @@ import { LocationsModule } from './modules/locations/locations.module.js';
 import { MutationsModule } from './modules/mutations/mutations.module.js';
 import { QrModule } from './modules/qr/qr.module.js';
 import { RolesModule } from './modules/roles/roles.module.js';
+import { StockOpnamesModule } from './modules/stock-opnames/stock-opnames.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 
 @Module({
@@ -44,6 +45,7 @@ import { UsersModule } from './modules/users/users.module.js';
     LocationsModule,
     MutationsModule,
     LoansModule,
+    StockOpnamesModule,
     AuditLogsModule,
     AssetsModule,
     QrModule,
