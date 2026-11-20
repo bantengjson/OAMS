@@ -8,6 +8,7 @@ import type {
   Mutation,
   MutationStatus,
   OpnameResult,
+  OpnameStatus,
 } from '@/types/api';
 
 type BadgeVariant = 'default' | 'success' | 'warning' | 'destructive' | 'outline' | 'muted';
@@ -106,3 +107,15 @@ export function describeMutationChange(m: Pick<Mutation, 'fromLocation' | 'toLoc
   }
   return lines;
 }
+
+export const OPNAME_STATUS_LABEL: Record<OpnameStatus, string> = {
+  OPEN: 'Berjalan',
+  CLOSED: 'Selesai',
+  CANCELLED: 'Dibatalkan',
+};
+
+export const OPNAME_STATUS_VARIANT: Record<OpnameStatus, BadgeVariant> = {
+  OPEN: 'default',
+  CLOSED: 'success',
+  CANCELLED: 'muted',
+};

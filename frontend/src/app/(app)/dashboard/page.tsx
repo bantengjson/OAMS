@@ -1,13 +1,12 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { Building2, MapPin, Tags, Users } from 'lucide-react';
+import { Building2, Tags, Users } from 'lucide-react';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AssetStatisticsPanel } from '@/features/dashboard/asset-statistics';
 import { StatCard } from '@/features/dashboard/stat-card';
 import { categoriesApi } from '@/lib/api/categories';
 import { departmentsApi } from '@/lib/api/departments';
-import { locationsApi } from '@/lib/api/locations';
 import { usersApi } from '@/lib/api/users';
 import { useAuth } from '@/lib/auth/use-auth';
 import { ROLE_LABEL } from '@/types/api';
@@ -30,9 +29,6 @@ export default function DashboardPage() {
   const categories = useCount('categories', canMaster, () =>
     categoriesApi.list({ isActive: true, pageSize: 1 }),
   );
-  const locations = useCount('locations', canMaster, () =>
-    locationsApi.list({ isActive: true, pageSize: 1 }),
-  );
   const departments = useCount('departments', canMaster, () =>
     departmentsApi.list({ isActive: true, pageSize: 1 }),
   );
@@ -54,7 +50,7 @@ export default function DashboardPage() {
       </Card>
 
       {canMaster || canUsers ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-3">
           {canUsers ? (
             <StatCard
               label="Pengguna aktif"
@@ -74,14 +70,6 @@ export default function DashboardPage() {
                 value={categories.data}
                 loading={categories.isPending}
                 error={categories.isError}
-              />
-              <StatCard
-                label="Lokasi aktif"
-                icon={MapPin}
-                href={hasPermission('locations.manage') ? '/locations' : undefined}
-                value={locations.data}
-                loading={locations.isPending}
-                error={locations.isError}
               />
               <StatCard
                 label="Unit kerja aktif"

@@ -12,9 +12,11 @@ export function StatCard({
   href,
   loading,
   error,
+  hint,
 }: {
   label: string;
-  value: number | undefined;
+  value: number | string | undefined;
+  hint?: string;
   icon: LucideIcon;
   href?: string;
   loading?: boolean;
@@ -30,6 +32,7 @@ export function StatCard({
         <p className="text-2xl font-semibold tabular-nums">
           {loading ? <Spinner className="h-5 w-5 text-muted-foreground" /> : error ? '–' : value}
         </p>
+        {hint ? <p className="truncate text-xs text-muted-foreground">{hint}</p> : null}
       </div>
     </Card>
   );

@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { AlertTriangle, Archive, ArrowLeftRight, Boxes, CheckCircle2, HandCoins } from 'lucide-react';
+import { AlertTriangle, Archive, ArrowLeftRight, Boxes, CheckCircle2, ClipboardList, HandCoins, Hammer, Wrench } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { assetsApi } from '@/lib/api/assets';
@@ -61,6 +61,8 @@ export function AssetStatisticsPanel() {
   const { hasPermission } = useAuth();
   const canMutations = hasPermission('mutations.view');
   const canLoans = hasPermission('loans.view');
+  const canMaintenance = hasPermission('assets.view');
+  const canOpname = hasPermission('stock_opnames.execute') || hasPermission('stock_opnames.manage');
   const stats = useQuery({ queryKey: ['assets', 'statistics'], queryFn: assetsApi.statistics });
   const s = stats.data;
 
@@ -96,6 +98,40 @@ export function AssetStatisticsPanel() {
                 error={stats.isError}
               />
             </>
+          ) : null}
+        </div>
+      ) : null}
+
+      {canMaintenance || (canOpname && s?.openOpname) ? (
+        <div className="grid gap-4 sm:grid-cols-3">
+          {canMaintenance ? (
+            <>
+              <StatCard
+                label="Dalam perbaikan"
+                icon={Wrench}
+                href="/maintenance?status=IN_PROGRESS"
+                value={s?.inMaintenance}
+                loading={stats.isPending}
+                error={stats.isError}
+              />
+              <StatCard
+                label="Laporan kerusakan baru"
+                icon={Hammer}
+                href="/maintenance?status=REPORTED"
+                value={s?.openMaintenance}
+                loading={stats.isPending}
+                error={stats.isError}
+              />
+            </>
+          ) : null}
+          {canOpname && s?.openOpname ? (
+            <StatCard
+              label="Stock opname berjalan"
+              icon={ClipboardList}
+              href={`/stock-opnames/${s.openOpname.id}`}
+              value={`${s.openOpname.scanned}/${s.openOpname.total}`}
+              hint={s.openOpname.name}
+            />
           ) : null}
         </div>
       ) : null}
