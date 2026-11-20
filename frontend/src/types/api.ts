@@ -195,6 +195,8 @@ export interface AssetPhoto {
   createdAt: string;
   /** Set when the photo documents a condition check. */
   conditionLogId: string | null;
+  /** Set when the photo documents a repair report (backend field may be absent on old rows). */
+  maintenanceId?: string | null;
   urls: { full: string; thumb: string };
 }
 
@@ -254,6 +256,8 @@ export interface AssetDetail extends AssetListItem {
   label: AssetLabel | null;
   activeLoan: AssetActiveLoan | null;
   pendingMutation: AssetPendingMutation | null;
+  openMaintenance: { id: string; status: 'REPORTED' | 'IN_PROGRESS'; description: string; reportedAt: string } | null;
+  activeDisposal: { id: string; reason: DisposalReason; disposedAt: string } | null;
 }
 
 export interface AssetActiveLoan {
@@ -290,6 +294,10 @@ export interface AssetStatistics {
   pendingMutations: number;
   activeLoans: number;
   overdueLoans: number;
+  disposed: number;
+  openMaintenance: number;
+  inMaintenance: number;
+  openOpname: { id: string; name: string; scanned: number; total: number } | null;
 }
 
 export interface PublicAsset {
@@ -428,7 +436,7 @@ export interface Loan {
   createdAt: string;
 }
 
-export type ConditionSource = 'CREATE' | 'MANUAL' | 'LOAN_RETURN';
+export type ConditionSource = 'CREATE' | 'MANUAL' | 'LOAN_RETURN' | 'OPNAME' | 'MAINTENANCE';
 
 export interface ConditionLog {
   id: string;
@@ -454,4 +462,107 @@ export interface Assignment {
   note: string | null;
   changedBy: AssetUserRef;
   createdAt: string;
+}
+
+// ---------------------------------------------------------------- Tahap 4
+
+export const MAINTENANCE_STATUSES = ['REPORTED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'] as const;
+export type MaintenanceStatus = (typeof MAINTENANCE_STATUSES)[number];
+
+export interface MaintenanceRecord {
+  id: string;
+  status: MaintenanceStatus;
+  asset: { id: string; assetCode: string; name: string };
+  description: string;
+  reportedBy: AssetUserRef;
+  reportedAt: string;
+  technician: string | null;
+  startedAt: string | null;
+  startedBy: AssetUserRef | null;
+  completedAt: string | null;
+  completedBy: AssetUserRef | null;
+  cost: string | null;
+  technicianNotes: string | null;
+  resultCondition: AssetCondition | null;
+  previousStatus: AssetStatus | null;
+  cancelledAt: string | null;
+  cancelReason: string | null;
+  photos: AssetPhoto[];
+}
+
+export const DISPOSAL_REASONS = ['BROKEN', 'LOST', 'SOLD', 'DONATED', 'OTHER'] as const;
+export type DisposalReason = (typeof DISPOSAL_REASONS)[number];
+
+export interface Disposal {
+  id: string;
+  asset: { id: string; assetCode: string; name: string };
+  reason: DisposalReason;
+  disposedAt: string;
+  description: string;
+  value: string | null;
+  recipient: string | null;
+  previousStatus: AssetStatus;
+  labelWasActive: boolean;
+  disposedBy: AssetUserRef;
+  createdAt: string;
+  revertedAt: string | null;
+  revertedBy: AssetUserRef | null;
+  revertReason: string | null;
+  documents: AssetDocument[];
+}
+
+export type OpnameStatus = 'OPEN' | 'CLOSED' | 'CANCELLED';
+export const OPNAME_RESULTS = [
+  'PENDING',
+  'MATCHED',
+  'CONDITION_DIFFERS',
+  'NOT_FOUND',
+  'UNREGISTERED',
+  'ON_LOAN',
+  'IN_MAINTENANCE',
+  'REMOVED',
+] as const;
+export type OpnameResult = (typeof OPNAME_RESULTS)[number];
+export const OPNAME_REPORT_RESULTS = ['MATCHED', 'CONDITION_DIFFERS', 'NOT_FOUND', 'UNREGISTERED', 'ON_LOAN', 'IN_MAINTENANCE'] as const;
+export type OpnameReportResult = (typeof OPNAME_REPORT_RESULTS)[number];
+
+export interface StockOpname {
+  id: string;
+  name: string;
+  notes: string | null;
+  status: OpnameStatus;
+  plannedDate: string;
+  officers: AssetUserRef[];
+  counts: Record<OpnameResult, number>;
+  total: number;
+  scanned: number;
+  createdBy: AssetUserRef;
+  createdAt: string;
+  closedBy: AssetUserRef | null;
+  closedAt: string | null;
+  cancelledAt: string | null;
+}
+
+export interface OpnameItem {
+  id: string;
+  asset: { id: string; assetCode: string; name: string; category: { name: string } } | null;
+  expectedCondition: AssetCondition | null;
+  expectedStatus: AssetStatus | null;
+  observedCondition: AssetCondition | null;
+  result: OpnameResult;
+  scannedAt: string | null;
+  scannedBy: AssetUserRef | null;
+  rawValue: string | null;
+  note: string | null;
+  conditionAppliedAt: string | null;
+}
+
+export interface ScanResult {
+  item: OpnameItem;
+  alreadyScanned: boolean;
+}
+
+export interface OpnameReport {
+  session: StockOpname;
+  groups: Record<OpnameReportResult, OpnameItem[]>;
 }

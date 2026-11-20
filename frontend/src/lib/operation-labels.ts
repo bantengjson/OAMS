@@ -1,4 +1,14 @@
-import type { AssignmentSource, BorrowerType, ConditionSource, LoanState, Mutation, MutationStatus } from '@/types/api';
+import type {
+  AssignmentSource,
+  BorrowerType,
+  ConditionSource,
+  DisposalReason,
+  LoanState,
+  MaintenanceStatus,
+  Mutation,
+  MutationStatus,
+  OpnameResult,
+} from '@/types/api';
 
 type BadgeVariant = 'default' | 'success' | 'warning' | 'destructive' | 'outline' | 'muted';
 
@@ -32,6 +42,52 @@ export const CONDITION_SOURCE_LABEL: Record<ConditionSource, string> = {
   CREATE: 'Pendaftaran',
   MANUAL: 'Pemeriksaan',
   LOAN_RETURN: 'Pengembalian pinjaman',
+  OPNAME: 'Stock opname',
+  MAINTENANCE: 'Selesai perbaikan',
+};
+
+export const MAINTENANCE_STATUS_LABEL: Record<MaintenanceStatus, string> = {
+  REPORTED: 'Dilaporkan',
+  IN_PROGRESS: 'Dikerjakan',
+  COMPLETED: 'Selesai',
+  CANCELLED: 'Dibatalkan',
+};
+
+export const MAINTENANCE_STATUS_VARIANT: Record<MaintenanceStatus, BadgeVariant> = {
+  REPORTED: 'warning',
+  IN_PROGRESS: 'default',
+  COMPLETED: 'success',
+  CANCELLED: 'muted',
+};
+
+export const DISPOSAL_REASON_LABEL: Record<DisposalReason, string> = {
+  BROKEN: 'Rusak total',
+  LOST: 'Hilang',
+  SOLD: 'Dijual',
+  DONATED: 'Dihibahkan',
+  OTHER: 'Lainnya',
+};
+
+export const OPNAME_RESULT_LABEL: Record<OpnameResult, string> = {
+  PENDING: 'Belum dipindai',
+  MATCHED: 'Sesuai',
+  CONDITION_DIFFERS: 'Kondisi berbeda',
+  NOT_FOUND: 'Tidak ditemukan',
+  UNREGISTERED: 'Tidak terdaftar',
+  ON_LOAN: 'Sedang dipinjam',
+  IN_MAINTENANCE: 'Dalam perbaikan',
+  REMOVED: 'Tidak dihitung',
+};
+
+export const OPNAME_RESULT_VARIANT: Record<OpnameResult, BadgeVariant> = {
+  PENDING: 'muted',
+  MATCHED: 'success',
+  CONDITION_DIFFERS: 'warning',
+  NOT_FOUND: 'destructive',
+  UNREGISTERED: 'outline',
+  ON_LOAN: 'default',
+  IN_MAINTENANCE: 'default',
+  REMOVED: 'muted',
 };
 
 export const ASSIGNMENT_SOURCE_LABEL: Record<AssignmentSource, string> = {

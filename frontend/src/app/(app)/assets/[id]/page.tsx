@@ -1,7 +1,19 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { Archive, ArchiveRestore, ArrowLeft, ArrowLeftRight, ClipboardCheck, HandCoins, Pencil, Printer, Undo2 } from 'lucide-react';
+import {
+  Archive,
+  ArchiveRestore,
+  ArrowLeft,
+  ArrowLeftRight,
+  ClipboardCheck,
+  HandCoins,
+  PackageX,
+  Pencil,
+  Printer,
+  Undo2,
+  Wrench,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
@@ -18,18 +30,31 @@ import { ConditionLogDialog } from '@/features/assets/condition-log-dialog';
 import { ReturnLoanDialog } from '@/features/loans/return-loan-dialog';
 import { AssetHistory } from '@/features/assets/asset-history';
 import { AssetInfo } from '@/features/assets/asset-info';
+import { AssetMaintenanceTab } from '@/features/assets/asset-maintenance-tab';
 import { AssetMutationsTab } from '@/features/assets/asset-mutations-tab';
+import { ReportMaintenanceDialog } from '@/features/maintenance/report-maintenance-dialog';
 import { AssetPhotos } from '@/features/assets/asset-photos';
 import { AssetQrCard } from '@/features/assets/asset-qr-card';
 import { AssetConditionBadge, AssetStatusBadge } from '@/features/assets/asset-table';
 import { assetsApi } from '@/lib/api/assets';
 import { getErrorMessage } from '@/lib/api/form-errors';
 import { useAuth } from '@/lib/auth/use-auth';
+import { DISPOSAL_REASON_LABEL } from '@/lib/operation-labels';
 import { formatDate, formatDateTime } from '@/lib/utils';
 
-type TabKey = 'info' | 'photos' | 'documents' | 'qr' | 'conditions' | 'mutations' | 'loans' | 'history';
+type TabKey = 'info' | 'photos' | 'documents' | 'qr' | 'conditions' | 'mutations' | 'loans' | 'maintenance' | 'history';
 
-const TAB_KEYS: readonly TabKey[] = ['info', 'photos', 'documents', 'qr', 'conditions', 'mutations', 'loans', 'history'];
+const TAB_KEYS: readonly TabKey[] = [
+  'info',
+  'photos',
+  'documents',
+  'qr',
+  'conditions',
+  'mutations',
+  'loans',
+  'maintenance',
+  'history',
+];
 
 export default function AssetDetailPage() {
   return (
@@ -50,6 +75,7 @@ function AssetDetailContent() {
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [conditionOpen, setConditionOpen] = useState(false);
   const [returnOpen, setReturnOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const asset = useQuery({ queryKey: ['assets', 'detail', id], queryFn: () => assetsApi.get(id) });
 
   if (asset.isPending) return <PageSpinner />;
@@ -63,6 +89,11 @@ function AssetDetailContent() {
   const canLoans = hasPermission('loans.manage');
   const canRecordCondition = hasPermission('conditions.record');
   const borrowed = a.activeLoan !== null;
+  const inRepair = a.openMaintenance?.status === 'IN_PROGRESS';
+  const disposed = a.activeDisposal !== null;
+  const live = !a.isArchived && !disposed;
+  const canReport = hasPermission('maintenance.report');
+  const canDispose = hasPermission('disposals.manage');
 
   return (
     <>
@@ -87,13 +118,18 @@ function AssetDetailContent() {
                 <Button variant="outline" leftIcon={<Printer className="h-4 w-4" />}>Cetak QR</Button>
               </Link>
             ) : null}
-            {canLoans && !a.isArchived ? (
+            {canLoans && live ? (
               a.activeLoan ? (
                 <Button variant="outline" onClick={() => setReturnOpen(true)} leftIcon={<Undo2 className="h-4 w-4" />}>
                   Kembalikan
                 </Button>
-              ) : a.pendingMutation ? (
-                <Button variant="outline" disabled title="Selesaikan mutasi yang menunggu dulu" leftIcon={<HandCoins className="h-4 w-4" />}>
+              ) : a.pendingMutation || inRepair ? (
+                <Button
+                  variant="outline"
+                  disabled
+                  title={inRepair ? 'Barang sedang diperbaiki' : 'Selesaikan mutasi yang menunggu dulu'}
+                  leftIcon={<HandCoins className="h-4 w-4" />}
+                >
                   Catat peminjaman
                 </Button>
               ) : (
@@ -102,17 +138,28 @@ function AssetDetailContent() {
                 </Link>
               )
             ) : null}
-            {canRecordCondition && !a.isArchived ? (
+            {canReport && live && !a.openMaintenance ? (
+              <Button variant="outline" onClick={() => setReportOpen(true)} leftIcon={<Wrench className="h-4 w-4" />}>
+                Lapor kerusakan
+              </Button>
+            ) : null}
+            {canRecordCondition && live ? (
               <Button variant="outline" onClick={() => setConditionOpen(true)} leftIcon={<ClipboardCheck className="h-4 w-4" />}>
                 Catat kondisi
               </Button>
             ) : null}
-            {canRequestMutation && !a.isArchived ? (
-              borrowed || a.pendingMutation ? (
+            {canRequestMutation && live ? (
+              borrowed || inRepair || a.pendingMutation ? (
                 <Button
                   variant="outline"
                   disabled
-                  title={borrowed ? 'Barang sedang dipinjam' : 'Sudah ada mutasi yang menunggu persetujuan'}
+                  title={
+                    borrowed
+                      ? 'Barang sedang dipinjam'
+                      : inRepair
+                        ? 'Barang sedang diperbaiki'
+                        : 'Sudah ada mutasi yang menunggu persetujuan'
+                  }
                   leftIcon={<ArrowLeftRight className="h-4 w-4" />}
                 >
                   {canApproveMutation ? 'Ganti PJ' : 'Ajukan mutasi'}
@@ -125,10 +172,26 @@ function AssetDetailContent() {
                 </Link>
               )
             ) : null}
-            {canEdit && !a.isArchived ? (
+            {canEdit && live ? (
               <Link href={`/assets/${a.id}/edit`}>
                 <Button variant="outline" leftIcon={<Pencil className="h-4 w-4" />}>Ubah</Button>
               </Link>
+            ) : null}
+            {canDispose && live ? (
+              borrowed || inRepair ? (
+                <Button
+                  variant="outline"
+                  disabled
+                  title={borrowed ? 'Barang sedang dipinjam' : 'Barang sedang diperbaiki'}
+                  leftIcon={<PackageX className="h-4 w-4" />}
+                >
+                  Lepaskan
+                </Button>
+              ) : (
+                <Link href={`/disposals/new?assetId=${a.id}`}>
+                  <Button variant="outline" leftIcon={<PackageX className="h-4 w-4" />}>Lepaskan</Button>
+                </Link>
+              )
             ) : null}
             {canArchive ? (
               <Button
@@ -146,6 +209,22 @@ function AssetDetailContent() {
       {a.isArchived ? (
         <Alert variant="info">
           Barang ini diarsipkan{a.archiveReason ? `: ${a.archiveReason}` : ''}. Data tidak dapat diubah dan QR tidak menampilkan informasi.
+        </Alert>
+      ) : null}
+
+      {a.activeDisposal ? (
+        <Alert variant="error">
+          Barang sudah dilepas ({DISPOSAL_REASON_LABEL[a.activeDisposal.reason]}, {formatDate(a.activeDisposal.disposedAt)}). QR
+          nonaktif dan barang tidak tampil di daftar inventaris aktif.{' '}
+          <Link href={`/disposals/${a.activeDisposal.id}`} className="font-medium underline">Lihat pelepasan</Link>
+        </Alert>
+      ) : null}
+
+      {a.openMaintenance ? (
+        <Alert variant="info">
+          {a.openMaintenance.status === 'IN_PROGRESS' ? 'Sedang diperbaiki' : 'Ada laporan kerusakan'}:{' '}
+          {a.openMaintenance.description} ({formatDate(a.openMaintenance.reportedAt)}).{' '}
+          <Link href={`/maintenance/${a.openMaintenance.id}`} className="font-medium underline">Lihat pemeliharaan</Link>
         </Alert>
       ) : null}
 
@@ -179,6 +258,7 @@ function AssetDetailContent() {
           { key: 'conditions', label: 'Kondisi' },
           { key: 'mutations', label: 'Mutasi', badge: a.pendingMutation ? 1 : undefined },
           { key: 'loans', label: 'Peminjaman', badge: a.activeLoan ? 1 : undefined },
+          { key: 'maintenance', label: 'Pemeliharaan', badge: a.openMaintenance ? 1 : undefined },
           { key: 'history', label: 'Riwayat' },
         ]}
       />
@@ -189,9 +269,16 @@ function AssetDetailContent() {
       <TabPanel active={tab === 'conditions'}><AssetConditionsTab asset={a} canRecord={canRecordCondition} /></TabPanel>
       <TabPanel active={tab === 'mutations'}><AssetMutationsTab assetId={a.id} /></TabPanel>
       <TabPanel active={tab === 'loans'}><AssetLoansTab asset={a} /></TabPanel>
+      <TabPanel active={tab === 'maintenance'}><AssetMaintenanceTab assetId={a.id} /></TabPanel>
       <TabPanel active={tab === 'history'}><AssetHistory assetId={a.id} /></TabPanel>
 
       <ArchiveDialog asset={a} open={archiveOpen} onClose={() => setArchiveOpen(false)} />
+      {reportOpen ? (
+        <ReportMaintenanceDialog
+          asset={{ id: a.id, assetCode: a.assetCode, name: a.name }}
+          onClose={() => setReportOpen(false)}
+        />
+      ) : null}
       {conditionOpen ? (
         <ConditionLogDialog assetId={a.id} currentCondition={a.condition} open onClose={() => setConditionOpen(false)} />
       ) : null}

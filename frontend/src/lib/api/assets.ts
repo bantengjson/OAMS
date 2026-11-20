@@ -78,11 +78,18 @@ export const assetsApi = {
   assignments: (id: string, query: PageQuery = {}) =>
     api.get<Paginated<Assignment>>(`/assets/${id}/assignments`, { query }),
 
-  uploadPhoto: (id: string, file: File, caption?: string, conditionLogId?: string) => {
+  uploadPhoto: (
+    id: string,
+    file: File,
+    caption?: string,
+    conditionLogId?: string,
+    maintenanceId?: string,
+  ) => {
     const form = new FormData();
     form.append('file', file);
     if (caption) form.append('caption', caption);
     if (conditionLogId) form.append('conditionLogId', conditionLogId);
+    if (maintenanceId) form.append('maintenanceId', maintenanceId);
     return apiUpload<AssetPhoto>(`/assets/${id}/photos`, form);
   },
   setPrimaryPhoto: (id: string, photoId: string) =>
@@ -91,10 +98,11 @@ export const assetsApi = {
   /** Blob for an <img>/download; strips the API prefix the DTO url already carries. */
   photoBlob: (urlFromDto: string) => fetchBlob(urlFromDto.replace(/^\/api\/v1/, '')),
 
-  uploadDocument: (id: string, file: File, title?: string) => {
+  uploadDocument: (id: string, file: File, title?: string, disposalId?: string) => {
     const form = new FormData();
     form.append('file', file);
     if (title) form.append('title', title);
+    if (disposalId) form.append('disposalId', disposalId);
     return apiUpload<AssetDocument>(`/assets/${id}/documents`, form);
   },
   deleteDocument: (id: string, documentId: string) =>

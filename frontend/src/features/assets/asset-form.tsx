@@ -33,7 +33,9 @@ import { AssetConditionBadge } from './asset-table';
 
 const FIELDS = Object.keys(emptyAssetForm) as (keyof AssetFormValues)[];
 /** Statuses a person may set by hand; BORROWED/RETURNED belong to the loan flow. */
-const MANUAL_STATUSES = ASSET_STATUSES.filter((s) => s !== 'BORROWED' && s !== 'RETURNED');
+/** Statuses a person may set by hand; the others belong to loans, repairs and disposals. */
+const FLOW_STATUSES = ['BORROWED', 'RETURNED', 'UNDER_MAINTENANCE', 'MISSING', 'DISPOSED'];
+const MANUAL_STATUSES = ASSET_STATUSES.filter((s) => !FLOW_STATUSES.includes(s));
 
 /** What the edit form shows read-only: these change only through a mutation or a condition check. */
 export interface LockedAssetFields {
@@ -265,7 +267,7 @@ export function AssetForm({
             {locked?.isBorrowed ? (
               <FieldHint>Barang sedang dipinjam; status kembali otomatis saat pengembalian dicatat.</FieldHint>
             ) : (
-              <FieldHint>Status Dipinjam diatur oleh pencatatan peminjaman.</FieldHint>
+              <FieldHint>Status Dipinjam, Dalam perbaikan, dan Dihapuskan diatur oleh peminjaman, pemeliharaan, dan pelepasan.</FieldHint>
             )}
           </Field>
           <Field className="md:col-span-2">

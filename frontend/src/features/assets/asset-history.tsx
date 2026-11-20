@@ -32,6 +32,16 @@ export const ASSET_ACTION_LABEL: Record<string, string> = {
   'loan.created': 'Dipinjamkan',
   'loan.updated': 'Peminjaman diubah',
   'loan.returned': 'Dikembalikan',
+  'opname.scanned': 'Dipindai saat stock opname',
+  'opname.confirmed': 'Kondisi dikonfirmasi saat stock opname',
+  'opname.unregistered': 'Tercatat tidak terdaftar saat stock opname',
+  'opname.condition_applied': 'Kondisi hasil stock opname diterapkan',
+  'maintenance.reported': 'Kerusakan dilaporkan',
+  'maintenance.started': 'Perbaikan dimulai',
+  'maintenance.completed': 'Perbaikan selesai',
+  'maintenance.cancelled': 'Pemeliharaan dibatalkan',
+  'disposal.created': 'Barang dilepas',
+  'disposal.reverted': 'Pelepasan dibatalkan',
 };
 
 export function AssetHistory({ assetId }: { assetId: string }) {

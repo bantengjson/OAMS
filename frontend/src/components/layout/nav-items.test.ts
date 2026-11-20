@@ -19,6 +19,7 @@ const ALL_PERMISSIONS = [
   'stock_opnames.execute',
   'maintenance.manage',
   'maintenance.report',
+  'disposals.manage',
   'reports.view',
   'reports.full',
   'users.manage',
@@ -70,11 +71,20 @@ const labels = (held: string[]) => visibleNavItems(NAV_ITEMS, hasAny(held)).map(
 
 describe('visibleNavItems', () => {
   it('shows a VIEWER the dashboard, inventory, scanner, mutations, loans and profile', () => {
-    expect(labels(VIEWER)).toEqual(['Dashboard', 'Inventaris', 'Scan QR', 'Mutasi', 'Peminjaman', 'Profil']);
+    expect(labels(VIEWER)).toEqual(['Dashboard', 'Inventaris', 'Scan QR', 'Mutasi', 'Peminjaman', 'Pemeliharaan', 'Profil']);
   });
 
   it('shows a PETUGAS the same as a viewer (no printing, no master data)', () => {
-    expect(labels(PETUGAS)).toEqual(['Dashboard', 'Inventaris', 'Scan QR', 'Mutasi', 'Peminjaman', 'Profil']);
+    expect(labels(PETUGAS)).toEqual([
+      'Dashboard',
+      'Inventaris',
+      'Scan QR',
+      'Mutasi',
+      'Peminjaman',
+      'Stock Opname',
+      'Pemeliharaan',
+      'Profil',
+    ]);
   });
 
   it('shows a SUPER_ADMIN every item, in menu order', () => {
@@ -85,6 +95,9 @@ describe('visibleNavItems', () => {
       'Cetak QR',
       'Mutasi',
       'Peminjaman',
+      'Stock Opname',
+      'Pemeliharaan',
+      'Pelepasan',
       'Pengguna',
       'Role & Izin',
       'Kategori',
@@ -103,6 +116,9 @@ describe('visibleNavItems', () => {
       'Cetak QR',
       'Mutasi',
       'Peminjaman',
+      'Stock Opname',
+      'Pemeliharaan',
+      'Pelepasan',
       'Role & Izin',
       'Kategori',
       'Unit Kerja',
