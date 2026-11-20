@@ -2,7 +2,6 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
   IsEnum,
-  IsIn,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -15,7 +14,7 @@ import {
   Validate,
   ValidatorConstraint,
 } from 'class-validator';
-import type { ValidatorConstraintInterface } from 'class-validator';
+import type { ValidationArguments, ValidatorConstraintInterface } from 'class-validator';
 import { trim } from '../../../common/dto/transforms.js';
 import {
   AcquisitionMethod,
@@ -28,10 +27,32 @@ export const enumMessage = (name: string, values: object) =>
   `${name} harus salah satu dari: ${Object.keys(values).join(', ')}`;
 
 export const STATUS_LOAN_MANAGED = 'Status ini diatur oleh peminjaman';
-/** Statuses a person may set by hand; BORROWED/RETURNED belong to the loan flow. */
+export const STATUS_FLOW_MANAGED = 'Status ini diatur oleh pemeliharaan/pelepasan';
+const LOAN_STATUSES: readonly AssetStatus[] = [AssetStatus.BORROWED, AssetStatus.RETURNED];
+const MAINTENANCE_DISPOSAL_STATUSES: readonly AssetStatus[] = [
+  AssetStatus.UNDER_MAINTENANCE,
+  AssetStatus.MISSING,
+  AssetStatus.DISPOSED,
+];
+/** Statuses only a flow (loan, maintenance, disposal) may set; never by hand. */
+export const FLOW_STATUSES: readonly AssetStatus[] = [...LOAN_STATUSES, ...MAINTENANCE_DISPOSAL_STATUSES];
+/** Statuses a person may set by hand. */
 export const CREATABLE_STATUSES: readonly AssetStatus[] = Object.values(AssetStatus).filter(
-  (s) => s !== AssetStatus.BORROWED && s !== AssetStatus.RETURNED,
+  (s) => !FLOW_STATUSES.includes(s),
 );
+
+/** Refuses flow-managed statuses with a message naming the flow that owns them. */
+@ValidatorConstraint({ name: 'manualStatus', async: false })
+export class IsManualStatus implements ValidatorConstraintInterface {
+  validate(value: unknown): boolean {
+    return typeof value === 'string' && (CREATABLE_STATUSES as readonly string[]).includes(value);
+  }
+  defaultMessage(args: ValidationArguments): string {
+    if ((MAINTENANCE_DISPOSAL_STATUSES as readonly unknown[]).includes(args.value)) return STATUS_FLOW_MANAGED;
+    if ((LOAN_STATUSES as readonly unknown[]).includes(args.value)) return STATUS_LOAN_MANAGED;
+    return enumMessage('Status', AssetStatus);
+  }
+}
 
 export const toNumberOrNull = ({ value }: { value: unknown }): unknown => {
   if (value === '' || value === null || value === undefined) return value === '' ? null : value;
@@ -128,7 +149,7 @@ export class CreateAssetDto {
   condition!: AssetCondition;
 
   @ApiProperty({ enum: CREATABLE_STATUSES })
-  @IsIn(CREATABLE_STATUSES, { message: STATUS_LOAN_MANAGED })
+  @Validate(IsManualStatus)
   status!: AssetStatus;
 
   @ApiPropertyOptional({ format: 'uuid', nullable: true })

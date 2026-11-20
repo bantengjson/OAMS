@@ -40,6 +40,18 @@ describe('employees (e2e)', () => {
     expect(codes).toEqual(expect.arrayContaining(['mutations.view', 'loans.view']));
   });
 
+  it('seed grants disposals.manage to ADMIN_INVENTARIS only (not PETUGAS)', async () => {
+    const codesOf = async (code: 'ADMIN_INVENTARIS' | 'PETUGAS_INVENTARIS') =>
+      (
+        await ctx.prisma.role.findUniqueOrThrow({
+          where: { code },
+          include: { permissions: { include: { permission: true } } },
+        })
+      ).permissions.map((rp) => rp.permission.code);
+    expect(await codesOf('ADMIN_INVENTARIS')).toContain('disposals.manage');
+    expect(await codesOf('PETUGAS_INVENTARIS')).not.toContain('disposals.manage');
+  });
+
   it('ADMIN creates an employee, PETUGAS cannot, VIEWER can list', async () => {
     const res = await ctx
       .http()

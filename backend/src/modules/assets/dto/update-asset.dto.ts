@@ -2,7 +2,6 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
   IsEnum,
-  IsIn,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -20,9 +19,9 @@ import { trim } from '../../../common/dto/transforms.js';
 import { AcquisitionMethod, AssetStatus, OwnershipType } from '../../../generated/prisma/client.js';
 import {
   CREATABLE_STATUSES,
+  IsManualStatus,
   IsCalendarDate,
   MAX_PURCHASE_PRICE,
-  STATUS_LOAN_MANAGED,
   emptyToNull,
   enumMessage,
   toNumberOrNull,
@@ -102,7 +101,7 @@ export class UpdateAssetDto {
 
   @ApiPropertyOptional({ enum: CREATABLE_STATUSES })
   @IfPresent()
-  @IsIn(CREATABLE_STATUSES, { message: STATUS_LOAN_MANAGED })
+  @Validate(IsManualStatus)
   status?: AssetStatus;
 
   @ApiPropertyOptional({ nullable: true }) @IsOptional() @Transform(emptyToNull) @IsString() @MaxLength(2000)

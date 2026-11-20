@@ -36,17 +36,26 @@ model User {
   refreshTokens RefreshToken[]
   auditLogs     AuditLog[]     @relation("AuditActor")
 
-  employee           Employee?
-  createdAssets      Asset[]             @relation("AssetCreatedBy")
-  assignmentsMade    AssetAssignment[]
-  conditionChecks    AssetConditionLog[]
-  mutationsRequested AssetMutation[]     @relation("MutationRequestedBy")
-  mutationsDecided   AssetMutation[]     @relation("MutationDecidedBy")
-  loansRecorded      AssetLoan[]         @relation("LoanRecordedBy")
-  loansReturned      AssetLoan[]         @relation("LoanReturnedBy")
-  archivedAssets     Asset[]             @relation("AssetArchivedBy")
-  uploadedPhotos     AssetPhoto[]
-  uploadedDocuments  AssetDocument[]
+  employee             Employee?
+  createdAssets        Asset[]              @relation("AssetCreatedBy")
+  assignmentsMade      AssetAssignment[]
+  conditionChecks      AssetConditionLog[]
+  mutationsRequested   AssetMutation[]      @relation("MutationRequestedBy")
+  mutationsDecided     AssetMutation[]      @relation("MutationDecidedBy")
+  loansRecorded        AssetLoan[]          @relation("LoanRecordedBy")
+  loansReturned        AssetLoan[]          @relation("LoanReturnedBy")
+  opnamesCreated       StockOpname[]        @relation("OpnameCreatedBy")
+  opnamesClosed        StockOpname[]        @relation("OpnameClosedBy")
+  opnameAssignments    StockOpnameOfficer[]
+  opnameScans          StockOpnameItem[]    @relation("OpnameScannedBy")
+  maintenanceReported  MaintenanceRecord[]  @relation("MaintenanceReportedBy")
+  maintenanceStarted   MaintenanceRecord[]  @relation("MaintenanceStartedBy")
+  maintenanceCompleted MaintenanceRecord[]  @relation("MaintenanceCompletedBy")
+  disposalsMade        AssetDisposal[]      @relation("DisposalBy")
+  disposalsReverted    AssetDisposal[]      @relation("DisposalRevertedBy")
+  archivedAssets       Asset[]              @relation("AssetArchivedBy")
+  uploadedPhotos       AssetPhoto[]
+  uploadedDocuments    AssetDocument[]
 
   @@index([departmentId])
   @@map("users")
@@ -289,6 +298,9 @@ model Asset {
   mutations           AssetMutation[]
   loans               AssetLoan[]
   conditionLogs       AssetConditionLog[]
+  opnameItems         StockOpnameItem[]
+  maintenance         MaintenanceRecord[]
+  disposals           AssetDisposal[]
 
   @@index([categoryId])
   @@index([locationId])
@@ -337,11 +349,13 @@ model AssetPhoto {
   caption        String?  @db.VarChar(255)
   uploadedById   String?  @map("uploaded_by_id") @db.Uuid
   conditionLogId String?  @map("condition_log_id") @db.Uuid
+  maintenanceId  String?  @map("maintenance_id") @db.Uuid
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   asset        Asset              @relation(fields: [assetId], references: [id], onDelete: Cascade)
   uploadedBy   User?              @relation(fields: [uploadedById], references: [id])
   conditionLog AssetConditionLog? @relation(fields: [conditionLogId], references: [id], onDelete: SetNull)
+  maintenance  MaintenanceRecord? @relation(fields: [maintenanceId], references: [id], onDelete: SetNull)
 
   @@index([assetId])
   @@index([conditionLogId])
@@ -357,10 +371,12 @@ model AssetDocument {
   sizeBytes    Int      @map("size_bytes")
   title        String?  @db.VarChar(200)
   uploadedById String?  @map("uploaded_by_id") @db.Uuid
+  disposalId   String?  @map("disposal_id") @db.Uuid
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  asset      Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
-  uploadedBy User? @relation(fields: [uploadedById], references: [id])
+  asset      Asset          @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  uploadedBy User?          @relation(fields: [uploadedById], references: [id])
+  disposal   AssetDisposal? @relation(fields: [disposalId], references: [id], onDelete: SetNull)
 
   @@index([assetId])
   @@map("asset_documents")
@@ -396,6 +412,8 @@ enum ConditionSource {
   CREATE
   MANUAL
   LOAN_RETURN
+  OPNAME
+  MAINTENANCE
 }
 
 /// Daftar pegawai (data master), terpisah dari akun login.
@@ -538,11 +556,171 @@ model AssetConditionLog {
   checkedById       String          @map("checked_by_id") @db.Uuid
   createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  asset     Asset        @relation(fields: [assetId], references: [id], onDelete: Cascade)
-  loan      AssetLoan?   @relation(fields: [loanId], references: [id])
-  checkedBy User         @relation(fields: [checkedById], references: [id])
-  photos    AssetPhoto[]
+  asset       Asset             @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  loan        AssetLoan?        @relation(fields: [loanId], references: [id])
+  checkedBy   User              @relation(fields: [checkedById], references: [id])
+  photos      AssetPhoto[]
+  opnameItems StockOpnameItem[]
 
   @@index([assetId, createdAt])
   @@map("asset_condition_logs")
+}
+
+// ---------------------------------------------------------------------------
+// Tahap 4: stock opname, pemeliharaan, pelepasan
+// ---------------------------------------------------------------------------
+
+enum OpnameStatus {
+  OPEN
+  CLOSED
+  CANCELLED
+}
+
+enum OpnameResult {
+  PENDING
+  MATCHED
+  CONDITION_DIFFERS
+  NOT_FOUND
+  UNREGISTERED
+  ON_LOAN
+  IN_MAINTENANCE
+  REMOVED
+}
+
+enum MaintenanceStatus {
+  REPORTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum DisposalReason {
+  BROKEN
+  LOST
+  SOLD
+  DONATED
+  OTHER
+}
+
+/// Sesi stock opname; hanya satu OPEN pada satu waktu (indeks unik parsial).
+model StockOpname {
+  id          String       @id @default(uuid()) @db.Uuid
+  name        String       @db.VarChar(150)
+  notes       String?
+  status      OpnameStatus @default(OPEN)
+  plannedDate DateTime     @map("planned_date") @db.Date
+  createdById String       @map("created_by_id") @db.Uuid
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  closedById  String?      @map("closed_by_id") @db.Uuid
+  closedAt    DateTime?    @map("closed_at") @db.Timestamptz(6)
+  cancelledAt DateTime?    @map("cancelled_at") @db.Timestamptz(6)
+  updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  createdBy User                 @relation("OpnameCreatedBy", fields: [createdById], references: [id])
+  closedBy  User?                @relation("OpnameClosedBy", fields: [closedById], references: [id])
+  officers  StockOpnameOfficer[]
+  items     StockOpnameItem[]
+
+  @@index([status, createdAt])
+  @@map("stock_opnames")
+}
+
+model StockOpnameOfficer {
+  opnameId String @map("opname_id") @db.Uuid
+  userId   String @map("user_id") @db.Uuid
+
+  opname StockOpname @relation(fields: [opnameId], references: [id], onDelete: Cascade)
+  user   User        @relation(fields: [userId], references: [id])
+
+  @@id([opnameId, userId])
+  @@map("stock_opname_officers")
+}
+
+/// Satu baris per barang di snapshot; baris tanpa barang = tidak terdaftar.
+model StockOpnameItem {
+  id                 String          @id @default(uuid()) @db.Uuid
+  opnameId           String          @map("opname_id") @db.Uuid
+  assetId            String?         @map("asset_id") @db.Uuid
+  expectedCondition  AssetCondition? @map("expected_condition")
+  expectedStatus     AssetStatus?    @map("expected_status")
+  scannedAt          DateTime?       @map("scanned_at") @db.Timestamptz(6)
+  scannedById        String?         @map("scanned_by_id") @db.Uuid
+  observedCondition  AssetCondition? @map("observed_condition")
+  result             OpnameResult    @default(PENDING)
+  rawValue           String?         @map("raw_value") @db.VarChar(500)
+  note               String?
+  conditionAppliedAt DateTime?       @map("condition_applied_at") @db.Timestamptz(6)
+  conditionLogId     String?         @map("condition_log_id") @db.Uuid
+  createdAt          DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  opname       StockOpname        @relation(fields: [opnameId], references: [id], onDelete: Cascade)
+  asset        Asset?             @relation(fields: [assetId], references: [id])
+  scannedBy    User?              @relation("OpnameScannedBy", fields: [scannedById], references: [id])
+  conditionLog AssetConditionLog? @relation(fields: [conditionLogId], references: [id])
+
+  @@unique([opnameId, assetId])
+  @@index([opnameId, result])
+  @@map("stock_opname_items")
+}
+
+/// Pemeliharaan; satu REPORTED/IN_PROGRESS per barang (indeks unik parsial).
+model MaintenanceRecord {
+  id              String            @id @default(uuid()) @db.Uuid
+  assetId         String            @map("asset_id") @db.Uuid
+  status          MaintenanceStatus @default(REPORTED)
+  description     String
+  reportedById    String            @map("reported_by_id") @db.Uuid
+  reportedAt      DateTime          @default(now()) @map("reported_at") @db.Timestamptz(6)
+  technician      String?           @db.VarChar(150)
+  startedAt       DateTime?         @map("started_at") @db.Timestamptz(6)
+  startedById     String?           @map("started_by_id") @db.Uuid
+  completedAt     DateTime?         @map("completed_at") @db.Timestamptz(6)
+  completedById   String?           @map("completed_by_id") @db.Uuid
+  cost            Decimal?          @db.Decimal(15, 2)
+  technicianNotes String?           @map("technician_notes")
+  resultCondition AssetCondition?   @map("result_condition")
+  previousStatus  AssetStatus?      @map("previous_status")
+  cancelledAt     DateTime?         @map("cancelled_at") @db.Timestamptz(6)
+  cancelReason    String?           @map("cancel_reason")
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  asset       Asset        @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  reportedBy  User         @relation("MaintenanceReportedBy", fields: [reportedById], references: [id])
+  startedBy   User?        @relation("MaintenanceStartedBy", fields: [startedById], references: [id])
+  completedBy User?        @relation("MaintenanceCompletedBy", fields: [completedById], references: [id])
+  photos      AssetPhoto[]
+
+  @@index([assetId])
+  @@index([status, reportedAt])
+  @@map("maintenance_records")
+}
+
+/// Pelepasan barang; satu aktif (belum dibatalkan) per barang (indeks unik parsial).
+model AssetDisposal {
+  id             String         @id @default(uuid()) @db.Uuid
+  assetId        String         @map("asset_id") @db.Uuid
+  reason         DisposalReason
+  disposedAt     DateTime       @map("disposed_at") @db.Date
+  description    String
+  value          Decimal?       @db.Decimal(15, 2)
+  recipient      String?        @db.VarChar(150)
+  previousStatus AssetStatus    @map("previous_status")
+  labelWasActive Boolean        @default(true) @map("label_was_active")
+  disposedById   String         @map("disposed_by_id") @db.Uuid
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  revertedAt     DateTime?      @map("reverted_at") @db.Timestamptz(6)
+  revertedById   String?        @map("reverted_by_id") @db.Uuid
+  revertReason   String?        @map("revert_reason")
+  updatedAt      DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  asset      Asset           @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  disposedBy User            @relation("DisposalBy", fields: [disposedById], references: [id])
+  revertedBy User?           @relation("DisposalRevertedBy", fields: [revertedById], references: [id])
+  documents  AssetDocument[]
+
+  @@index([assetId])
+  @@index([reason, disposedAt])
+  @@map("asset_disposals")
 }

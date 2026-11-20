@@ -202,6 +202,22 @@ describe('assets (e2e)', () => {
     expect(res.body.errors).toHaveProperty('purchasePrice');
   });
 
+  it('rejects maintenance/disposal-managed statuses on create and update', async () => {
+    const disposed = await ctx.http().post(URL).set(bearer(admin)).send({ ...baseAsset(), status: 'DISPOSED' }).expect(400);
+    expect(disposed.body.errors.status).toEqual(['Status ini diatur oleh pemeliharaan/pelepasan']);
+    const missing = await ctx.http().post(URL).set(bearer(admin)).send({ ...baseAsset(), status: 'MISSING' }).expect(400);
+    expect(missing.body.errors.status).toEqual(['Status ini diatur oleh pemeliharaan/pelepasan']);
+    const repair = await ctx
+      .http()
+      .patch(`${URL}/${firstId}`)
+      .set(bearer(admin))
+      .send({ status: 'UNDER_MAINTENANCE' })
+      .expect(400);
+    expect(repair.body.errors.status).toEqual(['Status ini diatur oleh pemeliharaan/pelepasan']);
+    const borrowed = await ctx.http().patch(`${URL}/${firstId}`).set(bearer(admin)).send({ status: 'BORROWED' }).expect(400);
+    expect(borrowed.body.errors.status).toEqual(['Status ini diatur oleh peminjaman']);
+  });
+
   it('rejects loan-managed statuses on create and locked fields on update', async () => {
     const borrowed = await ctx
       .http()
@@ -401,7 +417,7 @@ describe('assets (e2e)', () => {
       .http()
       .post(URL)
       .set(bearer(admin))
-      .send({ ...baseAsset(), name: 'Kursi Arsip', condition: 'UNUSABLE', status: 'DISPOSED' })
+      .send({ ...baseAsset(), name: 'Kursi Arsip', condition: 'UNUSABLE', status: 'STORED' })
       .expect(201);
     await ctx.http().post(`${URL}/${third.body.id}/archive`).set(bearer(admin)).send({}).expect(200);
 
