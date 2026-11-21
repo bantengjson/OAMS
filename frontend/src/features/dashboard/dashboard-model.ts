@@ -127,3 +127,27 @@ export function mergeActivity(perModule: AuditLog[][], limit: number): ActivityR
   }
   return [...byId.values()].sort((a, b) => b.at.localeCompare(a.at)).slice(0, limit);
 }
+
+/**
+ * Bars for the acquisition-year chart: every year between the first and last one (empty years
+ * included, so the axis is even), at most `max` bars; older years fold into one "≤year" bar.
+ */
+export function yearChartRows(
+  rows: { year: number; count: number }[],
+  max = 8,
+): { key: string; label: string; value: number }[] {
+  if (rows.length === 0) return [];
+  const byYear = new Map(rows.map((r) => [r.year, r.count]));
+  const first = Math.min(...rows.map((r) => r.year));
+  const last = Math.max(...rows.map((r) => r.year));
+  const all = Array.from({ length: last - first + 1 }, (_, i) => first + i).map((y) => ({
+    key: String(y),
+    label: String(y),
+    value: byYear.get(y) ?? 0,
+  }));
+  if (all.length <= max) return all;
+  const kept = all.slice(all.length - (max - 1));
+  const older = all.slice(0, all.length - (max - 1));
+  const lastOlder = older[older.length - 1].label;
+  return [{ key: 'older', label: `≤${lastOlder}`, value: older.reduce((s, r) => s + r.value, 0) }, ...kept];
+}

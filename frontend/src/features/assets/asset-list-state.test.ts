@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AssetStatistics } from '@/types/api';
-import { DEFAULT_LIST_STATE, chipCountsIgnoreFilters, parseAssetQuery, selectionFor, statusChipItems, toSearchParams } from './asset-list-state';
+import { DEFAULT_LIST_STATE, chipCountsIgnoreFilters, clampPage, parseAssetQuery, selectionFor, statusChipItems, toSearchParams } from './asset-list-state';
 
 const CAT = '0b2f4f43-7a64-4c1e-9b5e-2a1c8f0d9e11';
 
@@ -64,5 +64,13 @@ describe('chipCountsIgnoreFilters', () => {
     expect(chipCountsIgnoreFilters({ ...DEFAULT_LIST_STATE, condition: 'GOOD' })).toBe(true);
     expect(chipCountsIgnoreFilters({ ...DEFAULT_LIST_STATE, includeArchived: true })).toBe(true);
     expect(chipCountsIgnoreFilters({ ...DEFAULT_LIST_STATE, search: 'kursi' })).toBe(true);
+  });
+});
+
+describe('clampPage', () => {
+  it('sends a page past the end to the last page', () => {
+    expect(clampPage(999, 3)).toBe(3);
+    expect(clampPage(2, 3)).toBe(2);
+    expect(clampPage(5, 0)).toBe(5);
   });
 });

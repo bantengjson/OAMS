@@ -7,7 +7,8 @@ import { cn } from '@/lib/utils';
 export interface StatusChipItem<K extends string> {
   key: K;
   label: string;
-  count: number;
+  /** Undefined while still loading. */
+  count: number | undefined;
   tone: Tone;
 }
 
@@ -42,7 +43,7 @@ export function StatusChips<K extends string>({
           >
             <span className={cn('h-2 w-2 rounded-full', TONE_CLASS[it.tone].dot)} aria-hidden="true" />
             {it.label}
-            <span className={cn('font-semibold tabular-nums', active ? 'text-primary' : 'text-foreground')}>{it.count}</span>
+            <span className={cn('font-semibold tabular-nums', active ? 'text-primary' : 'text-foreground')}>{it.count ?? '–'}</span>
           </button>
         );
       })}

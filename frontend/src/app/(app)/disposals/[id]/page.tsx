@@ -65,9 +65,9 @@ export default function DisposalDetailPage() {
         <div className="flex flex-col gap-3 rounded-card border border-l-4 border-border border-l-primary bg-card px-5 py-4 shadow-card sm:flex-row sm:items-start sm:justify-between lg:px-6 lg:py-5">
           <div>
             <p className="font-mono text-sm text-muted-foreground">{d.asset.assetCode}</p>
-            <h2 className="text-[22px] font-semibold tracking-tight text-foreground lg:text-[26px]">
+            <h1 className="text-[22px] font-semibold tracking-tight text-foreground lg:text-[26px]">
               <Link href={`/assets/${d.asset.id}`} className="hover:underline">{d.asset.name}</Link>
-            </h2>
+            </h1>
             <div className="mt-2">
               {d.revertedAt ? <Badge variant="muted">Dibatalkan</Badge> : <Badge variant="destructive">Dilepas</Badge>}
             </div>

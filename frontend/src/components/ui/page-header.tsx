@@ -26,7 +26,7 @@ export function PageHeader({
     >
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <h2 className="text-[22px] font-semibold tracking-tight text-foreground lg:text-[26px]">{title}</h2>
+          <h1 className="text-[22px] font-semibold tracking-tight text-foreground lg:text-[26px]">{title}</h1>
           {meta}
         </div>
         {description ? <p className="mt-0.5 text-sm text-muted-foreground">{description}</p> : null}

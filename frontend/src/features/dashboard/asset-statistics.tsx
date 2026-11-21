@@ -15,7 +15,7 @@ import { CONDITION_TONE, FLOW_TONE, categoryTone } from '@/lib/tones';
 import { ASSET_CONDITIONS } from '@/types/api';
 import type { AssetStatistics } from '@/types/api';
 import type { DashboardBlocks } from './dashboard-model';
-import { showYearChart } from './dashboard-model';
+import { showYearChart, yearChartRows } from './dashboard-model';
 
 const toneVar = (tone: string) => `var(--tone-${tone})`;
 
@@ -37,13 +37,13 @@ export function OperationsPanel({
   if (blocks.operations.loans) {
     items.push(
       { key: 'loan', label: 'Peminjaman aktif', value: s?.activeLoans, icon: HandCoins, tone: FLOW_TONE.loan, href: '/loans' },
-      { key: 'late', label: 'Peminjaman terlambat', value: s?.overdueLoans, icon: Clock, tone: FLOW_TONE.overdue, href: '/loans?state=overdue' },
+      { key: 'late', label: 'Peminjaman terlambat', value: s?.overdueLoans, icon: Clock, tone: FLOW_TONE.overdue, href: '/loans?state=overdue', alertOnly: true },
     );
   }
   if (blocks.operations.maintenance) {
     items.push(
       { key: 'repair', label: 'Dalam perbaikan', value: s?.inMaintenance, icon: Wrench, tone: FLOW_TONE.maintenance, href: '/maintenance?status=IN_PROGRESS' },
-      { key: 'report', label: 'Laporan kerusakan baru', value: s?.openMaintenance, icon: AlertTriangle, tone: FLOW_TONE.damageReport, href: '/maintenance?status=REPORTED' },
+      { key: 'report', label: 'Laporan kerusakan baru', value: s?.openMaintenance, icon: AlertTriangle, tone: FLOW_TONE.damageReport, href: '/maintenance?status=REPORTED', alertOnly: true },
       { key: 'out', label: 'Barang dilepas', value: s?.disposed, icon: PackageX, tone: FLOW_TONE.disposal, href: '/disposals' },
     );
   }
@@ -78,7 +78,7 @@ export function AnalyticsPanel({ stats }: { stats: UseQueryResult<AssetStatistic
   const goodPct = s.active > 0 ? Math.round(((s.byCondition.GOOD ?? 0) / s.active) * 100) : 0;
   const years = showYearChart(s.byAcquisitionYear);
   return (
-    <div className={years ? 'grid gap-4 lg:grid-cols-2 2xl:grid-cols-[1fr_1.2fr_1.2fr]' : 'grid gap-4 lg:grid-cols-2'}>
+    <div className={years ? 'grid gap-4 lg:grid-cols-2 min-[1440px]:grid-cols-[1fr_1.2fr_1.2fr]' : 'grid gap-4 lg:grid-cols-2'}>
       <Card>
         <CardHeader className="flex-row items-center justify-between border-b border-border pb-3">
           <CardTitle>Kondisi barang</CardTitle>
@@ -118,7 +118,7 @@ export function AnalyticsPanel({ stats }: { stats: UseQueryResult<AssetStatistic
         </CardContent>
       </Card>
       {years ? (
-        <Card className="lg:col-span-2 2xl:col-span-1">
+        <Card className="lg:col-span-2 min-[1440px]:col-span-1">
           <CardHeader className="flex-row items-center justify-between border-b border-border pb-3">
             <CardTitle>Perolehan per tahun</CardTitle>
             <span className="text-xs text-muted-foreground">jumlah unit</span>
@@ -126,7 +126,7 @@ export function AnalyticsPanel({ stats }: { stats: UseQueryResult<AssetStatistic
           <CardContent className="pt-4">
             <ColumnChart
               highlightLast
-              rows={s.byAcquisitionYear.map((r) => ({ key: String(r.year), label: String(r.year), value: r.count, color: 'var(--tone-blue)' }))}
+              rows={yearChartRows(s.byAcquisitionYear).map((r) => ({ ...r, color: 'var(--tone-blue)' }))}
             />
             {s.withoutAcquisitionYear > 0 ? (
               <p className="mt-3 text-xs text-muted-foreground">{s.withoutAcquisitionYear} barang tanpa tahun perolehan</p>

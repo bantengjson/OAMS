@@ -7,6 +7,11 @@ export class CountByRefDto {
   @ApiProperty() count!: number;
 }
 
+export class YearCountDto {
+  @ApiProperty() year!: number;
+  @ApiProperty() count!: number;
+}
+
 export class AssetStatisticsDto {
   @ApiProperty({ description: 'Semua barang: aktif + diarsipkan + dilepas' }) total!: number;
   @ApiProperty() active!: number;
@@ -17,8 +22,8 @@ export class AssetStatisticsDto {
   @ApiProperty({ type: [CountByRefDto] }) byCategory!: CountByRefDto[];
   @ApiProperty({ type: [CountByRefDto], description: 'Dikelompokkan per Kantor (akar lokasi)' })
   byOffice!: CountByRefDto[];
-  @ApiProperty({ description: 'Barang aktif per tahun perolehan, urut naik' })
-  byAcquisitionYear!: { year: number; count: number }[];
+  @ApiProperty({ type: [YearCountDto], description: 'Barang aktif per tahun perolehan, urut naik' })
+  byAcquisitionYear!: YearCountDto[];
   @ApiProperty({ description: 'Barang aktif tanpa tanggal perolehan' })
   withoutAcquisitionYear!: number;
   @ApiProperty({ description: 'Mutasi berstatus PENDING' }) pendingMutations!: number;

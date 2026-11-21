@@ -11,6 +11,8 @@ import type {
   OpnameStatus,
 } from '@/types/api';
 
+import type { Tone } from './tones';
+
 type BadgeVariant = 'default' | 'success' | 'warning' | 'destructive' | 'outline' | 'muted';
 
 export const MUTATION_STATUS_LABEL: Record<MutationStatus, string> = {
@@ -118,4 +120,34 @@ export const OPNAME_STATUS_VARIANT: Record<OpnameStatus, BadgeVariant> = {
   OPEN: 'default',
   CLOSED: 'success',
   CANCELLED: 'muted',
+};
+
+// Colours of the list status chips (see lib/tones.ts for the shared meaning of each tone).
+export const MUTATION_STATUS_TONE: Record<MutationStatus, Tone> = {
+  PENDING: 'amber',
+  APPROVED: 'green',
+  REJECTED: 'red',
+  CANCELLED: 'slate',
+};
+
+export const LOAN_STATE_TONE: Record<LoanState, Tone> = {
+  active: 'blue',
+  overdue: 'red',
+  returned: 'green',
+  all: 'slate',
+};
+
+export const MAINTENANCE_STATUS_TONE: Record<MaintenanceStatus, Tone> = {
+  REPORTED: 'amber',
+  IN_PROGRESS: 'orange',
+  COMPLETED: 'green',
+  CANCELLED: 'slate',
+};
+
+export const DISPOSAL_REASON_TONE: Record<DisposalReason, Tone> = {
+  BROKEN: 'red',
+  LOST: 'orange',
+  SOLD: 'green',
+  DONATED: 'teal',
+  OTHER: 'slate',
 };

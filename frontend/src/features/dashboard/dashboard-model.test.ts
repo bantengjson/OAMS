@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AuditLog } from '@/types/api';
-import { ACTIVITY_MODULES, dashboardBlocks, mergeActivity, showYearChart, toActivityRow } from './dashboard-model';
+import { ACTIVITY_MODULES, dashboardBlocks, mergeActivity, showYearChart, toActivityRow, yearChartRows } from './dashboard-model';
 
 const can = (perms: string[]) => (p: string) => perms.includes(p);
 
@@ -87,5 +87,23 @@ describe('mergeActivity', () => {
 
   it('asks one page per dashboard module', () => {
     expect([...ACTIVITY_MODULES].sort()).toEqual(['assets', 'disposals', 'loans', 'maintenance', 'mutations']);
+  });
+});
+
+describe('yearChartRows', () => {
+  it('fills missing years so the axis is evenly spaced', () => {
+    expect(yearChartRows([{ year: 2022, count: 2 }, { year: 2024, count: 5 }]).map((r) => [r.label, r.value])).toEqual([
+      ['2022', 2],
+      ['2023', 0],
+      ['2024', 5],
+    ]);
+  });
+
+  it('keeps the last years and folds older ones into one bar', () => {
+    const rows = Array.from({ length: 12 }, (_, i) => ({ year: 2015 + i, count: 1 }));
+    const out = yearChartRows(rows, 8);
+    expect(out).toHaveLength(8);
+    expect(out[0]).toMatchObject({ label: '≤2019', value: 5 });
+    expect(out[7]).toMatchObject({ label: '2026', value: 1 });
   });
 });

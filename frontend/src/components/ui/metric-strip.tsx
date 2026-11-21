@@ -13,6 +13,8 @@ export interface Metric {
   icon: LucideIcon;
   tone: Tone;
   href?: string;
+  /** Use the tone colour only when the value is above 0 (warnings such as "terlambat"). */
+  alertOnly?: boolean;
 }
 
 /** Several small metrics in one card, divided by thin lines; each may link to its list. */
@@ -42,7 +44,12 @@ export function MetricStrip({
             <div className="flex h-full flex-col gap-2 px-5 py-4">
               <IconChip icon={m.icon} tone={m.tone} size="sm" className="h-8 w-8 rounded-lg" />
               <span className="text-xs font-medium text-muted-foreground">{m.label}</span>
-              <span className={cn('text-[22px] font-semibold leading-none tabular-nums', TONE_CLASS[m.tone].text)}>
+              <span
+                className={cn(
+                  'text-[22px] font-semibold leading-none tabular-nums',
+                  m.alertOnly && !(typeof m.value === 'number' && m.value > 0) ? 'text-foreground' : TONE_CLASS[m.tone].text,
+                )}
+              >
                 {loading ? <Spinner className="h-4 w-4 text-muted-foreground" /> : error ? '–' : m.value}
               </span>
             </div>

@@ -7,20 +7,23 @@ import { useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { FilterBar } from '@/components/ui/filter-bar';
 import { Input } from '@/components/ui/input';
-import { PageHeader } from '@/components/ui/page-header';
+import { HeaderPill, PageHeader } from '@/components/ui/page-header';
 import { Pagination } from '@/components/ui/pagination';
 import { PageSpinner } from '@/components/ui/spinner';
-import { Tabs } from '@/components/ui/tabs';
+import { StatusChips } from '@/components/ui/status-chips';
 import { ExtendLoanDialog } from '@/features/loans/extend-loan-dialog';
 import { LoanTable } from '@/features/loans/loan-table';
 import { ReturnLoanDialog } from '@/features/loans/return-loan-dialog';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { useListCounts } from '@/hooks/use-list-counts';
 import { getErrorMessage } from '@/lib/api/form-errors';
 import { loansApi } from '@/lib/api/loans';
 import type { LoanQuery } from '@/lib/api/loans';
 import { useAuth } from '@/lib/auth/use-auth';
-import { LOAN_STATE_LABEL } from '@/lib/operation-labels';
+import { chipItems } from '@/lib/list-chips';
+import { LOAN_STATE_LABEL, LOAN_STATE_TONE } from '@/lib/operation-labels';
 import { LOAN_STATES } from '@/types/api';
 import type { Loan, LoanState } from '@/types/api';
 
@@ -48,12 +51,21 @@ function LoansContent() {
   const query: LoanQuery = { page, pageSize: 20, state, search: debounced || undefined };
   const list = useQuery({ queryKey: ['loans', query], queryFn: () => loansApi.list(query) });
   const canManage = hasPermission('loans.manage');
+  const counts = useListCounts('loans', LOAN_STATES, async (s) => (await loansApi.list({ page: 1, pageSize: 1, state: s })).meta.total);
+  const chips = chipItems(LOAN_STATES.map((s) => ({ key: s, label: LOAN_STATE_LABEL[s], tone: LOAN_STATE_TONE[s] })), counts);
 
   return (
     <>
       <PageHeader
         title="Peminjaman"
         description="Barang kantor yang dipinjam karyawan atau orang dekat karyawan. Yang terlambat tampil paling atas."
+        meta={
+          counts.overdue ? (
+            <HeaderPill className="bg-tone-red-soft text-tone-red">{counts.overdue} terlambat</HeaderPill>
+          ) : counts.active !== undefined ? (
+            <HeaderPill>{counts.active} aktif</HeaderPill>
+          ) : null
+        }
         actions={
           canManage ? (
             <Link href="/loans/new">
@@ -63,16 +75,17 @@ function LoansContent() {
         }
       />
 
-      <Tabs<LoanState>
+      <StatusChips<LoanState>
+        items={chips}
         value={state}
         onChange={(s) => {
           setState(s);
           setPage(1);
         }}
-        items={LOAN_STATES.map((s) => ({ key: s, label: LOAN_STATE_LABEL[s] }))}
       />
 
-      <div className="relative">
+      <FilterBar>
+      <div className="relative min-w-[240px] flex-1">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           value={term}
@@ -85,6 +98,7 @@ function LoansContent() {
           aria-label="Cari peminjaman"
         />
       </div>
+      </FilterBar>
 
       {list.isError ? <Alert variant="error">{getErrorMessage(list.error)}</Alert> : null}
       <LoanTable

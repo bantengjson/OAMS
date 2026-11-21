@@ -105,7 +105,7 @@ function AssetDetailContent() {
         <div className="flex flex-col gap-4 rounded-card border border-l-4 border-border border-l-primary bg-card px-5 py-4 shadow-card lg:px-6 lg:py-5 xl:flex-row xl:items-start xl:justify-between">
           <div className="min-w-0">
             <p className="font-mono text-[13px] text-muted-foreground">{a.assetCode}</p>
-            <h2 className="truncate text-[22px] font-semibold tracking-tight text-foreground lg:text-[26px]">{a.name}</h2>
+            <h1 className="truncate text-[22px] font-semibold tracking-tight text-foreground lg:text-[26px]">{a.name}</h1>
             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
               <AssetStatusBadge status={a.status} />
               <AssetConditionBadge condition={a.condition} />
@@ -217,7 +217,7 @@ function AssetDetailContent() {
       ) : null}
 
       {a.activeDisposal ? (
-        <Alert tone={FLOW_TONE.disposal}>
+        <Alert variant="error" tone={FLOW_TONE.disposal}>
           Barang sudah dilepas ({DISPOSAL_REASON_LABEL[a.activeDisposal.reason]}, {formatDate(a.activeDisposal.disposedAt)}). QR
           nonaktif dan barang tidak tampil di daftar inventaris aktif.{' '}
           <Link href={`/disposals/${a.activeDisposal.id}`} className="font-medium underline">Lihat pelepasan</Link>
@@ -233,7 +233,7 @@ function AssetDetailContent() {
       ) : null}
 
       {a.activeLoan ? (
-        <Alert tone={a.activeLoan.isOverdue ? FLOW_TONE.overdue : STATUS_TONE.BORROWED}>
+        <Alert variant={a.activeLoan.isOverdue ? 'error' : 'info'} tone={a.activeLoan.isOverdue ? FLOW_TONE.overdue : STATUS_TONE.BORROWED}>
           Sedang dipinjam oleh {a.activeLoan.borrowerName} sejak {formatDate(a.activeLoan.loanedAt)}, rencana kembali{' '}
           {formatDate(a.activeLoan.dueAt)}
           {a.activeLoan.isOverdue ? ' (terlambat)' : ''}.{' '}

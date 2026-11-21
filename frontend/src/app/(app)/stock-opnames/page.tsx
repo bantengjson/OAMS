@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PageHeader } from '@/components/ui/page-header';
+import { HeaderPill, PageHeader } from '@/components/ui/page-header';
 import { Pagination } from '@/components/ui/pagination';
 import { Table, TableMessage, TBody, TD, TH, THead, TR } from '@/components/ui/table';
 import { CreateOpnameDialog } from '@/features/stock-opnames/create-opname-dialog';
@@ -32,6 +32,13 @@ export default function StockOpnamesPage() {
       <PageHeader
         title="Stock opname"
         description="Hitung fisik barang dengan memindai stikernya, lalu bandingkan dengan catatan."
+        meta={
+          hasOpen ? (
+            <HeaderPill className="bg-tone-teal-soft text-tone-teal">Sesi berjalan</HeaderPill>
+          ) : list.data ? (
+            <HeaderPill>{list.data.meta.total} sesi</HeaderPill>
+          ) : null
+        }
         actions={
           hasPermission('stock_opnames.manage') ? (
             <Button

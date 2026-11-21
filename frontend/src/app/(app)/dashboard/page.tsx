@@ -79,7 +79,7 @@ export default function DashboardPage() {
           <section
             className={cn(
               'grid gap-4 sm:grid-cols-2',
-              kpiCount === 4 ? 'xl:grid-cols-4' : 'xl:grid-cols-3',
+              kpiCount === 4 ? 'xl:grid-cols-4' : kpiCount === 3 ? 'xl:grid-cols-3' : 'xl:grid-cols-2',
               // An odd last tile spans the row on two-column layouts.
               'sm:[&>*:last-child:nth-child(odd)]:col-span-2 xl:[&>*:last-child:nth-child(odd)]:col-span-1',
             )}

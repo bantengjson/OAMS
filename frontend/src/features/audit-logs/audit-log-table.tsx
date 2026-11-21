@@ -76,7 +76,7 @@ export function AuditLogTable({
                       <IconChip icon={activityStyle(row.module, row.action).icon} tone={activityStyle(row.module, row.action).tone} size="sm" />
                       <span className="min-w-0">
                         <span className="block font-medium text-foreground">{ASSET_ACTION_LABEL[row.action] ?? row.action}</span>
-                        <code className="block text-[11px] text-muted-foreground">{row.action}</code>
+                        {ASSET_ACTION_LABEL[row.action] ? <code className="block text-[11px] text-muted-foreground">{row.action}</code> : null}
                       </span>
                     </span>
                   </TD>

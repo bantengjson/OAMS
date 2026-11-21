@@ -83,3 +83,8 @@ export function selectionFor(sel: { key: string; ids: string[] }, key: string): 
 export function chipCountsIgnoreFilters(state: AssetListState): boolean {
   return Boolean(state.search.trim() || state.categoryId || state.condition || state.ownershipType || state.includeArchived);
 }
+
+/** A page past the end (stale or hand-edited URL) becomes the last page; an empty list keeps the page. */
+export function clampPage(page: number, totalPages: number): number {
+  return totalPages >= 1 && page > totalPages ? totalPages : page;
+}

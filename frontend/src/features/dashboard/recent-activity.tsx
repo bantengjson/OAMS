@@ -31,7 +31,7 @@ export function RecentActivity() {
           Buka audit log →
         </Link>
       </div>
-      <Table wrapperClassName="rounded-t-none [&_th]:rounded-none">
+      <Table wrapperClassName="rounded-t-none [&_th]:rounded-none!">
         <THead>
           <TR>
             <TH className="w-36">Waktu</TH>

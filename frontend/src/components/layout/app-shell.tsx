@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { PageSpinner } from '@/components/ui/spinner';
+import { loginRedirect } from '@/lib/auth/login-redirect';
 import { useAuth } from '@/lib/auth/use-auth';
 import { Header } from './header';
 import { Sidebar } from './sidebar';
@@ -16,7 +17,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (status === 'anonymous') {
-      router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+      router.replace(loginRedirect(pathname, window.location.search));
     }
   }, [status, pathname, router]);
 

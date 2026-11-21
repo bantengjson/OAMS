@@ -14,7 +14,7 @@ import { Pagination } from '@/components/ui/pagination';
 import { PageSpinner } from '@/components/ui/spinner';
 import { StatusChips } from '@/components/ui/status-chips';
 import { AssetFilters, toAssetQuery } from '@/features/assets/asset-filters';
-import { chipCountsIgnoreFilters, parseAssetQuery, selectionFor, statusChipItems, toSearchParams } from '@/features/assets/asset-list-state';
+import { chipCountsIgnoreFilters, clampPage, parseAssetQuery, selectionFor, statusChipItems, toSearchParams } from '@/features/assets/asset-list-state';
 import type { AssetListState, ChipKey } from '@/features/assets/asset-list-state';
 import { ASSET_COLUMNS, ASSET_DEFAULT_COLUMNS, AssetTable } from '@/features/assets/asset-table';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
@@ -74,6 +74,12 @@ function AssetsContent() {
 
   const query = { ...toAssetQuery(state, state.search), sort: state.sort, order: state.order, page: state.page, pageSize: PAGE_SIZE };
   const list = useQuery({ queryKey: ['assets', query], queryFn: () => assetsApi.list(query) });
+  // A stale or hand-edited ?page past the end goes to the last page instead of an empty table.
+  const totalPages = list.data?.meta.totalPages;
+  useEffect(() => {
+    if (totalPages !== undefined && clampPage(state.page, totalPages) !== state.page) update({ page: clampPage(state.page, totalPages) });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reacts to the loaded page count only
+  }, [totalPages, state.page]);
   const stats = useQuery({ queryKey: ['assets', 'statistics'], queryFn: assetsApi.statistics });
 
   const chipValue: ChipKey = state.status || 'ALL';

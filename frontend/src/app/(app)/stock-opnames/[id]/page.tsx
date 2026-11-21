@@ -94,7 +94,7 @@ export default function StockOpnameDetailPage() {
         </Link>
         <div className="flex flex-col gap-3 rounded-card border border-l-4 border-border border-l-primary bg-card px-5 py-4 shadow-card sm:flex-row sm:items-start sm:justify-between lg:px-6 lg:py-5">
           <div>
-            <h2 className="text-[22px] font-semibold tracking-tight text-foreground lg:text-[26px]">{s.name}</h2>
+            <h1 className="text-[22px] font-semibold tracking-tight text-foreground lg:text-[26px]">{s.name}</h1>
             <p className="text-sm text-muted-foreground">
               {formatDate(s.plannedDate)} · Petugas: {s.officers.length > 0 ? s.officers.map((o) => o.fullName).join(', ') : 'semua'}
             </p>

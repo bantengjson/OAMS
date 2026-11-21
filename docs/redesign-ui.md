@@ -78,6 +78,11 @@ Unit test baru: `lib/tones`, `lib/column-prefs`, `components/ui/charts` (`donutS
 
 Review independen atas seluruh diff redesign: tidak ada temuan Critical; kelima fokus review (blok dashboard per izin, URL yang diubah tangan, pilihan baris yang basi, data kosong, warna kategori stabil), kunci sidebar, dan tambahan SQL statistik terpenuhi. Lima temuan Important diperbaiki: tabel melebar keluar halaman pada 1024–1350 px; aktivitas terbaru kosong setelah cetak QR massal; status tanpa barang aktif (mis. Hilang yang diarsipkan) tidak bisa disaring; kotak pencarian tidak mengikuti URL; tidak ada keterangan bahwa jumlah tombol status mengabaikan filter lain.
 
-Perbedaan dari desain yang perlu dikonfirmasi pemilik: header tabel lengket mulai 1280 px (bukan 1024); halaman daftar operasional (mutasi, peminjaman, pemeliharaan, pelepasan, stock opname) mempertahankan susunan tab + pencarian sendiri, hanya tampilannya yang mengikuti sistem baru.
+Perbedaan dari desain yang perlu dikonfirmasi pemilik: header tabel lengket mulai 1280 px (bukan 1024).
 
-Ditunda (kecil): warna angka operasional selalu menyala walau 0; grafik 3 kolom baru di 1536 px; slot KPI kosong untuk role khusus; warna kategori bisa kembar; grafik tahun padat bila >20 tahun; halaman di luar jangkauan pada URL; kategori tak dikenal di URL; kolom Barang di aktivitas sering "Lihat barang"; tidak ada h1 di halaman aplikasi; banner terlambat/dilepas kehilangan role alert; skema Swagger untuk statistik per tahun; filter hilang setelah login lewat tautan; sudut tabel aktivitas; aksi non-barang tampil dua kali di audit log.
+### Lanjutan (21 Nov 2026)
+
+- Halaman daftar Mutasi, Peminjaman, Pemeliharaan, dan Pelepasan kini memakai pola Inventaris: tombol status (atau alasan, untuk pelepasan) berwarna dengan jumlahnya, pencarian dalam bilah filter, dan label jumlah di judul (mis. "2 terlambat", "1 laporan baru"). Jumlah diambil per status dengan permintaan kecil (). Stock Opname mendapat label sesi berjalan / jumlah sesi.
+- Perbaikan kecil yang sebelumnya ditunda dan kini selesai: angka Terlambat dan Laporan kerusakan hanya berwarna bila > 0; grafik 3 kolom mulai 1440 px; tidak ada slot KPI kosong; grafik tahun maksimal 8 batang dengan tahun kosong ikut tampil dan tahun lama digabung "≤tahun"; halaman di luar jangkauan pindah ke halaman terakhir; judul halaman memakai h1; banner terlambat/dilepas kembali berperan sebagai peringatan; skema Swagger untuk statistik per tahun; filter tetap terbawa setelah login; sudut tabel aktivitas; kode aksi tidak tampil dua kali di audit log.
+
+Masih ditunda (kecil): dua kategori bisa kebetulan berwarna sama; kategori tak dikenal di URL menyaring jadi kosong; kolom Barang di aktivitas sering berisi "Lihat barang".
