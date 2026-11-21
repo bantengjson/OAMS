@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service.js';
+import { avatarUrl } from '../../common/files/avatar.js';
 import type { AuditLogDto } from '../../common/audit/audit.types.js';
 import type { AuthUser } from '../../common/auth/auth-user.js';
 import type { Paginated } from '../../common/dto/paginated.js';
@@ -44,6 +45,7 @@ function toDto(row: UserRow): UserDto {
     username: row.username,
     fullName: row.fullName,
     phone: row.phone,
+    avatarUrl: avatarUrl(row.id, row.avatarFileName),
     isActive: row.isActive,
     department: row.department,
     roles: row.roles

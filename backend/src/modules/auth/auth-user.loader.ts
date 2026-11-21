@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { AuthUser } from '../../common/auth/auth-user.js';
+import { avatarUrl } from '../../common/files/avatar.js';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
 
 @Injectable()
@@ -31,6 +32,8 @@ export class AuthUserLoader {
       username: user.username,
       fullName: user.fullName,
       departmentId: user.departmentId,
+      avatarUrl: avatarUrl(user.id, user.avatarFileName),
+      lastLoginAt: user.lastLoginAt,
       roles,
       permissions,
     };

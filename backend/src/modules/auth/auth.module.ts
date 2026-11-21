@@ -9,6 +9,8 @@ import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
 import { LoginAttemptLimiter } from './login-attempt.limiter.js';
 import { PasswordService } from './password.service.js';
+import { ProfileController } from './profile.controller.js';
+import { ProfileService } from './profile.service.js';
 import { RefreshTokenService } from './refresh-token.service.js';
 
 @Module({
@@ -22,11 +24,12 @@ import { RefreshTokenService } from './refresh-token.service.js';
       }),
     }),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, ProfileController],
   providers: [
     AuthService,
     AuthUserLoader,
     PasswordService,
+    ProfileService,
     RefreshTokenService,
     LoginAttemptLimiter,
     // Order matters: authentication first, then permission checks.

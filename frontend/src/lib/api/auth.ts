@@ -1,5 +1,5 @@
 import type { AuthUser, LoginResponse } from '@/types/api';
-import { api, refreshSession } from './client';
+import { api, apiUpload, refreshSession } from './client';
 
 export const authApi = {
   /** `identifier` is an email or a username. */
@@ -9,6 +9,14 @@ export const authApi = {
   refresh: () => refreshSession(),
   logout: () => api.post<void>('/auth/logout'),
   me: () => api.get<AuthUser>('/auth/me'),
+  /** Own display name only; username and email stay with Super Admin. */
+  updateMe: (fullName: string) => api.patch<AuthUser>('/auth/me', { fullName }),
+  uploadAvatar: (file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return apiUpload<AuthUser>('/auth/me/avatar', form);
+  },
+  removeAvatar: () => api.delete<AuthUser>('/auth/me/avatar'),
   changePassword: (currentPassword: string, newPassword: string) =>
     api.patch<void>('/auth/change-password', { currentPassword, newPassword }),
 };

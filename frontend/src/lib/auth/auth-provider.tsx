@@ -13,6 +13,8 @@ export interface AuthContextValue {
   user: AuthUser | null;
   login(identifier: string, password: string): Promise<AuthUser>;
   logout(): Promise<void>;
+  /** Replaces the signed-in user after a profile change (name, photo). */
+  setUser(user: AuthUser): void;
   hasPermission(code: string): boolean;
   hasAnyPermission(codes: readonly string[]): boolean;
 }
@@ -64,6 +66,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const setUser = useCallback((user: AuthUser) => {
+    setState((s) => (s.status === 'authenticated' ? { ...s, user } : s));
+  }, []);
+
   const value = useMemo<AuthContextValue>(() => {
     const held = new Set(state.user?.permissions ?? []);
     return {
@@ -71,10 +77,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user: state.user,
       login,
       logout,
+      setUser,
       hasPermission: (code) => held.has(code),
       hasAnyPermission: (codes) => codes.length === 0 || codes.some((c) => held.has(c)),
     };
-  }, [state, login, logout]);
+  }, [state, login, logout, setUser]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

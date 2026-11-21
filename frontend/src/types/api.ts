@@ -6,6 +6,9 @@ export interface AuthUser {
   username: string | null;
   fullName: string;
   departmentId: string | null;
+  /** API path of the profile photo, or null (initials are shown). */
+  avatarUrl: string | null;
+  lastLoginAt: string | null;
   roles: string[];
   permissions: string[];
 }
@@ -119,6 +122,7 @@ export interface User {
   username: string | null;
   fullName: string;
   phone: string | null;
+  avatarUrl: string | null;
   isActive: boolean;
   department: { id: string; code: string; name: string } | null;
   roles: { code: string; name: string }[];

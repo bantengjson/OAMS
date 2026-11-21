@@ -5,6 +5,9 @@ export interface AuthUser {
   username: string | null;
   fullName: string;
   departmentId: string | null;
+  /** API path of the profile photo (with a cache-busting version), or null for initials. */
+  avatarUrl: string | null;
+  lastLoginAt: Date | null;
   roles: string[];
   permissions: string[];
 }

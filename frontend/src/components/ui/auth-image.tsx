@@ -1,8 +1,8 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useMemo } from 'react';
 import type { ImgHTMLAttributes } from 'react';
+import { useObjectUrl } from '@/hooks/use-object-url';
 import { fetchBlob } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
 
@@ -18,12 +18,7 @@ export function AuthImage({
 }: { path: string } & Omit<ImgHTMLAttributes<HTMLImageElement>, 'src'>) {
   const apiPath = path.replace(/^\/api\/v1/, '');
   const blob = useQuery({ queryKey: ['blob', apiPath], queryFn: () => fetchBlob(apiPath), staleTime: 300_000 });
-  const url = useMemo(() => (blob.data ? URL.createObjectURL(blob.data) : null), [blob.data]);
-  useEffect(() => {
-    return () => {
-      if (url) URL.revokeObjectURL(url);
-    };
-  }, [url]);
+  const url = useObjectUrl(blob.data);
 
   if (!url) {
     return (

@@ -14,6 +14,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Pagination } from '@/components/ui/pagination';
 import { Select } from '@/components/ui/select';
 import { Table, TableMessage, TBody, TD, TH, THead, TR } from '@/components/ui/table';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { ResetPasswordDialog } from '@/features/users/reset-password-dialog';
 import { UserFormDialog } from '@/features/users/user-form-dialog';
 import { UserRolesDialog } from '@/features/users/user-roles-dialog';
@@ -161,8 +162,16 @@ function UsersAdmin({ meId }: { meId: string | null }) {
             rows.map((u) => (
               <TR key={u.id}>
                 <TD>
-                  <p className="font-medium">{u.fullName}</p>
-                  <p className="text-xs text-muted-foreground">{u.username ? `@${u.username} · ` : ""}<span className="md:hidden">{u.email}</span></p>
+                  <div className="flex items-center gap-3">
+                    <UserAvatar name={u.fullName} avatarUrl={u.avatarUrl} size="md" />
+                    <div className="min-w-0">
+                      <p className="font-medium">{u.fullName}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {u.username ? `@${u.username}` : ''}
+                        <span className="md:hidden">{u.username ? ' · ' : ''}{u.email}</span>
+                      </p>
+                    </div>
+                  </div>
                 </TD>
                 <TD className="hidden text-muted-foreground md:table-cell">{u.email}</TD>
                 <TD>

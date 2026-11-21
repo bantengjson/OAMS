@@ -3,8 +3,8 @@
 import { ChevronDown, LogOut, UserCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { DropdownMenu } from '@/components/ui/dropdown-menu';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { useAuth } from '@/lib/auth/use-auth';
-import { initials } from '@/lib/utils';
 import { ROLE_LABEL } from '@/types/api';
 
 export function UserMenu() {
@@ -19,9 +19,7 @@ export function UserMenu() {
       align="end"
       trigger={
         <span className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-soft text-xs font-semibold text-primary">
-            {initials(user.fullName)}
-          </span>
+          <UserAvatar name={user.fullName} avatarUrl={user.avatarUrl} size="sm" />
           <span className="hidden text-left sm:block">
             <span className="block max-w-40 truncate font-medium leading-tight text-foreground">{user.fullName}</span>
             <span className="block max-w-40 truncate text-xs text-muted-foreground">{roleLabel}</span>

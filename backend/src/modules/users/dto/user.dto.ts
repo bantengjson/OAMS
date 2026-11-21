@@ -24,6 +24,7 @@ export class UserDto {
   @ApiProperty({ nullable: true }) username!: string | null;
   @ApiProperty() fullName!: string;
   @ApiProperty({ nullable: true }) phone!: string | null;
+  @ApiProperty({ nullable: true, description: 'Path foto profil, null bila belum ada' }) avatarUrl!: string | null;
   @ApiProperty() isActive!: boolean;
   @ApiProperty({ type: UserDepartmentDto, nullable: true }) department!: UserDepartmentDto | null;
   @ApiProperty({ type: [UserRoleDto] }) roles!: UserRoleDto[];
