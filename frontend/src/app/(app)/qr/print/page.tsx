@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/ui/page-header';
 import { Spinner, PageSpinner } from '@/components/ui/spinner';
@@ -38,6 +39,8 @@ function PrintPage() {
   const [search, setSearch] = useState('');
   const debounced = useDebouncedValue(search, 300);
   const [optionKey, setOptionKey] = useState<StickerOption['key']>('F90');
+  // Items waiting for the user to confirm they were really printed (see afterprint below).
+  const [confirmIds, setConfirmIds] = useState<string[] | null>(null);
   const option = STICKER_OPTIONS.find((o) => o.key === optionKey) ?? STICKER_OPTIONS[3];
 
   const assets = useQuery({
@@ -86,7 +89,10 @@ function PrintPage() {
   });
   const markPrinted = useMutation({
     mutationFn: (ids: string[]) => qrApi.markPrinted(ids),
-    onSuccess: (res) => toast.success(`${res.updated} barang dicatat sebagai sudah dicetak.`),
+    onSuccess: (res) => {
+      toast.success(`${res.updated} barang dicatat sebagai sudah dicetak.`);
+      setConfirmIds(null);
+    },
     onError: (e) => toast.error(getErrorMessage(e)),
   });
 
@@ -103,16 +109,14 @@ function PrintPage() {
   const printedIds = [...new Set(sheetItems.map((i) => i.assetId))];
   const printedKey = printedIds.join(',');
 
-  // The browser fires `afterprint` whether the user printed or cancelled; counting both is the
-  // safer error (an uncounted sticker on a desk is worse than an over-counted one). Each item is
-  // counted once, however many copies were on the sheet.
+  // The browser fires `afterprint` whether the user printed or cancelled the dialog, and cannot
+  // tell which. So ask: only a confirmed print is recorded, each item once however many copies.
   useEffect(() => {
     if (!printedKey) return;
     const ids = printedKey.split(',');
-    const handler = () => markPrinted.mutate(ids);
+    const handler = () => setConfirmIds(ids);
     window.addEventListener('afterprint', handler);
     return () => window.removeEventListener('afterprint', handler);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- the mutation object is stable enough; re-binding per render would double-fire
   }, [printedKey]);
 
   const rows = assets.data?.data ?? [];
@@ -291,6 +295,21 @@ function PrintPage() {
           ) : null}
         </div>
       </div>
+      <ConfirmDialog
+        open={confirmIds !== null}
+        onClose={() => setConfirmIds(null)}
+        onConfirm={() => {
+          if (confirmIds) markPrinted.mutate(confirmIds);
+        }}
+        title="Stiker sudah tercetak?"
+        confirmLabel="Ya, catat sudah dicetak"
+        cancelLabel="Tidak jadi"
+        loading={markPrinted.isPending}
+      >
+        Jendela cetak sudah ditutup. Bila stiker benar-benar tercetak, {confirmIds?.length ?? 0} barang dicatat sebagai sudah
+        dicetak (menambah hitungan cetak di halaman QR barang). Bila pencetakan dibatalkan, pilih Tidak jadi.
+      </ConfirmDialog>
+
       {/* Hidden full copy used only by the printer: every page, no buttons. */}
       {sheetItems.length > 0 && images.data ? (
         <div className="hidden print:block">
