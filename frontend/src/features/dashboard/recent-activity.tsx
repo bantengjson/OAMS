@@ -7,7 +7,8 @@ import { IconChip } from '@/components/ui/icon-chip';
 import { Table, TableMessage, TBody, TD, TH, THead, TR } from '@/components/ui/table';
 import { auditLogsApi } from '@/lib/api/audit-logs';
 import { formatDateTime } from '@/lib/utils';
-import { ACTIVITY_MODULES, mergeActivity } from './dashboard-model';
+import { assetsApi } from '@/lib/api/assets';
+import { ACTIVITY_MODULES, assetIdsToResolve, mergeActivity, withAssetText } from './dashboard-model';
 
 const SHOWN = 8;
 
@@ -21,7 +22,19 @@ export function RecentActivity() {
     })),
   });
   const logs = { isPending: pages.some((p) => p.isPending), isError: pages.every((p) => p.isError) };
-  const rows = mergeActivity(pages.map((p) => p.data?.data ?? []), SHOWN);
+  const merged = mergeActivity(pages.map((p) => p.data?.data ?? []), SHOWN);
+  // Mutation, loan, repair and disposal entries carry only the asset id; look the names up (cached).
+  const lookups = useQueries({
+    queries: assetIdsToResolve(merged).map((id) => ({
+      queryKey: ['assets', 'detail', id],
+      queryFn: () => assetsApi.get(id),
+      staleTime: 60_000,
+      retry: false,
+    })),
+  });
+  const names: Record<string, string> = {};
+  for (const l of lookups) if (l.data) names[l.data.id] = `${l.data.name} · ${l.data.assetCode}`;
+  const rows = withAssetText(merged, names);
 
   return (
     <section className="flex flex-col gap-0">

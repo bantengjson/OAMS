@@ -151,3 +151,13 @@ export function yearChartRows(
   const lastOlder = older[older.length - 1].label;
   return [{ key: 'older', label: `≤${lastOlder}`, value: older.reduce((s, r) => s + r.value, 0) }, ...kept];
 }
+
+/** Assets whose name the log entries did not carry (most non-asset modules), each once. */
+export function assetIdsToResolve(rows: ActivityRow[]): string[] {
+  return [...new Set(rows.filter((r) => r.assetId && !r.assetText).map((r) => r.assetId as string))];
+}
+
+/** Rows with the looked-up "name · code" filled in where the log entry had none. */
+export function withAssetText(rows: ActivityRow[], names: Record<string, string>): ActivityRow[] {
+  return rows.map((r) => (!r.assetText && r.assetId && names[r.assetId] ? { ...r, assetText: names[r.assetId] } : r));
+}

@@ -11,7 +11,8 @@ import { MetricStrip } from '@/components/ui/metric-strip';
 import type { Metric } from '@/components/ui/metric-strip';
 import { getErrorMessage } from '@/lib/api/form-errors';
 import { CONDITION_LABEL } from '@/lib/asset-labels';
-import { CONDITION_TONE, FLOW_TONE, categoryTone } from '@/lib/tones';
+import { useCategoryTone } from '@/hooks/use-category-tone';
+import { CONDITION_TONE, FLOW_TONE } from '@/lib/tones';
 import { ASSET_CONDITIONS } from '@/types/api';
 import type { AssetStatistics } from '@/types/api';
 import type { DashboardBlocks } from './dashboard-model';
@@ -72,6 +73,7 @@ export function OperationsPanel({
 
 /** Condition donut, category bars and the acquisition-year chart; built only from API data. */
 export function AnalyticsPanel({ stats }: { stats: UseQueryResult<AssetStatistics> }) {
+  const categoryTone = useCategoryTone();
   if (stats.isError) return <Alert variant="error">{getErrorMessage(stats.error)}</Alert>;
   const s = stats.data;
   if (!s) return null;

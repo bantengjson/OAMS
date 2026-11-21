@@ -27,7 +27,7 @@ Semua pemetaan ada di satu tempat: `frontend/src/lib/tones.ts`.
 - **Status barang** (`STATUS_TONE`): Tersedia hijau, Digunakan biru, Disimpan abu, Dipinjam ungu, Dalam perbaikan oranye, Hilang merah, Dihapuskan abu, Dikembalikan teal.
 - **Kondisi** (`CONDITION_TONE`): Baik hijau, Rusak ringan kuning, Rusak berat oranye, Tidak layak pakai merah — ditampilkan sebagai titik + teks.
 - **Alur** (`FLOW_TONE`): mutasi ungu, peminjaman biru, terlambat merah, perbaikan oranye, laporan kerusakan kuning, pelepasan abu, stock opname teal.
-- **Kategori** (`categoryTone(id)`): warna tetap per kategori (hash id), tidak berubah walau jumlah atau urutan berubah.
+- **Kategori** (`categoryToneMap` lewat `useCategoryTone()`): warna menurut urutan pembuatan kategori, tetap walau jumlah atau urutan tampil berubah; delapan kategori pertama selalu berbeda warna.
 - **Aktivitas / audit log** (`ACTIVITY_MODULE_STYLE` di `features/dashboard/dashboard-model.ts`): ikon dan warna per modul.
 
 ## 3. Sidebar dikunci
@@ -85,4 +85,4 @@ Perbedaan dari desain yang perlu dikonfirmasi pemilik: header tabel lengket mula
 - Halaman daftar Mutasi, Peminjaman, Pemeliharaan, dan Pelepasan kini memakai pola Inventaris: tombol status (atau alasan, untuk pelepasan) berwarna dengan jumlahnya, pencarian dalam bilah filter, dan label jumlah di judul (mis. "2 terlambat", "1 laporan baru"). Jumlah diambil per status dengan permintaan kecil (hooks/use-list-counts.ts). Stock Opname mendapat label sesi berjalan / jumlah sesi.
 - Perbaikan kecil yang sebelumnya ditunda dan kini selesai: angka Terlambat dan Laporan kerusakan hanya berwarna bila > 0; grafik 3 kolom mulai 1440 px; tidak ada slot KPI kosong; grafik tahun maksimal 8 batang dengan tahun kosong ikut tampil dan tahun lama digabung "≤tahun"; halaman di luar jangkauan pindah ke halaman terakhir; judul halaman memakai h1; banner terlambat/dilepas kembali berperan sebagai peringatan; skema Swagger untuk statistik per tahun; filter tetap terbawa setelah login; sudut tabel aktivitas; kode aksi tidak tampil dua kali di audit log.
 
-Masih ditunda (kecil): dua kategori bisa kebetulan berwarna sama; kategori tak dikenal di URL menyaring jadi kosong; kolom Barang di aktivitas sering berisi "Lihat barang".
+Tiga sisa terakhir juga selesai: warna kategori kini mengikuti urutan pembuatan kategori (delapan kategori pertama selalu berbeda warna; lib/tones.ts categoryToneMap, hooks/use-category-tone.ts); filter kategori menampilkan kategori terpilih yang nonaktif atau tidak dikenal; kolom Barang di aktivitas terbaru mencari nama barang bila catatan audit hanya membawa id-nya. Tidak ada lagi temuan review yang ditunda.

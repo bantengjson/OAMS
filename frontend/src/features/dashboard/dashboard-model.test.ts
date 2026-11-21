@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AuditLog } from '@/types/api';
-import { ACTIVITY_MODULES, dashboardBlocks, mergeActivity, showYearChart, toActivityRow, yearChartRows } from './dashboard-model';
+import { ACTIVITY_MODULES, assetIdsToResolve, dashboardBlocks, mergeActivity, showYearChart, toActivityRow, withAssetText, yearChartRows } from './dashboard-model';
 
 const can = (perms: string[]) => (p: string) => perms.includes(p);
 
@@ -53,13 +53,16 @@ describe('toActivityRow', () => {
     expect(toActivityRow(log({ module: 'users', action: 'user.created' }))).toBeNull();
   });
 
-  it('labels an approved mutation with its asset and a green status', () => {
-    const row = toActivityRow(
-      log({ module: 'mutations', action: 'mutation.approved', after: { name: 'Printer', assetCode: 'INV-2026-0001' } }),
-    );
+  it('names the asset from an asset entry snapshot', () => {
+    const row = toActivityRow(log({ action: 'asset.created', after: { name: 'Printer', assetCode: 'INV-2026-0001' } }));
+    expect(row).toMatchObject({ label: 'Barang didaftarkan', assetText: 'Printer · INV-2026-0001', tone: 'teal' });
+  });
+
+  it('labels an approved mutation with a green status; its asset name is looked up later', () => {
+    const row = toActivityRow(log({ module: 'mutations', action: 'mutation.approved', after: { mutationId: 'm1' } }));
     expect(row).toMatchObject({
       label: 'Mutasi disetujui',
-      assetText: 'Printer · INV-2026-0001',
+      assetText: null,
       assetId: 'asset-1',
       actor: 'Super Admin',
       status: { label: 'Disetujui', tone: 'green' },
@@ -105,5 +108,19 @@ describe('yearChartRows', () => {
     expect(out).toHaveLength(8);
     expect(out[0]).toMatchObject({ label: '≤2019', value: 5 });
     expect(out[7]).toMatchObject({ label: '2026', value: 1 });
+  });
+});
+
+describe('asset names for activity rows', () => {
+  const row = (id: string, assetId: string | null, assetText: string | null) =>
+    ({ ...toActivityRow(log({ id, module: 'loans', action: 'loan.created', entityId: assetId }))!, assetText });
+
+  it('asks only for assets the log entry did not name, once each', () => {
+    expect(assetIdsToResolve([row('1', 'x', null), row('2', 'x', null), row('3', 'y', 'Printer'), row('4', null, null)])).toEqual(['x']);
+  });
+
+  it('fills the names it found and leaves the rest', () => {
+    const out = withAssetText([row('1', 'x', null), row('2', 'z', null)], { x: 'Kursi · INV-1' });
+    expect(out.map((r) => r.assetText)).toEqual(['Kursi · INV-1', null]);
   });
 });

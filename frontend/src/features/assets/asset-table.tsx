@@ -8,7 +8,8 @@ import { SortableHeader } from '@/components/ui/sortable-header';
 import { Table, TableMessage, TBody, TD, TH, THead, TR } from '@/components/ui/table';
 import type { ColumnDef } from '@/lib/column-prefs';
 import { CONDITION_LABEL, STATUS_LABEL } from '@/lib/asset-labels';
-import { CONDITION_TONE, STATUS_TONE, TONE_CLASS, categoryTone } from '@/lib/tones';
+import { useCategoryTone } from '@/hooks/use-category-tone';
+import { CONDITION_TONE, STATUS_TONE, TONE_CLASS } from '@/lib/tones';
 import { cn, formatDate, initials } from '@/lib/utils';
 import type { AssetListItem } from '@/types/api';
 import type { SortField } from './asset-list-state';
@@ -66,6 +67,7 @@ export function AssetTable({
   canEdit = false,
 }: AssetTableProps) {
   const router = useRouter();
+  const categoryTone = useCategoryTone();
   const show = (k: string) => visible.has(k);
   const cols = 2 + ASSET_COLUMNS.filter((c) => !c.required && show(c.key)).length + (selection ? 1 : 0) + 1;
   const pageIds = rows.map((r) => r.id);

@@ -4,9 +4,10 @@ import { useQuery } from '@tanstack/react-query';
 import { Search } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { FilterBar } from '@/components/ui/filter-bar';
+import { categoryOptions } from './category-options';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { categoriesApi } from '@/lib/api/categories';
+import { ALL_CATEGORIES_QUERY } from '@/hooks/use-category-tone';
 import type { AssetQuery } from '@/lib/api/assets';
 import { CONDITION_LABEL, OWNERSHIP_LABEL } from '@/lib/asset-labels';
 import { ASSET_CONDITIONS, OWNERSHIP_TYPES } from '@/types/api';
@@ -51,11 +52,8 @@ export function AssetFilters({
   onChange: (next: AssetFilterState) => void;
   right?: ReactNode;
 }) {
-  const categories = useQuery({
-    queryKey: ['categories', { isActive: true, pageSize: 100 }],
-    queryFn: () => categoriesApi.list({ isActive: true, pageSize: 100 }),
-    staleTime: 60_000,
-  });
+  const categories = useQuery(ALL_CATEGORIES_QUERY);
+  const categoryChoices = categoryOptions(categories.data?.data ?? [], value.categoryId);
   const set = <K extends keyof AssetFilterState>(key: K, v: AssetFilterState[K]) =>
     onChange({ ...value, [key]: v });
 
@@ -74,8 +72,8 @@ export function AssetFilters({
       <div className="w-full sm:w-44">
         <Select value={value.categoryId} onChange={(e) => set('categoryId', e.target.value)} aria-label="Filter kategori">
           <option value="">Semua kategori</option>
-          {categories.data?.data.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
+          {categoryChoices.map((c) => (
+            <option key={c.value} value={c.value}>{c.label}</option>
           ))}
         </Select>
       </div>

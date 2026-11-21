@@ -40,7 +40,8 @@ import { assetsApi } from '@/lib/api/assets';
 import { getErrorMessage } from '@/lib/api/form-errors';
 import { useAuth } from '@/lib/auth/use-auth';
 import { DISPOSAL_REASON_LABEL } from '@/lib/operation-labels';
-import { FLOW_TONE, STATUS_TONE, TONE_CLASS, categoryTone } from '@/lib/tones';
+import { useCategoryTone } from '@/hooks/use-category-tone';
+import { FLOW_TONE, STATUS_TONE, TONE_CLASS } from '@/lib/tones';
 import { cn, formatDate, formatDateTime } from '@/lib/utils';
 
 type TabKey = 'info' | 'photos' | 'documents' | 'qr' | 'conditions' | 'mutations' | 'loans' | 'maintenance' | 'history';
@@ -68,6 +69,7 @@ export default function AssetDetailPage() {
 function AssetDetailContent() {
   const { id } = useParams<{ id: string }>();
   const { hasPermission } = useAuth();
+  const categoryTone = useCategoryTone();
   const search = useSearchParams();
   const requested = search.get('tab');
   const [tab, setTab] = useState<TabKey>(

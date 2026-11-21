@@ -53,3 +53,13 @@ export const TONE_CLASS: Record<Tone, { text: string; bg: string; dot: string; b
   orange: { text: 'text-tone-orange', bg: 'bg-tone-orange-soft', dot: 'bg-tone-orange', border: 'border-tone-orange' },
   slate: { text: 'text-tone-slate', bg: 'bg-tone-slate-soft', dot: 'bg-tone-slate', border: 'border-tone-slate' },
 };
+
+/**
+ * Tones by creation order (oldest first): the first eight categories never share a colour, and a
+ * category keeps its colour when others are renamed or counts change. Unknown ids fall back to
+ * categoryTone().
+ */
+export function categoryToneMap(categories: { id: string; createdAt: string }[]): Map<string, Tone> {
+  const ordered = [...categories].sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
+  return new Map(ordered.map((c, i) => [c.id, TONES[i % TONES.length]]));
+}
