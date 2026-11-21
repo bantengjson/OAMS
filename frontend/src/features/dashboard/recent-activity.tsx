@@ -1,24 +1,27 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useQueries } from '@tanstack/react-query';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { IconChip } from '@/components/ui/icon-chip';
 import { Table, TableMessage, TBody, TD, TH, THead, TR } from '@/components/ui/table';
 import { auditLogsApi } from '@/lib/api/audit-logs';
 import { formatDateTime } from '@/lib/utils';
-import { toActivityRow } from './dashboard-model';
-import type { ActivityRow } from './dashboard-model';
+import { ACTIVITY_MODULES, mergeActivity } from './dashboard-model';
 
 const SHOWN = 8;
 
 /** Latest asset-related audit entries; only rendered for holders of an audit-log permission. */
 export function RecentActivity() {
-  const logs = useQuery({
-    queryKey: ['dashboard', 'activity'],
-    queryFn: () => auditLogsApi.list({ pageSize: 30 }),
+  // One small page per module, so a burst of QR prints or opname confirmations cannot push them out.
+  const pages = useQueries({
+    queries: ACTIVITY_MODULES.map((module) => ({
+      queryKey: ['dashboard', 'activity', module],
+      queryFn: () => auditLogsApi.list({ module, pageSize: SHOWN }),
+    })),
   });
-  const rows = (logs.data?.data ?? []).map(toActivityRow).filter((r): r is ActivityRow => r !== null).slice(0, SHOWN);
+  const logs = { isPending: pages.some((p) => p.isPending), isError: pages.every((p) => p.isError) };
+  const rows = mergeActivity(pages.map((p) => p.data?.data ?? []), SHOWN);
 
   return (
     <section className="flex flex-col gap-0">

@@ -14,7 +14,7 @@ import { Pagination } from '@/components/ui/pagination';
 import { PageSpinner } from '@/components/ui/spinner';
 import { StatusChips } from '@/components/ui/status-chips';
 import { AssetFilters, toAssetQuery } from '@/features/assets/asset-filters';
-import { parseAssetQuery, selectionFor, statusChipItems, toSearchParams } from '@/features/assets/asset-list-state';
+import { chipCountsIgnoreFilters, parseAssetQuery, selectionFor, statusChipItems, toSearchParams } from '@/features/assets/asset-list-state';
 import type { AssetListState, ChipKey } from '@/features/assets/asset-list-state';
 import { ASSET_COLUMNS, ASSET_DEFAULT_COLUMNS, AssetTable } from '@/features/assets/asset-table';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
@@ -42,13 +42,23 @@ function AssetsContent() {
   const state = parseAssetQuery(new URLSearchParams(params.toString()));
   const listKey = toSearchParams(state).toString();
 
+  // Changes are merged into the URL as it is right now (window.location, which replaceState updates
+  // synchronously), not into the last render's state, so quick changes in a row all land.
+  // replaceState also skips the server round trip that router.replace would make.
   const update = (next: Partial<AssetListState>) => {
-    const qs = toSearchParams({ ...state, ...next }).toString();
-    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    const current = parseAssetQuery(new URLSearchParams(window.location.search));
+    const qs = toSearchParams({ ...current, ...next }).toString();
+    window.history.replaceState(null, '', qs ? `${pathname}?${qs}` : pathname);
   };
 
   // Typing stays local; the URL (and the query) follow the debounced text.
   const [searchText, setSearchText] = useState(state.search);
+  // When the URL changes from outside (sidebar link, Back), show its search text again.
+  const [urlSearch, setUrlSearch] = useState(state.search);
+  if (urlSearch !== state.search) {
+    setUrlSearch(state.search);
+    setSearchText(state.search);
+  }
   const debounced = useDebouncedValue(searchText);
   useEffect(() => {
     if (debounced.trim() !== state.search) update({ search: debounced, page: 1 });
@@ -91,11 +101,16 @@ function AssetsContent() {
       />
 
       {stats.data ? (
+        <div className="flex flex-col gap-1.5">
         <StatusChips<ChipKey>
-          items={statusChipItems(stats.data)}
+          items={statusChipItems(stats.data, { selected: state.status, includeArchived: state.includeArchived })}
           value={chipValue}
           onChange={(key) => update({ status: key === 'ALL' ? '' : key, page: 1 })}
         />
+        {chipCountsIgnoreFilters(state) ? (
+          <p className="text-xs text-muted-foreground">Jumlah pada tombol status menghitung semua barang aktif, tanpa filter lain.</p>
+        ) : null}
+        </div>
       ) : null}
 
       <AssetFilters
@@ -105,7 +120,10 @@ function AssetsContent() {
             setSearchText(next.search);
             return;
           }
-          update({ ...next, search: state.search, page: 1 });
+          // The search box follows its own debounced path; keep whatever search the URL has.
+          const { search: _typed, ...filters } = next;
+          void _typed;
+          update({ ...filters, page: 1 });
         }}
         right={
           <ColumnMenu

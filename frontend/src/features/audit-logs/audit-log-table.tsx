@@ -34,7 +34,7 @@ export function AuditLogTable({
   const [openId, setOpenId] = useState<string | null>(null);
 
   return (
-    <Table>
+    <Table stickyHeader={false}>
       <THead>
         <TR>
           <TH className="w-8" />

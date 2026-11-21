@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AssetStatistics } from '@/types/api';
-import { DEFAULT_LIST_STATE, parseAssetQuery, selectionFor, statusChipItems, toSearchParams } from './asset-list-state';
+import { DEFAULT_LIST_STATE, chipCountsIgnoreFilters, parseAssetQuery, selectionFor, statusChipItems, toSearchParams } from './asset-list-state';
 
 const CAT = '0b2f4f43-7a64-4c1e-9b5e-2a1c8f0d9e11';
 
@@ -40,5 +40,29 @@ describe('selectionFor', () => {
   it('forgets ticked rows once the listing changes', () => {
     expect(selectionFor({ key: 'a', ids: ['1'] }, 'b')).toEqual([]);
     expect(selectionFor({ key: 'a', ids: ['1', '2'] }, 'a')).toEqual(['1', '2']);
+  });
+});
+
+describe('statusChipItems with the current view', () => {
+  const stats = { active: 3, disposed: 0, byStatus: { AVAILABLE: 3, MISSING: 0, RETURNED: 0 } } as unknown as AssetStatistics;
+
+  it('always shows the selected status, even with no live assets', () => {
+    expect(statusChipItems(stats, { selected: 'RETURNED', includeArchived: false }).map((c) => c.key)).toContain('RETURNED');
+  });
+
+  it('offers every status when archived assets are shown', () => {
+    const keys = statusChipItems(stats, { selected: '', includeArchived: true }).map((c) => c.key);
+    expect(keys).toContain('MISSING');
+    expect(keys).toContain('DISPOSED');
+  });
+});
+
+describe('chipCountsIgnoreFilters', () => {
+  it('is true only when a non-status filter or the archive toggle is on', () => {
+    expect(chipCountsIgnoreFilters(DEFAULT_LIST_STATE)).toBe(false);
+    expect(chipCountsIgnoreFilters({ ...DEFAULT_LIST_STATE, status: 'AVAILABLE', sort: 'name', page: 3 })).toBe(false);
+    expect(chipCountsIgnoreFilters({ ...DEFAULT_LIST_STATE, condition: 'GOOD' })).toBe(true);
+    expect(chipCountsIgnoreFilters({ ...DEFAULT_LIST_STATE, includeArchived: true })).toBe(true);
+    expect(chipCountsIgnoreFilters({ ...DEFAULT_LIST_STATE, search: 'kursi' })).toBe(true);
   });
 });

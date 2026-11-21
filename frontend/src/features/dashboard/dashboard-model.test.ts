@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AuditLog } from '@/types/api';
-import { dashboardBlocks, showYearChart, toActivityRow } from './dashboard-model';
+import { ACTIVITY_MODULES, dashboardBlocks, mergeActivity, showYearChart, toActivityRow } from './dashboard-model';
 
 const can = (perms: string[]) => (p: string) => perms.includes(p);
 
@@ -70,5 +70,22 @@ describe('toActivityRow', () => {
   it('falls back to the raw action and no asset text when the entry has none', () => {
     const row = toActivityRow(log({ module: 'loans', action: 'loan.extended', after: { loanId: 'x' } }));
     expect(row).toMatchObject({ label: 'loan.extended', assetText: null, status: null, tone: 'blue' });
+  });
+});
+
+describe('mergeActivity', () => {
+  it('keeps the newest asset entries even when another module floods the log', () => {
+    const at = (m: string, min: number) => log({ id: `${m}-${min}`, module: m, action: `${m}.x`, createdAt: new Date(Date.UTC(2026, 10, 21, 3, min)).toISOString() });
+    const perModule = [
+      [at('mutations', 50), at('mutations', 10)],
+      [at('loans', 40)],
+      [at('assets', 30), at('assets', 5)],
+    ];
+    const rows = mergeActivity(perModule, 3);
+    expect(rows.map((r) => r.id)).toEqual(['mutations-50', 'loans-40', 'assets-30']);
+  });
+
+  it('asks one page per dashboard module', () => {
+    expect([...ACTIVITY_MODULES].sort()).toEqual(['assets', 'disposals', 'loans', 'maintenance', 'mutations']);
   });
 });

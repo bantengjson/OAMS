@@ -74,7 +74,9 @@ const STATUS_OF: Record<string, { label: string; tone: Tone }> = {
   'maintenance.reported': { label: 'Dilaporkan', tone: 'amber' },
 };
 
-const DASHBOARD_MODULES = new Set(['assets', 'mutations', 'loans', 'maintenance', 'disposals']);
+/** Audit modules shown in Aktivitas terbaru; each is fetched separately so bulk QR or opname entries cannot crowd them out. */
+export const ACTIVITY_MODULES = ['assets', 'mutations', 'loans', 'maintenance', 'disposals'] as const;
+const DASHBOARD_MODULES = new Set<string>(ACTIVITY_MODULES);
 
 export interface ActivityRow {
   id: string;
@@ -114,4 +116,14 @@ export function toActivityRow(log: AuditLog): ActivityRow | null {
     assetText: assetTextOf(log.after, log.before),
     status: STATUS_OF[log.action] ?? null,
   };
+}
+
+/** Newest asset activity across the per-module pages, without duplicates, cut to `limit` rows. */
+export function mergeActivity(perModule: AuditLog[][], limit: number): ActivityRow[] {
+  const byId = new Map<string, ActivityRow>();
+  for (const entry of perModule.flat()) {
+    const row = toActivityRow(entry);
+    if (row && !byId.has(row.id)) byId.set(row.id, row);
+  }
+  return [...byId.values()].sort((a, b) => b.at.localeCompare(a.at)).slice(0, limit);
 }

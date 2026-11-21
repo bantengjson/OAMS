@@ -1,15 +1,21 @@
 import type { HTMLAttributes, TdHTMLAttributes, ThHTMLAttributes } from 'react';
 import { cn } from '@/lib/utils';
 
+/**
+ * Card-wrapped table. Below xl (1280 px) it scrolls sideways inside its card. From xl the header sticks under
+ * the topbar instead, which needs visible overflow; pass stickyHeader={false} for tables too wide for that.
+ */
 export function Table({
   className,
   wrapperClassName,
+  stickyHeader = true,
   ...props
-}: HTMLAttributes<HTMLTableElement> & { wrapperClassName?: string }) {
+}: HTMLAttributes<HTMLTableElement> & { wrapperClassName?: string; stickyHeader?: boolean }) {
   return (
     <div
       className={cn(
-        'relative w-full overflow-x-auto rounded-card border border-border bg-card shadow-card lg:overflow-x-visible',
+        'relative w-full overflow-x-auto rounded-card border border-border bg-card shadow-card',
+        stickyHeader && 'xl:overflow-x-visible xl:[&_th]:sticky xl:[&_th]:top-16 xl:[&_th]:z-10',
         wrapperClassName,
       )}
     >
@@ -19,7 +25,7 @@ export function Table({
 }
 
 export function THead({ className, ...props }: HTMLAttributes<HTMLTableSectionElement>) {
-  return <thead className={cn('text-left [&_th]:bg-[#fafbfc] lg:[&_th]:sticky lg:[&_th]:top-16 lg:[&_th]:z-10', className)} {...props} />;
+  return <thead className={cn('text-left [&_th]:bg-[#fafbfc]', className)} {...props} />;
 }
 
 export function TBody({ className, ...props }: HTMLAttributes<HTMLTableSectionElement>) {

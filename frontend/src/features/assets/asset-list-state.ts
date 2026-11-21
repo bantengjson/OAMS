@@ -53,21 +53,33 @@ export function toSearchParams(state: AssetListState): URLSearchParams {
 
 export type ChipKey = AssetStatus | 'ALL';
 
-/** Quick status filters: all live assets, each live status that has assets, then disposed when any. */
-export function statusChipItems(stats: AssetStatistics): { key: ChipKey; label: string; count: number; tone: Tone }[] {
+/**
+ * Quick status filters: all live assets, each live status that has assets, then disposed when any.
+ * The selected status always stays visible, and every status is offered while archived assets are shown,
+ * so no status that the old select allowed becomes unreachable. Counts are live (non-archived) assets.
+ */
+export function statusChipItems(
+  stats: AssetStatistics,
+  view: { selected: AssetStatus | ''; includeArchived: boolean } = { selected: '', includeArchived: false },
+): { key: ChipKey; label: string; count: number; tone: Tone }[] {
   const items: { key: ChipKey; label: string; count: number; tone: Tone }[] = [
     { key: 'ALL', label: 'Semua', count: stats.active, tone: 'blue' },
   ];
   for (const s of ASSET_STATUSES) {
     if (s === 'DISPOSED') continue;
     const count = stats.byStatus[s] ?? 0;
-    if (count > 0) items.push({ key: s, label: STATUS_LABEL[s], count, tone: STATUS_TONE[s] });
+    if (count > 0 || view.includeArchived || view.selected === s) items.push({ key: s, label: STATUS_LABEL[s], count, tone: STATUS_TONE[s] });
   }
-  if (stats.disposed > 0) items.push({ key: 'DISPOSED', label: STATUS_LABEL.DISPOSED, count: stats.disposed, tone: STATUS_TONE.DISPOSED });
+  if (stats.disposed > 0 || view.includeArchived || view.selected === 'DISPOSED') items.push({ key: 'DISPOSED', label: STATUS_LABEL.DISPOSED, count: stats.disposed, tone: STATUS_TONE.DISPOSED });
   return items;
 }
 
 /** Ticked rows belong to one listing (its serialised query); a different listing starts empty. */
 export function selectionFor(sel: { key: string; ids: string[] }, key: string): string[] {
   return sel.key === key ? sel.ids : [];
+}
+
+/** The chip counts cover all live assets; true when other filters narrow the table, so the page can say so. */
+export function chipCountsIgnoreFilters(state: AssetListState): boolean {
+  return Boolean(state.search.trim() || state.categoryId || state.condition || state.ownershipType || state.includeArchived);
 }
