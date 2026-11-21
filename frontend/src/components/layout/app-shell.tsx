@@ -36,11 +36,14 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen">
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      {/* Frozen sidebar: .sidebar-legacy keeps its original colours and font (spec §6). */}
+      <div className="sidebar-legacy contents">
+        <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      </div>
       <div className="flex min-w-0 flex-1 flex-col">
         <Header onOpenSidebar={() => setSidebarOpen(true)} />
-        <main className="flex-1 px-4 py-6 lg:px-8 lg:py-8">
-          <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">{children}</div>
+        <main className="flex-1 px-4 py-6 lg:px-8 lg:py-7">
+          <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-5">{children}</div>
         </main>
       </div>
     </div>

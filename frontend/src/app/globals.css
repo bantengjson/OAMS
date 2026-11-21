@@ -1,31 +1,71 @@
 @import "tailwindcss";
 
+/* Redesign 2026-11 (docs/superpowers/specs/2026-11-20-oams-ui-redesign-design.md). */
 :root {
-  --background: #f5f7fa;
-  --foreground: #0f172a;
+  --background: #f7f8fa;
+  --foreground: #172033;
+  --body: #475569;
   --card: #ffffff;
-  --card-foreground: #0f172a;
-  --muted: #eef2f6;
+  --card-foreground: #172033;
+  --muted: #f1f4f8;
   --muted-foreground: #64748b;
   --border: #e2e8f0;
-  --input: #cbd5e1;
+  --input: #d5dde7;
+  --primary: #2457d6;
+  --primary-hover: #1d47b5;
+  --primary-foreground: #ffffff;
+  --primary-soft: #eaf0fc;
+  --destructive: #dc5656;
+  --destructive-foreground: #ffffff;
+  --success: #16a36a;
+  --warning: #d99a28;
+  --ring: #2457d6;
+  --sidebar: #0b1220;
+  --sidebar-foreground: #cbd5e1;
+  --sidebar-muted: #7c8aa5;
+  --sidebar-active: #1e293b;
+
+  --tone-blue: #2457d6;
+  --tone-blue-soft: #eaf0fc;
+  --tone-green: #16a36a;
+  --tone-green-soft: #e7f6ef;
+  --tone-violet: #7c5cd6;
+  --tone-violet-soft: #f0ecfb;
+  --tone-amber: #d99a28;
+  --tone-amber-soft: #fcf3e2;
+  --tone-red: #dc5656;
+  --tone-red-soft: #fceded;
+  --tone-teal: #0e9aa7;
+  --tone-teal-soft: #e3f5f6;
+  --tone-orange: #e07b39;
+  --tone-orange-soft: #fcefe5;
+  --tone-slate: #64748b;
+  --tone-slate-soft: #eef1f5;
+
+  --font-system: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+}
+
+/*
+ * The sidebar is frozen (spec §6): AppShell wraps it in .sidebar-legacy, which restores the
+ * values it was designed with. Never restyle the sidebar through these tokens.
+ */
+.sidebar-legacy {
   --primary: #1d4ed8;
   --primary-hover: #1e40af;
   --primary-foreground: #ffffff;
-  --destructive: #dc2626;
-  --destructive-foreground: #ffffff;
-  --success: #15803d;
-  --warning: #b45309;
   --ring: #2563eb;
   --sidebar: #0b1220;
   --sidebar-foreground: #cbd5e1;
   --sidebar-muted: #7c8aa5;
   --sidebar-active: #1e293b;
+  font-family: var(--font-system);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-body: var(--body);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-muted: var(--muted);
@@ -35,6 +75,7 @@
   --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-success: var(--success);
@@ -44,9 +85,26 @@
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-muted: var(--sidebar-muted);
   --color-sidebar-active: var(--sidebar-active);
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
-    Arial, sans-serif;
+  --color-tone-blue: var(--tone-blue);
+  --color-tone-blue-soft: var(--tone-blue-soft);
+  --color-tone-green: var(--tone-green);
+  --color-tone-green-soft: var(--tone-green-soft);
+  --color-tone-violet: var(--tone-violet);
+  --color-tone-violet-soft: var(--tone-violet-soft);
+  --color-tone-amber: var(--tone-amber);
+  --color-tone-amber-soft: var(--tone-amber-soft);
+  --color-tone-red: var(--tone-red);
+  --color-tone-red-soft: var(--tone-red-soft);
+  --color-tone-teal: var(--tone-teal);
+  --color-tone-teal-soft: var(--tone-teal-soft);
+  --color-tone-orange: var(--tone-orange);
+  --color-tone-orange-soft: var(--tone-orange-soft);
+  --color-tone-slate: var(--tone-slate);
+  --color-tone-slate-soft: var(--tone-slate-soft);
+  --font-sans: var(--font-inter), var(--font-system);
   --radius-md: 0.5rem;
+  --radius-card: 11px;
+  --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04);
 }
 
 html,
@@ -56,7 +114,7 @@ body {
 
 body {
   background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans);
+  color: var(--body);
+  font-family: var(--font-inter), var(--font-system);
   -webkit-font-smoothing: antialiased;
 }
