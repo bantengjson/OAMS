@@ -58,9 +58,9 @@ export default function EmployeeDetailPage() {
         <Link href="/employees" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" /> Kembali ke daftar pegawai
         </Link>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-3 rounded-card border border-l-4 border-border border-l-primary bg-card px-5 py-4 shadow-card sm:flex-row sm:items-start sm:justify-between lg:px-6 lg:py-5">
           <div>
-            <h2 className="text-2xl font-semibold tracking-tight">{e.fullName}</h2>
+            <h2 className="text-[22px] font-semibold tracking-tight text-foreground lg:text-[26px]">{e.fullName}</h2>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
               <StatusBadge active={e.isActive} />
               {e.employeeNumber ? <span className="font-mono">{e.employeeNumber}</span> : null}
