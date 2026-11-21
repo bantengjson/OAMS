@@ -42,8 +42,8 @@ export function Dialog({
         if (e.target === ref.current) onClose();
       }}
       className={cn(
-        'm-auto w-[calc(100%-2rem)] rounded-lg border border-border bg-card p-0 text-foreground shadow-xl',
-        'backdrop:bg-black/40 open:animate-in',
+        'm-auto w-[calc(100%-2rem)] rounded-card border border-border bg-card p-0 text-body shadow-[0_12px_32px_rgba(16,24,40,0.12)]',
+        'backdrop:bg-[#172033]/40 open:animate-in',
         size === 'sm' && 'max-w-sm',
         size === 'md' && 'max-w-lg',
         size === 'lg' && 'max-w-2xl',
@@ -53,7 +53,7 @@ export function Dialog({
         <div className="flex max-h-[85vh] flex-col">
           <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
             <div>
-              <h2 className="text-base font-semibold">{title}</h2>
+              <h2 className="text-base font-semibold text-foreground">{title}</h2>
               {description ? (
                 <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
               ) : null}
@@ -69,7 +69,7 @@ export function Dialog({
           </div>
           <div className="overflow-y-auto px-5 py-4">{children}</div>
           {footer ? (
-            <div className="flex justify-end gap-2 border-t border-border px-5 py-3">{footer}</div>
+            <div className="flex justify-end gap-2 border-t border-border bg-[#fafbfc] px-5 py-3">{footer}</div>
           ) : null}
         </div>
       ) : null}

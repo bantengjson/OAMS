@@ -15,9 +15,10 @@ export function Pagination({
   const start = (meta.page - 1) * meta.pageSize + 1;
   const end = Math.min(meta.page * meta.pageSize, meta.total);
   return (
-    <div className="flex flex-col items-center justify-between gap-3 text-sm text-muted-foreground sm:flex-row">
+    <div className="flex flex-col items-center justify-between gap-3 px-1 text-[13px] text-muted-foreground sm:flex-row">
       <p>
-        Menampilkan {start}–{end} dari {meta.total}
+        Menampilkan <span className="font-medium text-foreground tabular-nums">{start}–{end}</span> dari{' '}
+        <span className="font-medium text-foreground tabular-nums">{meta.total}</span>
       </p>
       <div className="flex items-center gap-2">
         <Button

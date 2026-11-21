@@ -30,7 +30,7 @@ export function Tabs<K extends string>({
             aria-selected={active}
             onClick={() => onChange(item.key)}
             className={cn(
-              '-mb-px flex items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium transition-colors',
+              '-mb-px flex items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium transition-colors',
               active
                 ? 'border-primary text-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground',
@@ -38,7 +38,7 @@ export function Tabs<K extends string>({
           >
             {item.label}
             {item.badge !== undefined ? (
-              <span className="rounded-full bg-muted px-1.5 text-[11px] text-muted-foreground">{item.badge}</span>
+              <span className={cn('rounded-full px-1.5 text-[11px] tabular-nums', active ? 'bg-primary-soft text-primary' : 'bg-muted text-muted-foreground')}>{item.badge}</span>
             ) : null}
           </button>
         );

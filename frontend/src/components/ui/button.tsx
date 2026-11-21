@@ -13,18 +13,18 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variants: Record<Variant, string> = {
-  primary: 'bg-primary text-primary-foreground hover:bg-primary-hover shadow-sm',
-  secondary: 'bg-muted text-foreground hover:bg-border',
-  outline: 'border border-input bg-card text-foreground hover:bg-muted',
-  ghost: 'text-foreground hover:bg-muted',
-  destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-sm',
+  primary: 'bg-primary text-primary-foreground hover:bg-primary-hover shadow-card',
+  secondary: 'bg-primary-soft text-primary hover:bg-primary/15',
+  outline: 'border border-border bg-card text-foreground hover:border-input hover:bg-muted',
+  ghost: 'text-body hover:bg-muted hover:text-foreground',
+  destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-card',
 };
 
 const sizes: Record<Size, string> = {
-  sm: 'h-8 px-3 text-sm gap-1.5',
-  md: 'h-10 px-4 text-sm gap-2',
-  lg: 'h-11 px-5 text-base gap-2',
-  icon: 'h-9 w-9 p-0',
+  sm: 'h-8 px-2.5 text-[13px] gap-1.5',
+  md: 'h-9 px-3.5 text-[13px] gap-2',
+  lg: 'h-10 px-4 text-sm gap-2',
+  icon: 'h-8 w-8 p-0',
 };
 
 export function Button({
@@ -43,7 +43,7 @@ export function Button({
       type={type}
       disabled={disabled || loading}
       className={cn(
-        'inline-flex items-center justify-center rounded-md font-medium transition-colors',
+        'inline-flex items-center justify-center whitespace-nowrap rounded-md font-medium transition-colors',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
         'disabled:pointer-events-none disabled:opacity-60',
         variants[variant],

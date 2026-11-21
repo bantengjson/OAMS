@@ -10,7 +10,7 @@ export function Header({ onOpenSidebar }: { onOpenSidebar: () => void }) {
   const active = activeNavItem(NAV_ITEMS, pathname);
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-border bg-card/95 px-4 backdrop-blur lg:px-8">
+    <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-border bg-card px-4 lg:px-8">
       <button
         type="button"
         onClick={onOpenSidebar}
@@ -19,7 +19,10 @@ export function Header({ onOpenSidebar }: { onOpenSidebar: () => void }) {
       >
         <Menu className="h-5 w-5" />
       </button>
-      <h1 className="truncate text-base font-semibold lg:text-lg">{active?.label ?? 'OAMS'}</h1>
+      <p className="truncate text-[13px] text-muted-foreground">
+        <span className="hidden sm:inline">OAMS / </span>
+        <span className="font-semibold text-foreground">{active?.label ?? 'OAMS'}</span>
+      </p>
       <div className="ml-auto">
         <UserMenu />
       </div>
