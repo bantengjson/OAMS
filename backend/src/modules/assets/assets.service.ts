@@ -276,11 +276,13 @@ export class AssetsService {
   }
 
   async archive(id: string, reason: string | undefined, actor: AuthUser): Promise<AssetDetailDto> {
-    const row = await this.getRow(id);
-    if (row.archivedAt) throw new BadRequestException(ASSET_ARCHIVED);
-    if (row.loans.length > 0) throw new ConflictException(ARCHIVE_BLOCKED_BY_LOAN);
-    if (row.mutations.length > 0) throw new ConflictException(ARCHIVE_BLOCKED_BY_MUTATION);
+    // Every check and the status come from this one read. A separate earlier read for the
+    // checks would let a loan commit in between: the loan check passes on the old read, the
+    // status (already BORROWED) on the new one, and the asset ends up archived while lent.
     const state = await this.guard.load(this.prisma, id);
+    if (state.archivedAt) throw new BadRequestException(ASSET_ARCHIVED);
+    if (state.activeLoanId) throw new ConflictException(ARCHIVE_BLOCKED_BY_LOAN);
+    if (state.pendingMutationId) throw new ConflictException(ARCHIVE_BLOCKED_BY_MUTATION);
     if (state.openMaintenance?.status === 'IN_PROGRESS') throw new ConflictException(MSG_IN_MAINTENANCE);
     // Conditional on the status just read: a loan or repair that starts concurrently wins or loses cleanly.
     const archived = await this.prisma.asset.updateMany({

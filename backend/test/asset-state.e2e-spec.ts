@@ -1,3 +1,4 @@
+import { AssetStateGuard } from '../src/modules/assets/asset-state.guard.js';
 import { createTestApp } from './utils/app.js';
 import type { LoginResult, TestContext } from './utils/app.js';
 
@@ -67,6 +68,36 @@ describe('asset state guard (e2e)', () => {
       }
     }
   });
+
+  // The test above only sometimes lands a loan inside archive's checks; this pins both windows
+  // deterministically by committing a whole loan just before / just after archive reads the state.
+  it.each(['before', 'after'] as const)(
+    'a loan that commits %s archive reads the asset state wins, and archive refuses',
+    async (when) => {
+      const asset = await createAsset(`Balapan Arsip Celah ${when}`);
+      let loanStatus = 0;
+      const spy = vi
+        .spyOn(AssetStateGuard.prototype, 'load')
+        .mockImplementationOnce(async function (this: AssetStateGuard, ...args) {
+          if (when === 'before') loanStatus = (await loan(asset.id)).status;
+          // The once-implementation is used up by now, so this reaches the real load().
+          const state = await this.load(...args);
+          if (when === 'after') loanStatus = (await loan(asset.id)).status;
+          return state;
+        });
+      let archiveStatus: number;
+      try {
+        archiveStatus = (await ctx.http().post(`/api/v1/assets/${asset.id}/archive`).set(bearer(admin)).send({})).status;
+      } finally {
+        spy.mockRestore();
+      }
+      expect(loanStatus).toBe(201);
+      expect(archiveStatus).toBe(409);
+      const row = await ctx.prisma.asset.findUniqueOrThrow({ where: { id: asset.id } });
+      expect(row.archivedAt).toBeNull();
+      expect(row.status).toBe('BORROWED');
+    },
+  );
 
   it('loan vs manual status change at the same instant: the status is never overwritten', async () => {
     for (let round = 0; round < 3; round++) {
