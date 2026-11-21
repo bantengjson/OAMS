@@ -9,6 +9,7 @@ const SIZE = {
   sm: 'h-8 w-8 text-xs',
   md: 'h-10 w-10 text-sm',
   xl: 'h-28 w-28 text-3xl',
+  '2xl': 'h-56 w-56 text-6xl',
 } as const;
 
 /**
