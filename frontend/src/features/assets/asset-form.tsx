@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -84,6 +84,14 @@ export function AssetForm({
     queryFn: () => departmentsApi.list({ isActive: true, pageSize: 100 }),
     staleTime: 60_000,
   });
+  // The selects are uncontrolled: when their options arrive after the form mounted, the browser
+  // shows the empty option although the form still holds the value. Re-apply it once they load.
+  useEffect(() => {
+    if (categories.data) form.setValue('categoryId', form.getValues('categoryId'));
+  }, [categories.data, form]);
+  useEffect(() => {
+    if (departments.data) form.setValue('departmentId', form.getValues('departmentId'));
+  }, [departments.data, form]);
 
   const submit = form.handleSubmit(async (values) => {
     setFormError(null);

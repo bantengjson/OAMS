@@ -40,7 +40,8 @@ import { assetsApi } from '@/lib/api/assets';
 import { getErrorMessage } from '@/lib/api/form-errors';
 import { useAuth } from '@/lib/auth/use-auth';
 import { DISPOSAL_REASON_LABEL } from '@/lib/operation-labels';
-import { formatDate, formatDateTime } from '@/lib/utils';
+import { FLOW_TONE, STATUS_TONE, TONE_CLASS, categoryTone } from '@/lib/tones';
+import { cn, formatDate, formatDateTime } from '@/lib/utils';
 
 type TabKey = 'info' | 'photos' | 'documents' | 'qr' | 'conditions' | 'mutations' | 'loans' | 'maintenance' | 'history';
 
@@ -101,18 +102,21 @@ function AssetDetailContent() {
         <Link href="/assets" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" /> Kembali ke inventaris
         </Link>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-4 rounded-card border border-l-4 border-border border-l-primary bg-card px-5 py-4 shadow-card lg:px-6 lg:py-5 xl:flex-row xl:items-start xl:justify-between">
           <div className="min-w-0">
-            <p className="font-mono text-sm text-muted-foreground">{a.assetCode}</p>
-            <h2 className="truncate text-2xl font-semibold tracking-tight">{a.name}</h2>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
+            <p className="font-mono text-[13px] text-muted-foreground">{a.assetCode}</p>
+            <h2 className="truncate text-[22px] font-semibold tracking-tight text-foreground lg:text-[26px]">{a.name}</h2>
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
               <AssetStatusBadge status={a.status} />
               <AssetConditionBadge condition={a.condition} />
               {a.isArchived ? <Badge variant="muted">Diarsipkan</Badge> : null}
-              <span className="text-sm text-muted-foreground">{a.category.name}</span>
+              <span className="inline-flex items-center gap-1.5 text-[13px] text-muted-foreground">
+                <span className={cn('h-2 w-2 rounded-[2px]', TONE_CLASS[categoryTone(a.category.id)].dot)} aria-hidden="true" />
+                {a.category.name}
+              </span>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 xl:max-w-[60%] xl:justify-end [&_button]:h-8 [&_button]:px-2.5">
             {canGenerate ? (
               <Link href={`/qr/print?ids=${a.id}`}>
                 <Button variant="outline" leftIcon={<Printer className="h-4 w-4" />}>Cetak QR</Button>
@@ -207,13 +211,13 @@ function AssetDetailContent() {
       </div>
 
       {a.isArchived ? (
-        <Alert variant="info">
+        <Alert tone="slate">
           Barang ini diarsipkan{a.archiveReason ? `: ${a.archiveReason}` : ''}. Data tidak dapat diubah dan QR tidak menampilkan informasi.
         </Alert>
       ) : null}
 
       {a.activeDisposal ? (
-        <Alert variant="error">
+        <Alert tone={FLOW_TONE.disposal}>
           Barang sudah dilepas ({DISPOSAL_REASON_LABEL[a.activeDisposal.reason]}, {formatDate(a.activeDisposal.disposedAt)}). QR
           nonaktif dan barang tidak tampil di daftar inventaris aktif.{' '}
           <Link href={`/disposals/${a.activeDisposal.id}`} className="font-medium underline">Lihat pelepasan</Link>
@@ -221,7 +225,7 @@ function AssetDetailContent() {
       ) : null}
 
       {a.openMaintenance ? (
-        <Alert variant="info">
+        <Alert tone={a.openMaintenance.status === 'IN_PROGRESS' ? FLOW_TONE.maintenance : FLOW_TONE.damageReport}>
           {a.openMaintenance.status === 'IN_PROGRESS' ? 'Sedang diperbaiki' : 'Ada laporan kerusakan'}:{' '}
           {a.openMaintenance.description} ({formatDate(a.openMaintenance.reportedAt)}).{' '}
           <Link href={`/maintenance/${a.openMaintenance.id}`} className="font-medium underline">Lihat pemeliharaan</Link>
@@ -229,7 +233,7 @@ function AssetDetailContent() {
       ) : null}
 
       {a.activeLoan ? (
-        <Alert variant={a.activeLoan.isOverdue ? 'error' : 'info'}>
+        <Alert tone={a.activeLoan.isOverdue ? FLOW_TONE.overdue : STATUS_TONE.BORROWED}>
           Sedang dipinjam oleh {a.activeLoan.borrowerName} sejak {formatDate(a.activeLoan.loanedAt)}, rencana kembali{' '}
           {formatDate(a.activeLoan.dueAt)}
           {a.activeLoan.isOverdue ? ' (terlambat)' : ''}.{' '}
@@ -238,7 +242,7 @@ function AssetDetailContent() {
       ) : null}
 
       {a.pendingMutation ? (
-        <Alert variant="info">
+        <Alert tone={FLOW_TONE.mutation}>
           Mutasi menunggu persetujuan sejak {formatDateTime(a.pendingMutation.requestedAt)} (diajukan{' '}
           {a.pendingMutation.requestedBy.fullName}).{' '}
           <Link href={`/mutations/${a.pendingMutation.id}`} className="font-medium underline">
