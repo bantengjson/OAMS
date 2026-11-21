@@ -1,91 +1,137 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
-import { Building2, Tags, Users } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Boxes, CheckCircle2, RefreshCw, Tags, Users } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { AssetStatisticsPanel } from '@/features/dashboard/asset-statistics';
-import { StatCard } from '@/features/dashboard/stat-card';
+import { HeaderPill, PageHeader } from '@/components/ui/page-header';
+import { StatTile } from '@/components/ui/stat-tile';
+import { AnalyticsPanel, OperationsPanel } from '@/features/dashboard/asset-statistics';
+import { dashboardBlocks } from '@/features/dashboard/dashboard-model';
+import { RecentActivity } from '@/features/dashboard/recent-activity';
+import { assetsApi } from '@/lib/api/assets';
 import { categoriesApi } from '@/lib/api/categories';
-import { departmentsApi } from '@/lib/api/departments';
+import { api } from '@/lib/api/client';
 import { usersApi } from '@/lib/api/users';
 import { useAuth } from '@/lib/auth/use-auth';
-import { ROLE_LABEL } from '@/types/api';
+import { cn } from '@/lib/utils';
 
-function useCount(key: string, enabled: boolean, fetcher: () => Promise<{ meta: { total: number } }>) {
-  return useQuery({
-    queryKey: ['count', key],
-    queryFn: async () => (await fetcher()).meta.total,
-    enabled,
-  });
-}
+const todayLabel = () =>
+  new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Jakarta' }).format(
+    new Date(),
+  );
 
 export default function DashboardPage() {
-  const { user, hasPermission } = useAuth();
-  const canUsers = hasPermission('users.manage');
-  const canMaster = hasPermission('master_data.view');
+  const { hasPermission } = useAuth();
+  const queryClient = useQueryClient();
+  const blocks = dashboardBlocks(hasPermission);
   const canAssets = hasPermission('assets.view');
+  const canMaster = hasPermission('master_data.view');
+  const canOpname = hasPermission('stock_opnames.execute') || hasPermission('stock_opnames.manage');
 
-  const users = useCount('users', canUsers, () => usersApi.list({ isActive: true, pageSize: 1 }));
-  const categories = useCount('categories', canMaster, () =>
-    categoriesApi.list({ isActive: true, pageSize: 1 }),
-  );
-  const departments = useCount('departments', canMaster, () =>
-    departmentsApi.list({ isActive: true, pageSize: 1 }),
-  );
+  const health = useQuery({ queryKey: ['dashboard', 'health'], queryFn: () => api.get<{ status: string }>('/health'), retry: false });
+  const stats = useQuery({ queryKey: ['assets', 'statistics'], queryFn: assetsApi.statistics, enabled: canAssets });
+  const users = useQuery({
+    queryKey: ['count', 'users'],
+    queryFn: async () => (await usersApi.list({ isActive: true, pageSize: 1 })).meta.total,
+    enabled: blocks.users,
+  });
+  const categories = useQuery({
+    queryKey: ['count', 'categories'],
+    queryFn: async () => (await categoriesApi.list({ isActive: true, pageSize: 1 })).meta.total,
+    enabled: canMaster,
+  });
 
-  const hour = new Date().getHours();
-  const greeting = hour < 11 ? 'Selamat pagi' : hour < 15 ? 'Selamat siang' : hour < 18 ? 'Selamat sore' : 'Selamat malam';
+  const refresh = () => {
+    void queryClient.invalidateQueries({ queryKey: ['assets', 'statistics'] });
+    void queryClient.invalidateQueries({ queryKey: ['count'] });
+    void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+  };
+
+  const s = stats.data;
+  const activePct = s && s.total > 0 ? Math.round((s.active / s.total) * 100) : 0;
+  const systemOk = health.isSuccess;
+  const kpiCount = 2 + (blocks.users ? 1 : 0) + (canMaster ? 1 : 0);
 
   return (
     <>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">
-            {greeting}, {user?.fullName}
-          </CardTitle>
-          <CardDescription>
-            Anda masuk sebagai {user?.roles.map((r) => ROLE_LABEL[r] ?? r).join(', ')}.
-          </CardDescription>
-        </CardHeader>
-      </Card>
+      <PageHeader
+        title="Dashboard"
+        description="Ringkasan inventaris DPC PDI Perjuangan"
+        actions={
+          <>
+            <HeaderPill>{todayLabel()}</HeaderPill>
+            {health.isPending ? null : (
+              <HeaderPill className={systemOk ? 'bg-tone-green-soft text-[#11804f]' : 'bg-tone-red-soft text-[#b83e3e]'}>
+                <span className={cn('h-1.5 w-1.5 rounded-full', systemOk ? 'bg-tone-green' : 'bg-tone-red')} aria-hidden="true" />
+                {systemOk ? 'Sistem normal' : 'Sistem terganggu'}
+              </HeaderPill>
+            )}
+            <Button variant="outline" size="sm" onClick={refresh} leftIcon={<RefreshCw className="h-4 w-4" />}>
+              Muat ulang
+            </Button>
+          </>
+        }
+      />
 
-      {canMaster || canUsers ? (
-        <div className="grid gap-4 sm:grid-cols-3">
-          {canUsers ? (
-            <StatCard
-              label="Pengguna aktif"
-              icon={Users}
-              href="/users"
-              value={users.data}
-              loading={users.isPending}
-              error={users.isError}
+      {canAssets ? (
+        <>
+          <section
+            className={cn(
+              'grid gap-4 sm:grid-cols-2',
+              kpiCount === 4 ? 'xl:grid-cols-4' : 'xl:grid-cols-3',
+              // An odd last tile spans the row on two-column layouts.
+              'sm:[&>*:last-child:nth-child(odd)]:col-span-2 xl:[&>*:last-child:nth-child(odd)]:col-span-1',
+            )}
+          >
+            <StatTile
+              label="Total inventaris"
+              icon={Boxes}
+              tone="blue"
+              href="/assets"
+              value={s?.total}
+              loading={stats.isPending}
+              error={stats.isError}
+              hint={s ? <><b>{s.active}</b> aktif · {s.archived} diarsipkan · {s.disposed} dilepas</> : null}
             />
-          ) : null}
-          {canMaster ? (
-            <>
-              <StatCard
-                label="Kategori aktif"
+            <StatTile
+              label="Aset aktif"
+              icon={CheckCircle2}
+              tone="green"
+              href="/assets"
+              value={s?.active}
+              loading={stats.isPending}
+              error={stats.isError}
+              hint={s ? <><b>{activePct}%</b> dari total inventaris</> : null}
+            />
+            {blocks.users ? (
+              <StatTile
+                label="Pengguna aktif"
+                icon={Users}
+                tone="violet"
+                href="/users"
+                value={users.data}
+                loading={users.isPending}
+                error={users.isError}
+                hint="yang bisa masuk ke aplikasi"
+              />
+            ) : null}
+            {canMaster ? (
+              <StatTile
+                label="Kategori barang"
                 icon={Tags}
+                tone="amber"
                 href={hasPermission('categories.manage') ? '/categories' : undefined}
                 value={categories.data}
                 loading={categories.isPending}
                 error={categories.isError}
+                hint="kategori aktif"
               />
-              <StatCard
-                label="Unit kerja aktif"
-                icon={Building2}
-                href={hasPermission('departments.manage') ? '/departments' : undefined}
-                value={departments.data}
-                loading={departments.isPending}
-                error={departments.isError}
-              />
-            </>
-          ) : null}
-        </div>
-      ) : null}
-
-      {canAssets ? (
-        <AssetStatisticsPanel />
+            ) : null}
+          </section>
+          <OperationsPanel stats={stats} blocks={blocks} canOpname={canOpname} />
+          <AnalyticsPanel stats={stats} />
+        </>
       ) : (
         <Card>
           <CardHeader>
@@ -94,6 +140,8 @@ export default function DashboardPage() {
           </CardHeader>
         </Card>
       )}
+
+      {blocks.activity ? <RecentActivity /> : null}
     </>
   );
 }
