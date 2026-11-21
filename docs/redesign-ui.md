@@ -82,7 +82,7 @@ Perbedaan dari desain yang perlu dikonfirmasi pemilik: header tabel lengket mula
 
 ### Lanjutan (21 Nov 2026)
 
-- Halaman daftar Mutasi, Peminjaman, Pemeliharaan, dan Pelepasan kini memakai pola Inventaris: tombol status (atau alasan, untuk pelepasan) berwarna dengan jumlahnya, pencarian dalam bilah filter, dan label jumlah di judul (mis. "2 terlambat", "1 laporan baru"). Jumlah diambil per status dengan permintaan kecil (). Stock Opname mendapat label sesi berjalan / jumlah sesi.
+- Halaman daftar Mutasi, Peminjaman, Pemeliharaan, dan Pelepasan kini memakai pola Inventaris: tombol status (atau alasan, untuk pelepasan) berwarna dengan jumlahnya, pencarian dalam bilah filter, dan label jumlah di judul (mis. "2 terlambat", "1 laporan baru"). Jumlah diambil per status dengan permintaan kecil (hooks/use-list-counts.ts). Stock Opname mendapat label sesi berjalan / jumlah sesi.
 - Perbaikan kecil yang sebelumnya ditunda dan kini selesai: angka Terlambat dan Laporan kerusakan hanya berwarna bila > 0; grafik 3 kolom mulai 1440 px; tidak ada slot KPI kosong; grafik tahun maksimal 8 batang dengan tahun kosong ikut tampil dan tahun lama digabung "≤tahun"; halaman di luar jangkauan pindah ke halaman terakhir; judul halaman memakai h1; banner terlambat/dilepas kembali berperan sebagai peringatan; skema Swagger untuk statistik per tahun; filter tetap terbawa setelah login; sudut tabel aktivitas; kode aksi tidak tampil dua kali di audit log.
 
 Masih ditunda (kecil): dua kategori bisa kebetulan berwarna sama; kategori tak dikenal di URL menyaring jadi kosong; kolom Barang di aktivitas sering berisi "Lihat barang".
