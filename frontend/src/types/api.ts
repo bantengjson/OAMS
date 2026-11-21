@@ -291,6 +291,8 @@ export interface AssetStatistics {
   byCondition: Record<AssetCondition, number>;
   byCategory: CountByRef[];
   byOffice: CountByRef[];
+  byAcquisitionYear: { year: number; count: number }[];
+  withoutAcquisitionYear: number;
   pendingMutations: number;
   activeLoans: number;
   overdueLoans: number;

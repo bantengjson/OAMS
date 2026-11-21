@@ -17,6 +17,10 @@ export class AssetStatisticsDto {
   @ApiProperty({ type: [CountByRefDto] }) byCategory!: CountByRefDto[];
   @ApiProperty({ type: [CountByRefDto], description: 'Dikelompokkan per Kantor (akar lokasi)' })
   byOffice!: CountByRefDto[];
+  @ApiProperty({ description: 'Barang aktif per tahun perolehan, urut naik' })
+  byAcquisitionYear!: { year: number; count: number }[];
+  @ApiProperty({ description: 'Barang aktif tanpa tanggal perolehan' })
+  withoutAcquisitionYear!: number;
   @ApiProperty({ description: 'Mutasi berstatus PENDING' }) pendingMutations!: number;
   @ApiProperty({ description: 'Peminjaman berstatus ACTIVE' }) activeLoans!: number;
   @ApiProperty({ description: 'Peminjaman aktif yang lewat rencana kembali (Asia/Jakarta)' })

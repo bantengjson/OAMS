@@ -462,4 +462,41 @@ describe('assets (e2e)', () => {
 
     await ctx.http().get('/api/v1/users/lookup').set(bearer(viewer)).expect(200);
   });
+  it('statistics group live assets by acquisition year', async () => {
+    const stats = async () => (await ctx.http().get(`${URL}/statistics`).set(bearer(viewer)).expect(200)).body;
+    const create = async (name: string, acquisitionDate?: string) =>
+      (
+        await ctx
+          .http()
+          .post(URL)
+          .set(bearer(admin))
+          .send({ ...baseAsset(), name, serialNumber: undefined, acquisitionDate })
+          .expect(201)
+      ).body.id as string;
+    const before = await stats();
+
+    await create('Tahun 1991 A', '1991-05-01');
+    await create('Tahun 1991 B', '1991-12-31');
+    await create('Tahun 1993', '1993-01-01');
+    await create('Tanpa tahun', undefined);
+    const archived = await create('Arsip 1992', '1992-03-03');
+    await ctx.http().post(`${URL}/${archived}/archive`).set(bearer(admin)).send({}).expect(200);
+    const disposed = await create('Dilepas 1992', '1992-04-04');
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date());
+    await ctx
+      .http()
+      .post('/api/v1/disposals')
+      .set(bearer(admin))
+      .send({ assetId: disposed, reason: 'BROKEN', disposedAt: today, description: 'Uji statistik' })
+      .expect(201);
+
+    const after = await stats();
+    const year = (rows: { year: number; count: number }[], y: number) => rows.find((r) => r.year === y)?.count ?? 0;
+    expect(year(after.byAcquisitionYear, 1991)).toBe(2);
+    expect(year(after.byAcquisitionYear, 1993)).toBe(1);
+    expect(year(after.byAcquisitionYear, 1992)).toBe(0);
+    const years = after.byAcquisitionYear.map((r: { year: number }) => r.year);
+    expect(years).toEqual([...years].sort((a, b) => a - b));
+    expect(after.withoutAcquisitionYear - before.withoutAcquisitionYear).toBeGreaterThanOrEqual(1);
+  });
 });

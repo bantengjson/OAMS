@@ -137,6 +137,8 @@ export class AssetsService {
       pendingMutations,
       activeLoans,
       overdueLoans,
+      byYearRows,
+      withoutAcquisitionYear,
     ] = await Promise.all([
       this.prisma.asset.count({ where: live }),
       this.prisma.asset.count({ where: { archivedAt: { not: null } } }),
@@ -148,6 +150,13 @@ export class AssetsService {
       this.prisma.assetMutation.count({ where: { status: 'PENDING' } }),
       this.prisma.assetLoan.count({ where: { status: 'ACTIVE' } }),
       this.prisma.assetLoan.count({ where: { status: 'ACTIVE', dueAt: { lt: today } } }),
+      // acquisition_date is a calendar date (no time zone), so its year is the Jakarta year.
+      this.prisma.$queryRaw<{ year: number; count: number }[]>`
+        SELECT extract(year FROM acquisition_date)::int AS year, count(*)::int AS count
+        FROM assets
+        WHERE archived_at IS NULL AND status <> 'DISPOSED' AND acquisition_date IS NOT NULL
+        GROUP BY 1 ORDER BY 1`,
+      this.prisma.asset.count({ where: { ...live, acquisitionDate: null } }),
     ]);
 
     const byStatus = Object.fromEntries(Object.keys(AssetStatus).map((k) => [k, 0])) as Record<
@@ -190,6 +199,8 @@ export class AssetsService {
       byCondition,
       byCategory,
       byOffice,
+      byAcquisitionYear: byYearRows.map((r) => ({ year: Number(r.year), count: Number(r.count) })),
+      withoutAcquisitionYear,
       pendingMutations,
       activeLoans,
       overdueLoans,
