@@ -3,6 +3,9 @@
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Fragment, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
+import { IconChip } from '@/components/ui/icon-chip';
+import { ASSET_ACTION_LABEL } from '@/features/assets/asset-history';
+import { ACTIVITY_MODULE_STYLE, activityStyle } from '@/features/dashboard/dashboard-model';
 import { Table, TableMessage, TBody, TD, TH, THead, TR } from '@/components/ui/table';
 import { formatDateTime } from '@/lib/utils';
 import type { AuditLog } from '@/types/api';
@@ -69,10 +72,16 @@ export function AuditLogTable({
                     )}
                   </TD>
                   <TD>
-                    <code className="text-xs">{row.action}</code>
+                    <span className="flex items-center gap-2.5">
+                      <IconChip icon={activityStyle(row.module, row.action).icon} tone={activityStyle(row.module, row.action).tone} size="sm" />
+                      <span className="min-w-0">
+                        <span className="block font-medium text-foreground">{ASSET_ACTION_LABEL[row.action] ?? row.action}</span>
+                        <code className="block text-[11px] text-muted-foreground">{row.action}</code>
+                      </span>
+                    </span>
                   </TD>
                   <TD className="hidden md:table-cell">
-                    <Badge variant="outline">{row.module}</Badge>
+                    <Badge tone={ACTIVITY_MODULE_STYLE[row.module]?.tone ?? 'slate'}>{row.module}</Badge>
                   </TD>
                   <TD className="hidden font-mono text-[11px] text-muted-foreground lg:table-cell">
                     {row.entityId ?? '-'}
