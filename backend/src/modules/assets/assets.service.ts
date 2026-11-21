@@ -276,20 +276,25 @@ export class AssetsService {
   }
 
   async archive(id: string, reason: string | undefined, actor: AuthUser): Promise<AssetDetailDto> {
-    // Every check and the status come from this one read. A separate earlier read for the
-    // checks would let a loan commit in between: the loan check passes on the old read, the
-    // status (already BORROWED) on the new one, and the asset ends up archived while lent.
-    const state = await this.guard.load(this.prisma, id);
-    if (state.archivedAt) throw new BadRequestException(ASSET_ARCHIVED);
-    if (state.activeLoanId) throw new ConflictException(ARCHIVE_BLOCKED_BY_LOAN);
-    if (state.pendingMutationId) throw new ConflictException(ARCHIVE_BLOCKED_BY_MUTATION);
-    if (state.openMaintenance?.status === 'IN_PROGRESS') throw new ConflictException(MSG_IN_MAINTENANCE);
-    // Conditional on the status just read: a loan or repair that starts concurrently wins or loses cleanly.
-    const archived = await this.prisma.asset.updateMany({
-      where: { id, archivedAt: null, status: state.status },
-      data: { archivedAt: new Date(), archivedById: actor.id, archiveReason: reason ?? null },
+    await this.prisma.$transaction(async (tx) => {
+      // A pending mutation request changes no asset column, so only the row lock (which the
+      // request takes too) makes it visible here; read everything after taking it.
+      await this.guard.lock(tx, id);
+      // Every check and the status come from this one read. A separate earlier read for the
+      // checks would let a loan commit in between: the loan check passes on the old read, the
+      // status (already BORROWED) on the new one, and the asset ends up archived while lent.
+      const state = await this.guard.load(tx, id);
+      if (state.archivedAt) throw new BadRequestException(ASSET_ARCHIVED);
+      if (state.activeLoanId) throw new ConflictException(ARCHIVE_BLOCKED_BY_LOAN);
+      if (state.pendingMutationId) throw new ConflictException(ARCHIVE_BLOCKED_BY_MUTATION);
+      if (state.openMaintenance?.status === 'IN_PROGRESS') throw new ConflictException(MSG_IN_MAINTENANCE);
+      // Conditional on the status just read: a loan or repair that starts concurrently wins or loses cleanly.
+      const archived = await tx.asset.updateMany({
+        where: { id, archivedAt: null, status: state.status },
+        data: { archivedAt: new Date(), archivedById: actor.id, archiveReason: reason ?? null },
+      });
+      if (archived.count !== 1) throw new ConflictException(MSG_STATUS_CHANGED);
     });
-    if (archived.count !== 1) throw new ConflictException(MSG_STATUS_CHANGED);
     await this.audit.record({
       action: 'asset.archived',
       module: MODULE,

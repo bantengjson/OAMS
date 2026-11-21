@@ -69,6 +69,15 @@ export class AssetStateGuard {
     };
   }
 
+  /**
+   * Holds the asset row until the transaction ends. For a flow that changes no asset column
+   * (a pending mutation request) racing one that must see it (archive): both lock first and
+   * read after, so whichever commits second sees the first.
+   */
+  async lock(tx: Prisma.TransactionClient, assetId: string): Promise<void> {
+    await tx.$queryRaw`SELECT id FROM assets WHERE id = ${assetId}::uuid FOR NO KEY UPDATE`;
+  }
+
   /** Throws the first blocker in priority order, ignoring those in `allow`. */
   assertFree(state: AssetState, allow: readonly AssetBlocker[] = []): void {
     const blocked = (b: AssetBlocker) => !allow.includes(b);

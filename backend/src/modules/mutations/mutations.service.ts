@@ -116,6 +116,10 @@ export class MutationsService {
     let id: string;
     try {
       id = await this.withSerializableRetry(async (tx) => {
+        // A pending request changes no asset column, so an archive racing it would not notice;
+        // archive takes the same row lock, and the state is re-read under it.
+        await this.guard.lock(tx, asset.id);
+        this.guard.assertFree(await this.guard.load(tx, asset.id), ['pendingMutation']);
         const created = await tx.assetMutation.create({ data, include: mutationInclude });
         if (autoApprove) await this.applyApproval(tx, created, actor, null);
         return created.id;

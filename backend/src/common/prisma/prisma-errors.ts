@@ -13,7 +13,14 @@ export function isUniqueViolation(error: unknown, index?: string): boolean {
   return JSON.stringify((error as { meta?: unknown }).meta ?? {}).includes(index);
 }
 
-/** Serialization failure under Serializable isolation (`P2034`): safe to retry once. */
+/**
+ * Serialization failure under Serializable isolation: safe to retry once. Prisma queries report
+ * it as `P2034`; a raw query (such as a row lock) as `P2010` carrying Postgres code `40001`.
+ */
 export function isSerializationFailure(error: unknown): boolean {
-  return prismaErrorCode(error) === 'P2034';
+  const code = prismaErrorCode(error);
+  if (code === 'P2034') return true;
+  if (code !== 'P2010') return false;
+  const meta = (error as { meta?: { driverAdapterError?: { cause?: { originalCode?: unknown } } } }).meta;
+  return meta?.driverAdapterError?.cause?.originalCode === '40001';
 }
