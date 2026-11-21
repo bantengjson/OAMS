@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { ArrayMaxSize, ArrayMinSize, IsArray, IsIn, IsInt, IsOptional, IsUUID, Max, Min } from 'class-validator';
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsBoolean, IsIn, IsInt, IsOptional, IsUUID, Max, Min } from 'class-validator';
 
 export class QrInfoDto {
   @ApiProperty() token!: string;
@@ -38,6 +38,14 @@ export class AssetIdsDto {
   assetIds!: string[];
 }
 
+/** Bulk print data; with activateInactive false a deactivated label is skipped instead of reactivated. */
+export class BulkGenerateDto extends AssetIdsDto {
+  @ApiPropertyOptional({ default: true, description: 'false: lewati label QR yang dinonaktifkan, jangan aktifkan ulang' })
+  @IsOptional()
+  @IsBoolean({ message: 'activateInactive harus true atau false' })
+  activateInactive?: boolean;
+}
+
 export class BulkQrItemDto {
   @ApiProperty() assetId!: string;
   @ApiProperty() assetCode!: string;
@@ -49,6 +57,7 @@ export class BulkQrItemDto {
 export class BulkQrSkippedDto {
   @ApiProperty() assetId!: string;
   @ApiProperty() reason!: string;
+  @ApiPropertyOptional({ description: 'true bila dilewati karena label QR nonaktif' }) inactiveLabel?: boolean;
 }
 
 export class BulkQrResultDto {

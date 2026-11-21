@@ -8,7 +8,8 @@ export const qrApi = {
   activate: (assetId: string) => api.post<QrInfo>(`/assets/${assetId}/qr/activate`),
   download: (assetId: string, format: 'png' | 'svg', size = 600) =>
     fetchBlob(`/assets/${assetId}/qr/download`, { format, size }),
-  bulkGenerate: (assetIds: string[]) => api.post<BulkQrResult>('/qr/bulk-generate', { assetIds }),
+  bulkGenerate: (assetIds: string[], opts: { activateInactive?: boolean } = {}) =>
+    api.post<BulkQrResult>('/qr/bulk-generate', { assetIds, ...opts }),
   markPrinted: (assetIds: string[]) =>
     api.post<{ updated: number }>('/qr/mark-printed', { assetIds }),
   /** Anonymous or staff view of a scanned token (bearer attached automatically when logged in). */

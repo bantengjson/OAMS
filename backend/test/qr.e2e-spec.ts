@@ -172,6 +172,23 @@ describe('qr (e2e)', () => {
     await ctx.http().post('/api/v1/qr/bulk-generate').set(bearer(admin)).send({ assetIds: [] }).expect(400);
   });
 
+  it('bulk-generate can leave a deactivated label alone instead of reactivating it', async () => {
+    await ctx.http().post(`${qrUrl()}/deactivate`).set(bearer(admin)).expect(200);
+    const res = await ctx
+      .http()
+      .post('/api/v1/qr/bulk-generate')
+      .set(bearer(admin))
+      .send({ assetIds: [assetId], activateInactive: false })
+      .expect(200);
+    expect(res.body.items).toEqual([]);
+    expect(res.body.skipped).toEqual([expect.objectContaining({ assetId, inactiveLabel: true })]);
+    const info = await ctx.http().get(qrUrl()).set(bearer(admin)).expect(200);
+    expect(info.body.isActive).toBe(false);
+    // Without the flag the old behaviour stands: printing reactivates the label.
+    const again = await ctx.http().post('/api/v1/qr/bulk-generate').set(bearer(admin)).send({ assetIds: [assetId] }).expect(200);
+    expect(again.body.items).toHaveLength(1);
+  });
+
   it('mark-printed increments the counter', async () => {
     const res = await ctx.http().post('/api/v1/qr/mark-printed').set(bearer(admin)).send({ assetIds: [assetId] }).expect(200);
     expect(res.body.updated).toBe(1);

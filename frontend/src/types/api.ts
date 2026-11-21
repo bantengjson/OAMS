@@ -335,7 +335,8 @@ export interface BulkQrItem {
 
 export interface BulkQrResult {
   items: BulkQrItem[];
-  skipped: { assetId: string; reason: string }[];
+  /** inactiveLabel: skipped because its QR label is deactivated (only with activateInactive false). */
+  skipped: { assetId: string; reason: string; inactiveLabel?: boolean }[];
 }
 
 export interface UserLookupItem {

@@ -94,7 +94,7 @@ export class QrService {
   }
 
   /** Print data for a set of assets; missing labels are created, inactive ones reactivated. */
-  async bulkGenerate(assetIds: string[]): Promise<BulkQrResultDto> {
+  async bulkGenerate(assetIds: string[], opts: { activateInactive: boolean } = { activateInactive: true }): Promise<BulkQrResultDto> {
     const baseUrl = requirePublicBaseUrl(await this.settings.getPublicBaseUrl());
     const unique = Array.from(new Set(assetIds));
     const rows = await this.prisma.asset.findMany({
@@ -118,6 +118,10 @@ export class QrService {
         continue;
       }
       let label = row.label ?? (await this.ensureLabel(id));
+      if (!label.isActive && !opts.activateInactive) {
+        result.skipped.push({ assetId: id, reason: 'QR barang ini dinonaktifkan.', inactiveLabel: true });
+        continue;
+      }
       if (!label.isActive) {
         label = await this.prisma.assetLabel.update({
           where: { assetId: id },

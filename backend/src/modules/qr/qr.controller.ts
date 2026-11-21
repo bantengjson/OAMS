@@ -21,6 +21,7 @@ import { RequirePermissions } from '../../common/auth/permissions.decorator.js';
 import { ParseUuid } from '../../common/pipes/uuid.pipe.js';
 import {
   AssetIdsDto,
+  BulkGenerateDto,
   BulkQrResultDto,
   MarkPrintedResultDto,
   QrDownloadQueryDto,
@@ -96,8 +97,8 @@ export class QrController {
   @RequirePermissions(PERMISSIONS.QR_GENERATE)
   @ApiOperation({ summary: 'Data cetak massal untuk daftar barang' })
   @ApiOkResponse({ type: BulkQrResultDto })
-  bulkGenerate(@Body() dto: AssetIdsDto): Promise<BulkQrResultDto> {
-    return this.qr.bulkGenerate(dto.assetIds);
+  bulkGenerate(@Body() dto: BulkGenerateDto): Promise<BulkQrResultDto> {
+    return this.qr.bulkGenerate(dto.assetIds, { activateInactive: dto.activateInactive ?? true });
   }
 
   @Post('mark-printed')

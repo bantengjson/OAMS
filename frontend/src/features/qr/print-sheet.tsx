@@ -1,6 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 import { chunk, sheetLayoutFor, stickerDims, type StickerSpec } from '@/lib/print-layout';
 import { qrDataUrl } from '@/lib/qr-image';
 import type { BulkQrItem } from '@/types/api';
@@ -19,17 +20,23 @@ export function useQrImages(items: BulkQrItem[]) {
   });
 }
 
+/** A sticker on the sheet; its key is unique per copy (several copies may share an asset). */
+export type SheetItem = BulkQrItem & { key: string };
+
 export function PrintSheet({
   items,
   spec,
   images,
   previewOnly = false,
+  controls,
 }: {
-  items: BulkQrItem[];
+  items: SheetItem[];
   spec: StickerSpec;
   images: Record<string, string>;
-  /** Render just the first page (for the on-screen preview). */
+  /** Render just the first page. */
   previewOnly?: boolean;
+  /** On-screen buttons over each sticker (never printed: the print copy passes none). */
+  controls?: (item: SheetItem) => ReactNode;
 }) {
   const { widthMm, heightMm } = stickerDims(spec);
   const layout = sheetLayoutFor(widthMm, heightMm);
@@ -47,17 +54,17 @@ export function PrintSheet({
           }}
           aria-label={`Lembar ${index + 1} dari ${pages.length}`}
         >
-          {page.map((item) =>
-            spec.kind === 'framed' ? (
+          {page.map((item) => {
+            const sticker = spec.kind === 'framed' ? (
               <FramedSticker
-                key={item.assetId}
+                key={item.key}
                 className="sticker framed"
                 widthMm={spec.widthMm}
                 qrSrc={images[item.token] ?? null}
                 assetCode={item.assetCode}
               />
             ) : (
-              <div key={item.assetId} className="sticker" style={{ width: `${widthMm}mm`, height: `${heightMm}mm` }}>
+              <div key={item.key} className="sticker" style={{ width: `${widthMm}mm`, height: `${heightMm}mm` }}>
                 {images[item.token] ? (
                   // eslint-disable-next-line @next/next/no-img-element -- data URL generated client-side
                   <img src={images[item.token]} alt={`QR ${item.assetCode}`} />
@@ -66,8 +73,17 @@ export function PrintSheet({
                 )}
                 <span className="code">{item.assetCode}</span>
               </div>
-            ),
-          )}
+            );
+            if (!controls) return sticker;
+            return (
+              <div key={item.key} className="group relative">
+                {sticker}
+                <div className="absolute right-1 top-1 flex gap-1">
+                  {controls(item)}
+                </div>
+              </div>
+            );
+          })}
         </section>
       ))}
     </div>
