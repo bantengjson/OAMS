@@ -108,6 +108,9 @@ npm run lint
 - Desain Tahap 4: [docs/superpowers/specs/2026-11-20-oams-tahap4-audit-maintenance-design.md](docs/superpowers/specs/2026-11-20-oams-tahap4-audit-maintenance-design.md)
 - Rencana Tahap 4: [docs/superpowers/plans/2026-11-20-oams-tahap4-audit-maintenance.md](docs/superpowers/plans/2026-11-20-oams-tahap4-audit-maintenance.md)
 - Dokumentasi hasil Tahap 4: [docs/tahap-4-audit-maintenance.md](docs/tahap-4-audit-maintenance.md)
+- Desain redesign UI: [docs/superpowers/specs/2026-11-20-oams-ui-redesign-design.md](docs/superpowers/specs/2026-11-20-oams-ui-redesign-design.md)
+- Rencana redesign UI: [docs/superpowers/plans/2026-11-21-oams-ui-redesign.md](docs/superpowers/plans/2026-11-21-oams-ui-redesign.md)
+- Dokumentasi redesign UI (warna, komponen, sidebar terkunci): [docs/redesign-ui.md](docs/redesign-ui.md)
 
 ## Deployment (server dengan Docker)
 
