@@ -14,6 +14,7 @@ import { DisposalsModule } from './modules/disposals/disposals.module.js';
 import { EmployeesModule } from './modules/employees/employees.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { LoansModule } from './modules/loans/loans.module.js';
+import { GroupItemsModule } from './modules/group-items/group-items.module.js';
 import { LocationsModule } from './modules/locations/locations.module.js';
 import { MaintenanceModule } from './modules/maintenance/maintenance.module.js';
 import { MutationsModule } from './modules/mutations/mutations.module.js';
@@ -45,6 +46,7 @@ import { UsersModule } from './modules/users/users.module.js';
     DepartmentsModule,
     EmployeesModule,
     LocationsModule,
+    GroupItemsModule,
     MutationsModule,
     LoansModule,
     StockOpnamesModule,
