@@ -15,7 +15,8 @@ import { Input } from '@/components/ui/input';
 import { Field, FieldError, FieldHint, Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/ui/page-header';
 import { Pagination } from '@/components/ui/pagination';
-import { Select } from '@/components/ui/select';
+import { FilterSelect, FormSelect } from '@/components/ui/select-panel';
+import type { SelectOption } from '@/components/ui/select-panel';
 import { Table, TableMessage, TBody, TD, TH, THead, TR } from '@/components/ui/table';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { categoriesApi } from '@/lib/api/categories';
@@ -25,6 +26,19 @@ import { assetCodeOrgApi } from '@/lib/api/rooms';
 import type { Category, Golongan } from '@/types/api';
 import { itemTypeSchema, orgCodeSchema } from './item-type-form.schema';
 import type { ItemTypeFormInput, ItemTypeFormValues } from './item-type-form.schema';
+
+const GOLONGAN_FILTER_OPTIONS: SelectOption[] = [
+  { value: 'BG', label: 'BG · Bergerak' },
+  { value: 'NG', label: 'NG · Tidak bergerak' },
+];
+const GOLONGAN_FORM_OPTIONS: SelectOption[] = [
+  { value: 'NG', label: 'NG · Tidak bergerak' },
+  { value: 'BG', label: 'BG · Bergerak (kendaraan)' },
+];
+const KIND_FILTER_OPTIONS: SelectOption[] = [
+  { value: 'unit', label: 'Per unit (ber-QR)' },
+  { value: 'group', label: 'Barang kelompok' },
+];
 
 const pad3 = (n: number) => String(n).padStart(3, '0');
 
@@ -103,34 +117,29 @@ export function ItemTypesPage({ canManage }: { canManage: boolean }) {
             aria-label="Cari jenis barang"
           />
         </div>
-        <div className="w-full sm:w-44">
-          <Select
-            value={golongan}
-            onChange={(e) => {
-              setGolongan(e.target.value as typeof golongan);
-              setPage(1);
-            }}
-            aria-label="Filter golongan"
-          >
-            <option value="">Semua golongan</option>
-            <option value="BG">BG · Bergerak</option>
-            <option value="NG">NG · Tidak bergerak</option>
-          </Select>
-        </div>
-        <div className="w-full sm:w-48">
-          <Select
-            value={kind}
-            onChange={(e) => {
-              setKind(e.target.value as typeof kind);
-              setPage(1);
-            }}
-            aria-label="Filter jenis kelompok"
-          >
-            <option value="">Semua jenis</option>
-            <option value="unit">Per unit (ber-QR)</option>
-            <option value="group">Barang kelompok</option>
-          </Select>
-        </div>
+        <FilterSelect
+          className="w-full sm:w-44"
+          label="Golongan"
+          value={golongan}
+          onChange={(v) => {
+            setGolongan(v as typeof golongan);
+            setPage(1);
+          }}
+          panelWidth={224}
+          options={GOLONGAN_FILTER_OPTIONS}
+        />
+        <FilterSelect
+          className="w-full sm:w-48"
+          label="Pencatatan"
+          value={kind}
+          onChange={(v) => {
+            setKind(v as typeof kind);
+            setPage(1);
+          }}
+          allLabel="Semua pencatatan"
+          panelWidth={224}
+          options={KIND_FILTER_OPTIONS}
+        />
       </div>
 
       {list.isError ? <Alert variant="error">{getErrorMessage(list.error)}</Alert> : null}
@@ -304,10 +313,14 @@ function ItemTypeForm({ row, onSaved }: { row: Category | null; onSaved: () => v
           <Label htmlFor="it-golongan" required>
             Golongan
           </Label>
-          <Select id="it-golongan" disabled={locked} {...form.register('golongan')}>
-            <option value="NG">NG · Tidak bergerak</option>
-            <option value="BG">BG · Bergerak (kendaraan)</option>
-          </Select>
+          <FormSelect
+            id="it-golongan"
+            control={form.control}
+            name="golongan"
+            disabled={locked}
+            what="golongan"
+            options={GOLONGAN_FORM_OPTIONS}
+          />
           <FieldError>{errors.golongan?.message}</FieldError>
         </Field>
         <Field>

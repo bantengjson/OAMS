@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { Input, Textarea } from '@/components/ui/input';
 import { Field, FieldError, FieldHint, Label } from '@/components/ui/label';
-import { Select } from '@/components/ui/select';
+import { FormSelect } from '@/components/ui/select-panel';
 import { applyApiError } from '@/lib/api/form-errors';
 import { locationsApi } from '@/lib/api/locations';
 import { LOCATION_TYPE_LABEL, LOCATION_TYPES } from '@/types/api';
@@ -175,13 +175,14 @@ function LocationForm({
         <Label htmlFor="loc-type" required>
           Tipe
         </Label>
-        <Select id="loc-type" disabled={Boolean(location)} {...form.register('type')}>
-          {LOCATION_TYPES.map((t) => (
-            <option key={t} value={t}>
-              {LOCATION_TYPE_LABEL[t]}
-            </option>
-          ))}
-        </Select>
+        <FormSelect
+          id="loc-type"
+          control={form.control}
+          name="type"
+          disabled={Boolean(location)}
+          what="tipe"
+          options={LOCATION_TYPES.map((t) => ({ value: t, label: LOCATION_TYPE_LABEL[t] }))}
+        />
         {location ? <FieldHint>Tipe lokasi tidak dapat diubah.</FieldHint> : null}
       </Field>
 
@@ -190,18 +191,14 @@ function LocationForm({
           <Label htmlFor="loc-parent" required>
             {LOCATION_TYPE_LABEL[parentType]} induk
           </Label>
-          <Select
+          <FormSelect
             id="loc-parent"
-            aria-invalid={Boolean(errors.parentId)}
-            {...form.register('parentId')}
-          >
-            <option value="">{parents.isPending ? 'Memuat...' : 'Pilih...'}</option>
-            {parentOptions.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.label}
-              </option>
-            ))}
-          </Select>
+            control={form.control}
+            name="parentId"
+            placeholder={parents.isPending ? 'Memuat...' : 'Pilih...'}
+            what="induk"
+            options={parentOptions.map((p) => ({ value: p.id, label: p.label }))}
+          />
           <FieldError>{errors.parentId?.message}</FieldError>
         </Field>
       ) : null}

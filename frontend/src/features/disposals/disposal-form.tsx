@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input, Textarea } from '@/components/ui/input';
 import { Field, FieldError, FieldHint, Label } from '@/components/ui/label';
-import { Select } from '@/components/ui/select';
+import { FormSelect } from '@/components/ui/select-panel';
 import { AssetPicker } from '@/features/mutations/asset-picker';
 import { assetsApi } from '@/lib/api/assets';
 import { applyApiError } from '@/lib/api/form-errors';
@@ -107,11 +107,13 @@ export function DisposalForm({
         <CardContent className="grid gap-4 md:grid-cols-2">
           <Field>
             <Label htmlFor="reason" required>Alasan</Label>
-            <Select id="reason" {...form.register('reason')}>
-              {DISPOSAL_REASONS.map((r) => (
-                <option key={r} value={r}>{DISPOSAL_REASON_LABEL[r]}</option>
-              ))}
-            </Select>
+            <FormSelect
+              id="reason"
+              control={form.control}
+              name="reason"
+              what="alasan"
+              options={DISPOSAL_REASONS.map((r) => ({ value: r, label: DISPOSAL_REASON_LABEL[r] }))}
+            />
           </Field>
           <Field>
             <Label htmlFor="disposedAt" required>Tanggal</Label>

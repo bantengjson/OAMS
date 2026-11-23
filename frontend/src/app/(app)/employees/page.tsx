@@ -10,10 +10,11 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/ui/page-header';
 import { Pagination } from '@/components/ui/pagination';
-import { Select } from '@/components/ui/select';
+import { FilterSelect } from '@/components/ui/select-panel';
 import { EmployeeFormDialog } from '@/features/employees/employee-form-dialog';
 import { EmployeeTable } from '@/features/employees/employee-table';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { STATUS_FILTER_OPTIONS } from '@/lib/filter-options';
 import { departmentsApi } from '@/lib/api/departments';
 import { employeesApi } from '@/lib/api/employees';
 import type { EmployeeQuery } from '@/lib/api/employees';
@@ -98,35 +99,27 @@ export default function EmployeesPage() {
             aria-label="Cari pegawai"
           />
         </div>
-        <div className="w-full sm:w-56">
-          <Select
-            value={departmentId}
-            onChange={(e) => {
-              setDepartmentId(e.target.value);
-              setPage(1);
-            }}
-            aria-label="Filter unit kerja"
-          >
-            <option value="">Semua unit kerja</option>
-            {departments.data?.data.map((d) => (
-              <option key={d.id} value={d.id}>{d.name}</option>
-            ))}
-          </Select>
-        </div>
-        <div className="w-full sm:w-44">
-          <Select
-            value={status}
-            onChange={(e) => {
-              setStatus(e.target.value as typeof status);
-              setPage(1);
-            }}
-            aria-label="Filter status"
-          >
-            <option value="active">Aktif</option>
-            <option value="inactive">Nonaktif</option>
-            <option value="all">Semua status</option>
-          </Select>
-        </div>
+        <FilterSelect
+          className="w-full sm:w-56"
+          label="Unit kerja"
+          value={departmentId}
+          onChange={(v) => {
+            setDepartmentId(v);
+            setPage(1);
+          }}
+          options={(departments.data?.data ?? []).map((d) => ({ value: d.id, label: d.name }))}
+        />
+        <FilterSelect
+          className="w-full sm:w-44"
+          label="Status"
+          value={status}
+          onChange={(v) => {
+            setStatus(v as typeof status);
+            setPage(1);
+          }}
+          neutral="active"
+          options={STATUS_FILTER_OPTIONS}
+        />
       </div>
 
       {list.isError ? <Alert variant="error">{getErrorMessage(list.error)}</Alert> : null}

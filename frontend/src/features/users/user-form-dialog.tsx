@@ -12,7 +12,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Field, FieldError, FieldHint, Label } from '@/components/ui/label';
 import { PasswordInput } from '@/components/ui/password-input';
-import { Select } from '@/components/ui/select';
+import { FormSelect } from '@/components/ui/select-panel';
 import { departmentsApi } from '@/lib/api/departments';
 import { applyApiError } from '@/lib/api/form-errors';
 import { rolesApi } from '@/lib/api/roles';
@@ -244,14 +244,15 @@ function UserForm({ user, onSaved }: { user: User | null; onSaved: () => void })
 
       <Field>
         <Label htmlFor="u-department">Unit kerja</Label>
-        <Select id="u-department" {...form.register('departmentId')}>
-          <option value="">Tidak ada</option>
-          {departments.data?.data.map((d) => (
-            <option key={d.id} value={d.id}>
-              {d.name} ({d.code})
-            </option>
-          ))}
-        </Select>
+        <FormSelect
+          id="u-department"
+          control={form.control}
+          name="departmentId"
+          placeholder="Tidak ada"
+          emptyLabel="Tidak ada"
+          what="unit kerja"
+          options={(departments.data?.data ?? []).map((d) => ({ value: d.id, label: `${d.name} (${d.code})` }))}
+        />
         <FieldError>{errors.departmentId?.message}</FieldError>
       </Field>
 

@@ -3,6 +3,7 @@
 import { X } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
+import { escapeTakenByDropdown } from '@/components/ui/select-panel';
 import { cn } from '@/lib/utils';
 
 export function Dialog({
@@ -36,6 +37,8 @@ export function Dialog({
       ref={ref}
       onCancel={(e) => {
         e.preventDefault();
+        // A dropdown open inside has already taken this Escape for itself.
+        if (escapeTakenByDropdown()) return;
         onClose();
       }}
       onClick={(e) => {

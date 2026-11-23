@@ -6,8 +6,8 @@ import type { ReactNode } from 'react';
 import { FilterBar } from '@/components/ui/filter-bar';
 import { categoryOptions } from './category-options';
 import { Input } from '@/components/ui/input';
-import { FilterSelect } from '@/components/ui/filter-select';
-import type { FilterOption } from '@/components/ui/filter-select';
+import { FilterSelect } from '@/components/ui/select-panel';
+import type { SelectOption } from '@/components/ui/select-panel';
 import { ALL_CATEGORIES_QUERY } from '@/hooks/use-category-tone';
 import type { AssetQuery } from '@/lib/api/assets';
 import { CONDITION_LABEL, OWNERSHIP_LABEL } from '@/lib/asset-labels';
@@ -51,12 +51,12 @@ export function toAssetQuery(f: AssetFilterState, debouncedSearch: string): Asse
   };
 }
 
-const GOLONGAN_OPTIONS: FilterOption[] = [
+const GOLONGAN_OPTIONS: SelectOption[] = [
   { value: 'BG', label: 'BG · Bergerak (kendaraan)' },
   { value: 'NG', label: 'NG · Tidak bergerak' },
 ];
-const CONDITION_OPTIONS: FilterOption[] = ASSET_CONDITIONS.map((c) => ({ value: c, label: CONDITION_LABEL[c] }));
-const OWNERSHIP_OPTIONS: FilterOption[] = OWNERSHIP_TYPES.map((o) => ({ value: o, label: OWNERSHIP_LABEL[o] }));
+const CONDITION_OPTIONS: SelectOption[] = ASSET_CONDITIONS.map((c) => ({ value: c, label: CONDITION_LABEL[c] }));
+const OWNERSHIP_OPTIONS: SelectOption[] = OWNERSHIP_TYPES.map((o) => ({ value: o, label: OWNERSHIP_LABEL[o] }));
 
 /** Search and filters of the inventory list; status is chosen with the status chips above it. */
 export function AssetFilters({
@@ -71,7 +71,7 @@ export function AssetFilters({
   const categories = useQuery(ALL_CATEGORIES_QUERY);
   const rooms = useQuery({ queryKey: ['rooms', 'all'], queryFn: () => roomsApi.list(), staleTime: 60_000 });
   // The panel searches these, so the whole list can be offered without a long scroll.
-  const typeOptions: FilterOption[] = (categories.data?.data ?? [])
+  const typeOptions: SelectOption[] = (categories.data?.data ?? [])
     .filter((c) => !c.isGroup)
     .map((c) => ({ value: c.id, label: c.label, group: c.golongan === 'BG' ? 'BG · Bergerak' : 'NG · Tidak bergerak' }));
   const typeChoices = categoryOptions(
@@ -79,7 +79,7 @@ export function AssetFilters({
     value.categoryId,
   );
   const unknownType = typeChoices.find((o) => o.value === value.categoryId && !typeOptions.some((t) => t.value === o.value));
-  const roomOptions: FilterOption[] = (rooms.data ?? []).map((r) => ({ value: r.id, label: `${r.code} · ${r.name}` }));
+  const roomOptions: SelectOption[] = (rooms.data ?? []).map((r) => ({ value: r.id, label: `${r.code} · ${r.name}` }));
   const set = <K extends keyof AssetFilterState>(key: K, v: AssetFilterState[K]) =>
     onChange({ ...value, [key]: v });
 
@@ -98,6 +98,7 @@ export function AssetFilters({
       <FilterSelect
         className="w-full sm:w-44"
         label="Golongan"
+        panelWidth={240}
         value={value.golongan}
         onChange={(v) => set('golongan', v as AssetFilterState['golongan'])}
         options={GOLONGAN_OPTIONS}
@@ -108,7 +109,7 @@ export function AssetFilters({
         value={value.locationId}
         onChange={(v) => set('locationId', v)}
         options={roomOptions}
-        widthClassName="w-72"
+        panelWidth={288}
       />
       <FilterSelect
         className="w-full sm:w-48"
@@ -116,7 +117,7 @@ export function AssetFilters({
         value={value.categoryId}
         onChange={(v) => set('categoryId', v)}
         options={unknownType ? [...typeOptions, unknownType] : typeOptions}
-        widthClassName="w-80"
+        panelWidth={320}
       />
       <FilterSelect
         className="w-full sm:w-44"

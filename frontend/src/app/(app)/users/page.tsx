@@ -12,13 +12,14 @@ import { DropdownMenu } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/ui/page-header';
 import { Pagination } from '@/components/ui/pagination';
-import { Select } from '@/components/ui/select';
+import { FilterSelect } from '@/components/ui/select-panel';
 import { Table, TableMessage, TBody, TD, TH, THead, TR } from '@/components/ui/table';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { ResetPasswordDialog } from '@/features/users/reset-password-dialog';
 import { UserFormDialog } from '@/features/users/user-form-dialog';
 import { UserRolesDialog } from '@/features/users/user-roles-dialog';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { STATUS_FILTER_OPTIONS } from '@/lib/filter-options';
 import { getErrorMessage } from '@/lib/api/form-errors';
 import { rolesApi } from '@/lib/api/roles';
 import { usersApi } from '@/lib/api/users';
@@ -106,37 +107,27 @@ function UsersAdmin({ meId }: { meId: string | null }) {
             aria-label="Cari pengguna"
           />
         </div>
-        <div className="w-full sm:w-52">
-          <Select
-            value={roleCode}
-            onChange={(e) => {
-              setRoleCode(e.target.value);
-              setPage(1);
-            }}
-            aria-label="Filter role"
-          >
-            <option value="">Semua role</option>
-            {roles.data?.map((r) => (
-              <option key={r.code} value={r.code}>
-                {r.name}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <div className="w-full sm:w-44">
-          <Select
-            value={status}
-            onChange={(e) => {
-              setStatus(e.target.value as typeof status);
-              setPage(1);
-            }}
-            aria-label="Filter status"
-          >
-            <option value="all">Semua status</option>
-            <option value="active">Aktif</option>
-            <option value="inactive">Nonaktif</option>
-          </Select>
-        </div>
+        <FilterSelect
+          className="w-full sm:w-52"
+          label="Role"
+          value={roleCode}
+          onChange={(v) => {
+            setRoleCode(v);
+            setPage(1);
+          }}
+          options={(roles.data ?? []).map((r) => ({ value: r.code, label: r.name }))}
+        />
+        <FilterSelect
+          className="w-full sm:w-44"
+          label="Status"
+          value={status}
+          onChange={(v) => {
+            setStatus(v as typeof status);
+            setPage(1);
+          }}
+          neutral="all"
+          options={STATUS_FILTER_OPTIONS}
+        />
       </div>
 
       {list.isError ? <Alert variant="error">{getErrorMessage(list.error)}</Alert> : null}

@@ -5,7 +5,7 @@ import { Camera, CameraOff } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Select } from '@/components/ui/select';
+import { FieldSelect } from '@/components/ui/select-panel';
 
 type CameraInfo = { id: string; label: string };
 type State = 'idle' | 'starting' | 'scanning' | 'unavailable';
@@ -122,12 +122,15 @@ export function QrScannerView({ onDecode, paused = false }: { onDecode: (text: s
           <Button onClick={() => void start()} leftIcon={<Camera className="h-4 w-4" />}>Nyalakan kamera</Button>
         )}
         {cameras.length > 1 ? (
-          <Select aria-label="Pilih kamera" value={cameraId} onChange={(e) => void switchCamera(e.target.value)} className="w-auto">
-            <option value="">Kamera belakang (otomatis)</option>
-            {cameras.map((c) => (
-              <option key={c.id} value={c.id}>{c.label}</option>
-            ))}
-          </Select>
+          <FieldSelect
+            className="w-60"
+            value={cameraId}
+            onChange={(v) => void switchCamera(v)}
+            placeholder="Kamera belakang (otomatis)"
+            emptyLabel="Kamera belakang (otomatis)"
+            what="kamera"
+            options={cameras.map((c) => ({ value: c.id, label: c.label }))}
+          />
         ) : null}
       </div>
     </div>

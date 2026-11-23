@@ -24,6 +24,10 @@ export function useRefreshAction(
     setRefreshing(true);
     try {
       await Promise.all([work(), new Promise((resolve) => setTimeout(resolve, minMs))]);
+    } catch {
+      // The work reports its own failure — a refetch that fails leaves its query in an error
+      // state the page already shows. All this hook owes the caller is to stop spinning, and
+      // callers fire it from a click handler, where a rejection would go unhandled.
     } finally {
       running.current = false;
       setRefreshing(false);

@@ -13,7 +13,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { Input, Textarea } from '@/components/ui/input';
 import { Field, FieldError, FieldHint, Label } from '@/components/ui/label';
 import { Pagination } from '@/components/ui/pagination';
-import { Select } from '@/components/ui/select';
+import { FilterSelect, FormSelect } from '@/components/ui/select-panel';
 import { Table, TableMessage, TBody, TD, TH, THead, TR } from '@/components/ui/table';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { categoriesApi } from '@/lib/api/categories';
@@ -59,6 +59,7 @@ export function GroupItemsPanel({ canCreate, canUpdate, canArchive }: { canCreat
   const query: GroupItemQuery = { page, pageSize: 50, search: debounced || undefined, locationId: roomId || undefined };
   const list = useQuery({ queryKey: ['group-items', query], queryFn: () => groupItemsApi.list(query) });
   const rooms = useQuery({ queryKey: ['rooms', 'active'], queryFn: () => roomsApi.list({ isActive: true }), staleTime: 60_000 });
+  const roomOptions = (rooms.data ?? []).map((r) => ({ value: r.id, label: `${r.code} · ${r.name}` }));
   const rows = list.data?.data ?? [];
   const totalUnits = rows.reduce((s, r) => s + r.total, 0);
   const invalidate = () => {
@@ -82,21 +83,17 @@ export function GroupItemsPanel({ canCreate, canUpdate, canArchive }: { canCreat
             aria-label="Cari barang kelompok"
           />
         </div>
-        <div className="w-full sm:w-52">
-          <Select
-            value={roomId}
-            onChange={(e) => {
-              setRoomId(e.target.value);
-              setPage(1);
-            }}
-            aria-label="Filter ruangan"
-          >
-            <option value="">Semua ruangan</option>
-            {rooms.data?.map((r) => (
-              <option key={r.id} value={r.id}>{r.code} · {r.name}</option>
-            ))}
-          </Select>
-        </div>
+        <FilterSelect
+          className="w-full sm:w-52"
+          label="Ruangan"
+          value={roomId}
+          onChange={(v) => {
+            setRoomId(v);
+            setPage(1);
+          }}
+          panelWidth={288}
+          options={roomOptions}
+        />
         {canCreate ? (
           <Button onClick={() => setEditing('new')} leftIcon={<Plus className="h-4 w-4" />}>
             Tambah barang kelompok
@@ -208,6 +205,7 @@ function GroupItemForm({ row, onSaved }: { row: GroupItem | null; onSaved: () =>
     staleTime: 60_000,
   });
   const rooms = useQuery({ queryKey: ['rooms', 'active'], queryFn: () => roomsApi.list({ isActive: true }), staleTime: 60_000 });
+  const roomOptions = (rooms.data ?? []).map((r) => ({ value: r.id, label: `${r.code} · ${r.name}` }));
   const form = useForm<FormValues>({
     resolver: zodResolver(groupItemSchema),
     defaultValues: {
@@ -264,22 +262,27 @@ function GroupItemForm({ row, onSaved }: { row: GroupItem | null; onSaved: () =>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field>
           <Label htmlFor="gi-type" required>Jenis</Label>
-          <Select id="gi-type" disabled={Boolean(row)} {...form.register('categoryId')}>
-            <option value="">{types.isPending ? 'Memuat...' : 'Pilih jenis...'}</option>
-            {types.data?.map((t) => (
-              <option key={t.id} value={t.id}>{t.label}</option>
-            ))}
-          </Select>
+          <FormSelect
+            id="gi-type"
+            control={form.control}
+            name="categoryId"
+            disabled={Boolean(row)}
+            placeholder={types.isPending ? 'Memuat...' : 'Pilih jenis...'}
+            what="jenis"
+            options={(types.data ?? []).map((t) => ({ value: t.id, label: t.label }))}
+          />
           <FieldError>{errors.categoryId?.message}</FieldError>
         </Field>
         <Field>
           <Label htmlFor="gi-room" required>Ruangan</Label>
-          <Select id="gi-room" {...form.register('locationId')}>
-            <option value="">Pilih ruangan...</option>
-            {rooms.data?.map((r) => (
-              <option key={r.id} value={r.id}>{r.code} · {r.name}</option>
-            ))}
-          </Select>
+          <FormSelect
+            id="gi-room"
+            control={form.control}
+            name="locationId"
+            placeholder="Pilih ruangan..."
+            what="ruangan"
+            options={roomOptions}
+          />
           <FieldError>{errors.locationId?.message}</FieldError>
         </Field>
         <Field>

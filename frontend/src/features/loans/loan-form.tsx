@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input, Textarea } from '@/components/ui/input';
 import { Field, FieldError, FieldHint, Label } from '@/components/ui/label';
-import { Select } from '@/components/ui/select';
+import { FormSelect } from '@/components/ui/select-panel';
 import { EmployeeLookup } from '@/features/employees/employee-lookup';
 import { AssetPicker } from '@/features/mutations/asset-picker';
 import { assetsApi } from '@/lib/api/assets';
@@ -125,12 +125,15 @@ export function LoanForm({
               </Field>
               <Field>
                 <Label htmlFor="borrowerDepartmentId">Unit kerja terkait</Label>
-                <Select id="borrowerDepartmentId" {...form.register('borrowerDepartmentId')}>
-                  <option value="">Tidak ada</option>
-                  {departments.data?.data.map((d) => (
-                    <option key={d.id} value={d.id}>{d.name}</option>
-                  ))}
-                </Select>
+                <FormSelect
+                  id="borrowerDepartmentId"
+                  control={form.control}
+                  name="borrowerDepartmentId"
+                  placeholder="Tidak ada"
+                  emptyLabel="Tidak ada"
+                  what="unit kerja"
+                  options={(departments.data?.data ?? []).map((d) => ({ value: d.id, label: d.name }))}
+                />
                 <FieldHint>Opsional.</FieldHint>
               </Field>
               <Field className="md:col-span-2">

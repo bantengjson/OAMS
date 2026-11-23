@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Field, Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/ui/page-header';
 import { Pagination } from '@/components/ui/pagination';
-import { Select } from '@/components/ui/select';
+import { FieldSelect } from '@/components/ui/select-panel';
 import { AuditLogTable } from '@/features/audit-logs/audit-log-table';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { auditLogsApi } from '@/lib/api/audit-logs';
@@ -72,21 +72,18 @@ export default function AuditLogsPage() {
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <Field>
           <Label htmlFor="al-module">Modul</Label>
-          <Select
+          <FieldSelect
             id="al-module"
             value={module}
-            onChange={(e) => {
-              setModule(e.target.value);
+            onChange={(v) => {
+              setModule(v);
               setPage(1);
             }}
-          >
-            <option value="">Semua modul</option>
-            {modules.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
-            ))}
-          </Select>
+            placeholder="Semua modul"
+            emptyLabel="Semua modul"
+            what="modul"
+            options={modules.map((m) => ({ value: m, label: m }))}
+          />
         </Field>
         <Field>
           <Label htmlFor="al-action">Aksi</Label>

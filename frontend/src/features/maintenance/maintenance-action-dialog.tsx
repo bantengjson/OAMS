@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { Input, Textarea } from '@/components/ui/input';
 import { Field, FieldHint, Label } from '@/components/ui/label';
-import { Select } from '@/components/ui/select';
+import { FieldSelect } from '@/components/ui/select-panel';
 import { getErrorMessage } from '@/lib/api/form-errors';
 import { maintenanceApi } from '@/lib/api/maintenance';
 import { CONDITION_LABEL } from '@/lib/asset-labels';
@@ -108,12 +108,15 @@ export function MaintenanceActionDialog({
             </Field>
             <Field>
               <Label htmlFor="mt-condition">Kondisi setelah perbaikan</Label>
-              <Select id="mt-condition" value={condition} onChange={(e) => setCondition(e.target.value as '' | AssetCondition)}>
-                <option value="">Tidak diperiksa</option>
-                {ASSET_CONDITIONS.map((c) => (
-                  <option key={c} value={c}>{CONDITION_LABEL[c]}</option>
-                ))}
-              </Select>
+              <FieldSelect
+                id="mt-condition"
+                value={condition}
+                onChange={(v) => setCondition(v as '' | AssetCondition)}
+                placeholder="Tidak diperiksa"
+                emptyLabel="Tidak diperiksa"
+                what="kondisi"
+                options={ASSET_CONDITIONS.map((c) => ({ value: c, label: CONDITION_LABEL[c] }))}
+              />
               <FieldHint>Bila diisi, kondisi barang ikut berubah dan tercatat di riwayat kondisi.</FieldHint>
             </Field>
             <Field>

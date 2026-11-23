@@ -63,15 +63,15 @@ describe('LocationFormDialog', () => {
       { wrapper },
     );
 
-    const select = screen.getByLabelText(/Kantor induk/) as HTMLSelectElement;
-    expect(select.value).toBe('hq');
+    const field = screen.getByLabelText(/Kantor induk/);
+    expect(field).toHaveTextContent('Memuat...');
 
     resolveList({
       data: [office],
       meta: { page: 1, pageSize: 100, total: 1, totalPages: 1 } as never,
     });
-    await waitFor(() => expect(screen.getByRole('option', { name: 'Kantor Pusat' })).toBeInTheDocument());
-    expect(select.value).toBe('hq');
+    // the field naming the office it was given is how we see the value survived the load
+    await waitFor(() => expect(field).toHaveTextContent('Kantor Pusat'));
   });
 
   it('shows no parent field for an office', () => {

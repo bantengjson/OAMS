@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/input';
 import { Field, FieldError, FieldHint, Label } from '@/components/ui/label';
-import { Select } from '@/components/ui/select';
+import { FormSelect } from '@/components/ui/select-panel';
+import type { SelectOption } from '@/components/ui/select-panel';
 import { roomsApi } from '@/lib/api/rooms';
 import { EmployeeLookup } from '@/features/employees/employee-lookup';
 import { assetsApi } from '@/lib/api/assets';
@@ -20,6 +21,12 @@ import { emptyMutationForm, mutationFormSchema } from './mutation-form.schema';
 import type { MutationFormValues } from './mutation-form.schema';
 
 const FIELDS = Object.keys(emptyMutationForm) as (keyof MutationFormValues)[];
+
+const RESPONSIBLE_MODE_OPTIONS: SelectOption[] = [
+  { value: 'keep', label: 'Tetap' },
+  { value: 'change', label: 'Ganti penanggung jawab' },
+  { value: 'release', label: 'Lepaskan tanpa penanggung jawab' },
+];
 
 export function MutationForm({
   initialAssetId,
@@ -108,23 +115,28 @@ export function MutationForm({
         <CardContent className="flex flex-col gap-4">
           <Field>
             <Label htmlFor="toLocationId">Pindah ke ruangan</Label>
-            <Select id="toLocationId" aria-invalid={Boolean(errors.toLocationId)} {...form.register('toLocationId')}>
-              <option value="">Tidak pindah ruangan</option>
-              {rooms.data
-                ?.filter((r) => r.id !== shownAsset?.room?.id)
-                .map((r) => (
-                  <option key={r.id} value={r.id}>{r.code} · {r.name}</option>
-                ))}
-            </Select>
+            <FormSelect
+              id="toLocationId"
+              control={form.control}
+              name="toLocationId"
+              placeholder="Tidak pindah ruangan"
+              emptyLabel="Tidak pindah ruangan"
+              what="ruangan"
+              options={(rooms.data ?? [])
+                .filter((r) => r.id !== shownAsset?.room?.id)
+                .map((r) => ({ value: r.id, label: `${r.code} · ${r.name}` }))}
+            />
             <FieldError>{errors.toLocationId?.message}</FieldError>
           </Field>
           <Field>
             <Label htmlFor="responsibleMode">Penanggung jawab</Label>
-            <Select id="responsibleMode" {...form.register('responsibleMode')}>
-              <option value="keep">Tetap</option>
-              <option value="change">Ganti penanggung jawab</option>
-              <option value="release">Lepaskan tanpa penanggung jawab</option>
-            </Select>
+            <FormSelect
+              id="responsibleMode"
+              control={form.control}
+              name="responsibleMode"
+              what="pilihan"
+              options={RESPONSIBLE_MODE_OPTIONS}
+            />
           </Field>
           {responsibleMode === 'change' ? (
             <Field>

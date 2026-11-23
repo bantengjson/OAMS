@@ -16,9 +16,10 @@ import { Input, Textarea } from '@/components/ui/input';
 import { Field, FieldError, FieldHint, Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/ui/page-header';
 import { Pagination } from '@/components/ui/pagination';
-import { Select } from '@/components/ui/select';
+import { FilterSelect } from '@/components/ui/select-panel';
 import { Table, TableMessage, TBody, TD, TH, THead, TR } from '@/components/ui/table';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { STATUS_FILTER_OPTIONS } from '@/lib/filter-options';
 import { applyApiError, getErrorMessage } from '@/lib/api/form-errors';
 import { formatDateTime } from '@/lib/utils';
 import type { MasterDataQuery, Paginated } from '@/types/api';
@@ -138,20 +139,17 @@ export function MasterDataPage<Row extends MasterDataRow, Input extends FormValu
             aria-label="Cari"
           />
         </div>
-        <div className="w-full sm:w-44">
-          <Select
-            value={status}
-            onChange={(e) => {
-              setStatus(e.target.value as typeof status);
-              setPage(1);
-            }}
-            aria-label="Filter status"
-          >
-            <option value="all">Semua status</option>
-            <option value="active">Aktif</option>
-            <option value="inactive">Nonaktif</option>
-          </Select>
-        </div>
+        <FilterSelect
+          className="w-full sm:w-44"
+          label="Status"
+          value={status}
+          onChange={(v) => {
+            setStatus(v as typeof status);
+            setPage(1);
+          }}
+          neutral="all"
+          options={STATUS_FILTER_OPTIONS}
+        />
       </div>
 
       {list.isError ? <Alert variant="error">{getErrorMessage(list.error)}</Alert> : null}

@@ -10,7 +10,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { FileDrop } from '@/components/ui/file-drop';
 import { Input, Textarea } from '@/components/ui/input';
 import { Field, FieldHint, Label } from '@/components/ui/label';
-import { Select } from '@/components/ui/select';
+import { FieldSelect } from '@/components/ui/select-panel';
 import { assetsApi } from '@/lib/api/assets';
 import { getErrorMessage } from '@/lib/api/form-errors';
 import { CONDITION_LABEL } from '@/lib/asset-labels';
@@ -72,11 +72,13 @@ export function ConditionLogDialog({
         <div className="grid gap-4 sm:grid-cols-2">
           <Field>
             <Label htmlFor="cond-condition" required>Kondisi</Label>
-            <Select id="cond-condition" value={condition} onChange={(e) => setCondition(e.target.value as AssetCondition)}>
-              {ASSET_CONDITIONS.map((c) => (
-                <option key={c} value={c}>{CONDITION_LABEL[c]}</option>
-              ))}
-            </Select>
+            <FieldSelect
+              id="cond-condition"
+              value={condition}
+              onChange={(v) => setCondition(v as AssetCondition)}
+              what="kondisi"
+              options={ASSET_CONDITIONS.map((c) => ({ value: c, label: CONDITION_LABEL[c] }))}
+            />
             <FieldHint>Saat ini: {CONDITION_LABEL[currentCondition]}</FieldHint>
           </Field>
           <Field>

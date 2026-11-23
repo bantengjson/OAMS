@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input, Textarea } from '@/components/ui/input';
 import { Field, FieldError, FieldHint, Label } from '@/components/ui/label';
-import { Select } from '@/components/ui/select';
+import { FormSelect } from '@/components/ui/select-panel';
+import type { SelectOption } from '@/components/ui/select-panel';
 import { categoriesApi } from '@/lib/api/categories';
 import { departmentsApi } from '@/lib/api/departments';
 import { applyApiError } from '@/lib/api/form-errors';
@@ -26,6 +27,9 @@ import { AssetConditionBadge } from './asset-table';
 const FIELDS = Object.keys(emptyAssetForm) as (keyof AssetFormValues)[];
 /** Statuses a person may set by hand; the others belong to loans, repairs and disposals. */
 const MANUAL_STATUSES = ASSET_STATUSES.filter((s) => !FLOW_STATUSES.includes(s));
+const OWNERSHIP_OPTIONS: SelectOption[] = OWNERSHIP_TYPES.map((v) => ({ value: v, label: OWNERSHIP_LABEL[v] }));
+const CONDITION_OPTIONS: SelectOption[] = ASSET_CONDITIONS.map((v) => ({ value: v, label: CONDITION_LABEL[v] }));
+const MANUAL_STATUS_OPTIONS: SelectOption[] = MANUAL_STATUSES.map((v) => ({ value: v, label: STATUS_LABEL[v] }));
 
 const FLOW_STATUS_HINT: Partial<Record<AssetFormValues['status'], string>> = {
   BORROWED: 'Barang sedang dipinjam; status kembali otomatis saat pengembalian dicatat.',
@@ -77,6 +81,11 @@ export function AssetForm({
   });
   const rooms = useQuery({ queryKey: ['rooms', 'active'], queryFn: () => roomsApi.list({ isActive: true }), staleTime: 60_000 });
   const types: Category[] = categories.data ?? [];
+  // Bergerak first, so the panel's two headings come out in that order.
+  const typeOptions: SelectOption[] = [
+    ...types.filter((c) => c.golongan === 'BG').map((c) => ({ value: c.id, label: c.label, group: 'BG · Barang bergerak' })),
+    ...types.filter((c) => c.golongan === 'NG').map((c) => ({ value: c.id, label: c.label, group: 'NG · Barang tidak bergerak' })),
+  ];
   const categoryId = useWatch({ control: form.control, name: 'categoryId' });
   const selectedType = types.find((c) => c.id === categoryId);
   const noRoom = selectedType ? usesNoRoom(selectedType) : false;
@@ -139,19 +148,15 @@ export function AssetForm({
           </Field>
           <Field>
             <Label htmlFor="categoryId" required>Jenis barang</Label>
-            <Select id="categoryId" disabled={codeLocked} aria-invalid={Boolean(errors.categoryId)} {...form.register('categoryId')}>
-              <option value="">{categories.isPending ? 'Memuat...' : 'Pilih jenis...'}</option>
-              <optgroup label="BG · Barang bergerak">
-                {types.filter((c) => c.golongan === 'BG').map((c) => (
-                  <option key={c.id} value={c.id}>{c.label}</option>
-                ))}
-              </optgroup>
-              <optgroup label="NG · Barang tidak bergerak">
-                {types.filter((c) => c.golongan === 'NG').map((c) => (
-                  <option key={c.id} value={c.id}>{c.label}</option>
-                ))}
-              </optgroup>
-            </Select>
+            <FormSelect
+              id="categoryId"
+              control={form.control}
+              name="categoryId"
+              disabled={codeLocked}
+              placeholder={categories.isPending ? 'Memuat...' : 'Pilih jenis...'}
+              what="jenis"
+              options={typeOptions}
+            />
             {codeLocked ? <FieldHint>{CODE_LOCKED_HINT}</FieldHint> : null}
             <FieldError>{errors.categoryId?.message}</FieldError>
           </Field>
@@ -165,12 +170,15 @@ export function AssetForm({
           ) : (
             <Field>
               <Label htmlFor="locationId" required>Ruangan</Label>
-              <Select id="locationId" disabled={codeLocked} aria-invalid={Boolean(errors.locationId)} {...form.register('locationId')}>
-                <option value="">{rooms.isPending ? 'Memuat...' : 'Pilih ruangan...'}</option>
-                {rooms.data?.map((r) => (
-                  <option key={r.id} value={r.id}>{r.code} · {r.name}</option>
-                ))}
-              </Select>
+              <FormSelect
+                id="locationId"
+                control={form.control}
+                name="locationId"
+                disabled={codeLocked}
+                placeholder={rooms.isPending ? 'Memuat...' : 'Pilih ruangan...'}
+                what="ruangan"
+                options={(rooms.data ?? []).map((r) => ({ value: r.id, label: `${r.code} · ${r.name}` }))}
+              />
               {isEdit && !codeLocked ? <FieldHint>Koreksi ruangan awal mengubah kode selama stiker belum dicetak. Pindah ruangan biasa lewat mutasi.</FieldHint> : null}
               <FieldError>{errors.locationId?.message}</FieldError>
             </Field>
@@ -214,11 +222,7 @@ export function AssetForm({
         <CardContent className="grid gap-4 md:grid-cols-2">
           <Field>
             <Label htmlFor="ownershipType" required>Kepemilikan</Label>
-            <Select id="ownershipType" {...form.register('ownershipType')}>
-              {OWNERSHIP_TYPES.map((v) => (
-                <option key={v} value={v}>{OWNERSHIP_LABEL[v]}</option>
-              ))}
-            </Select>
+            <FormSelect id="ownershipType" control={form.control} name="ownershipType" what="kepemilikan" options={OWNERSHIP_OPTIONS} />
           </Field>
           <Field>
             <Label htmlFor="source">Sumber</Label>
@@ -252,12 +256,15 @@ export function AssetForm({
         <CardContent className="grid gap-4 md:grid-cols-2">
           <Field>
             <Label htmlFor="departmentId">Unit kerja</Label>
-            <Select id="departmentId" {...form.register('departmentId')}>
-              <option value="">Tidak ada</option>
-              {departments.data?.data.map((d) => (
-                <option key={d.id} value={d.id}>{d.name} ({d.code})</option>
-              ))}
-            </Select>
+            <FormSelect
+              id="departmentId"
+              control={form.control}
+              name="departmentId"
+              placeholder="Tidak ada"
+              emptyLabel="Tidak ada"
+              what="unit kerja"
+              options={(departments.data?.data ?? []).map((d) => ({ value: d.id, label: `${d.name} (${d.code})` }))}
+            />
             <FieldError>{errors.departmentId?.message}</FieldError>
           </Field>
           {isEdit && locked ? (
@@ -315,22 +322,24 @@ export function AssetForm({
           ) : (
             <Field>
               <Label htmlFor="condition" required>Kondisi</Label>
-              <Select id="condition" {...form.register('condition')}>
-                {ASSET_CONDITIONS.map((v) => (
-                  <option key={v} value={v}>{CONDITION_LABEL[v]}</option>
-                ))}
-              </Select>
+              <FormSelect id="condition" control={form.control} name="condition" what="kondisi" options={CONDITION_OPTIONS} />
               {!isEdit ? <FieldHint>Tercatat sebagai pemeriksaan kondisi awal.</FieldHint> : null}
             </Field>
           )}
           <Field>
             <Label htmlFor="status" required>Status operasional</Label>
-            <Select id="status" disabled={Boolean(locked?.flowStatus)} {...form.register('status')}>
-              {locked?.flowStatus ? <option value={locked.flowStatus}>{STATUS_LABEL[locked.flowStatus]}</option> : null}
-              {MANUAL_STATUSES.map((v) => (
-                <option key={v} value={v}>{STATUS_LABEL[v]}</option>
-              ))}
-            </Select>
+            <FormSelect
+              id="status"
+              control={form.control}
+              name="status"
+              disabled={Boolean(locked?.flowStatus)}
+              what="status"
+              options={
+                locked?.flowStatus
+                  ? [{ value: locked.flowStatus, label: STATUS_LABEL[locked.flowStatus] }, ...MANUAL_STATUS_OPTIONS]
+                  : MANUAL_STATUS_OPTIONS
+              }
+            />
             {locked?.flowStatus ? (
               <FieldHint>{FLOW_STATUS_HINT[locked.flowStatus] ?? 'Status ini diatur oleh alurnya sendiri.'}</FieldHint>
             ) : (
