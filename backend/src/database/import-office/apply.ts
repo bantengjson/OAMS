@@ -33,8 +33,18 @@ export async function readOrg(prisma: Pick<PrismaClient, 'systemSetting'>): Prom
   return typeof row?.value === 'string' && row.value ? row.value : DEFAULT_ASSET_CODE_ORG;
 }
 
-/** Removes every asset-related row and the test master data (types, extra locations); users stay. */
+/**
+ * Removes every asset-related row and the test master data (types, extra locations); users stay.
+ * Audit entries about the removed rows go too: the dashboard looks items up by id, and an entry
+ * pointing at a deleted test item would show activity for something nobody can open.
+ */
 async function wipe(tx: Prisma.TransactionClient): Promise<void> {
+  const gone = [
+    ...(await tx.asset.findMany({ select: { id: true } })),
+    ...(await tx.groupItem.findMany({ select: { id: true } })),
+    ...(await tx.category.findMany({ select: { id: true } })),
+    ...(await tx.stockOpname.findMany({ select: { id: true } })),
+  ].map((r) => r.id);
   await tx.stockOpnameGroupLine.deleteMany();
   await tx.stockOpnameItem.deleteMany();
   await tx.stockOpnameOfficer.deleteMany();
@@ -53,10 +63,33 @@ async function wipe(tx: Prisma.TransactionClient): Promise<void> {
   await tx.assetCodeSequence.deleteMany();
   await tx.category.deleteMany();
   const office = await tx.location.findUnique({ where: { code: OFFICE_CODE } });
+  const staleRooms = office
+    ? await tx.location.findMany({ where: { NOT: [{ id: office.id }] }, select: { id: true } })
+    : [];
   await tx.location.deleteMany({
     where: office ? { NOT: [{ id: office.id }, { parentId: office.id, type: 'ROOM' }] } : {},
   });
+  if (gone.length > 0 || staleRooms.length > 0) {
+    await tx.auditLog.deleteMany({ where: { entityId: { in: [...gone, ...staleRooms.map((r) => r.id)] } } });
+  }
+  // These modules only ever describe rows this wipe removed, and some of them (mutations, loans,
+  // disposals) carry the asset id inside the payload instead of entityId.
+  await tx.auditLog.deleteMany({ where: { module: { in: [...WIPED_MODULES] } } });
 }
+
+const WIPED_MODULES = [
+  'assets',
+  'qr',
+  'assignments',
+  'condition_logs',
+  'mutations',
+  'loans',
+  'maintenance',
+  'disposals',
+  'stock_opnames',
+  'group_items',
+  'categories',
+] as const;
 
 /**
  * Replaces the test data with the office inventory in one transaction: types, rooms, units (with

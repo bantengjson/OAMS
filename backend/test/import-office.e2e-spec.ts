@@ -6,6 +6,7 @@ import { planImport } from '../src/database/import-office/plan.js';
 import { writePreview } from '../src/database/import-office/preview-xlsx.js';
 import type { ImportData } from '../src/database/import-office/types.js';
 import { createTestApp } from './utils/app.js';
+import { testTypes } from './utils/fixtures.js';
 import type { TestContext } from './utils/app.js';
 
 // Invented rows only; the office data never enters the repository.
@@ -42,11 +43,31 @@ const DATA: ImportData = {
 describe('office import (e2e)', () => {
   let ctx: TestContext;
   let actorId: string;
+  /** A test item that exists before the import, with its audit trail. */
+  let staleAssetId: string;
 
   beforeAll(async () => {
     ctx = await createTestApp();
     actorId = (await ctx.loginAs('SUPER_ADMIN')).userId;
     await ctx.prisma.systemSetting.deleteMany({ where: { key: IMPORT_MARKER_KEY } });
+    const t = await testTypes(ctx.prisma);
+    const admin = await ctx.loginAs('ADMIN_INVENTARIS');
+    const created = await ctx
+      .http()
+      .post('/api/v1/assets')
+      .set({ Authorization: `Bearer ${admin.accessToken}` })
+      .send({
+        name: 'Barang Uji Sebelum Impor',
+        categoryId: t.ng.id,
+        locationId: t.roomA.id,
+        acquisitionYear: 2024,
+        ownershipType: 'OFFICE',
+        condition: 'GOOD',
+        status: 'IN_USE',
+      })
+      .expect(201);
+    staleAssetId = created.body.id;
+    expect(await ctx.prisma.auditLog.count({ where: { entityId: staleAssetId } })).toBeGreaterThan(0);
   });
 
   afterAll(async () => {
@@ -94,6 +115,22 @@ describe('office import (e2e)', () => {
     const next = await ctx.prisma.assetCodeSequence.findUniqueOrThrow({ where: { prefix: 'NG.A/002/DPC/2025' } });
     expect(next.lastNumber).toBe(2);
     expect(await ctx.prisma.auditLog.count({ where: { action: 'import.office' } })).toBe(1);
+  });
+
+  it('leaves no audit entries pointing at the wiped test items', async () => {
+    // The dashboard's activity panel looks these up by id; a dangling entry shows an item that is gone.
+    expect(await ctx.prisma.auditLog.count({ where: { entityId: staleAssetId } })).toBe(0);
+    const ids = (await ctx.prisma.auditLog.findMany({ where: { module: { in: ['assets', 'qr'] }, entityId: { not: null } }, select: { entityId: true } }))
+      .map((a) => a.entityId!)
+      .filter((v, i, all) => all.indexOf(v) === i);
+    expect(await ctx.prisma.asset.count({ where: { id: { in: ids } } })).toBe(ids.length);
+    // entries about other things (users, roles) stay
+    expect(await ctx.prisma.auditLog.count({ where: { action: 'import.office' } })).toBe(1);
+    // Mutation, loan and disposal entries carry the asset id inside their payload, not in entityId;
+    // the dashboard resolves those too, so their history goes with the items.
+    expect(await ctx.prisma.auditLog.count({ where: { module: { in: ['mutations', 'loans', 'maintenance', 'disposals', 'condition_logs', 'stock_opnames', 'group_items', 'qr', 'assignments'] } } })).toBe(0);
+    // unrelated history (logins) survives the wipe
+    expect(await ctx.prisma.auditLog.count({ where: { module: 'auth' } })).toBeGreaterThan(0);
   });
 
   it('refuses to run when office data already exists', async () => {
