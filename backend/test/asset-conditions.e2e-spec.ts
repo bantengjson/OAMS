@@ -21,7 +21,6 @@ describe('asset condition logs & assignments (e2e)', () => {
     viewer = await ctx.loginAs('VIEWER');
     const p = ctx.prisma;
     const category = (await testTypes(p)).ng;
-    const office = await p.location.create({ data: { code: 'CND_HQ', name: 'Kantor Kondisi', type: 'OFFICE' } });
     employeeId = (await p.employee.create({ data: { fullName: 'Pegawai Kondisi' } })).id;
     const base = {
       name: 'Kursi Kondisi',

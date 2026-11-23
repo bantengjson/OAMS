@@ -267,7 +267,7 @@ export class AssetsService {
       });
       await this.audit.record({ action: 'qr.generated', module: 'qr', entityId: unit.id });
     }
-    return { ...(await this.get(units[0].id)), units };
+    return Object.assign(await this.get(units[0].id), { units });
   }
 
   async update(id: string, dto: UpdateAssetDto): Promise<AssetDetailDto> {
