@@ -52,11 +52,12 @@ export default function EditAssetPage() {
           responsibleLabel: asset.data.responsibleEmployee?.fullName ?? null,
           condition: asset.data.condition,
           flowStatus: FLOW_STATUSES.includes(asset.data.status) ? asset.data.status : null,
+          printed: (asset.data.label?.printedCount ?? 0) > 0,
         }}
         submitLabel="Simpan perubahan"
         onCancel={() => router.push(`/assets/${id}`)}
-        onSubmit={async (values) => {
-          await assetsApi.update(id, toAssetUpdatePayload(values));
+        onSubmit={async (values, type) => {
+          await assetsApi.update(id, toAssetUpdatePayload(values, type, (asset.data.label?.printedCount ?? 0) > 0));
           void queryClient.invalidateQueries({ queryKey: ['assets'] });
           toast.success('Perubahan tersimpan.');
           router.push(`/assets/${id}`);

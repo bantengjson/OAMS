@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,22 +13,14 @@ import { Select } from '@/components/ui/select';
 import { categoriesApi } from '@/lib/api/categories';
 import { departmentsApi } from '@/lib/api/departments';
 import { applyApiError } from '@/lib/api/form-errors';
-import {
-  ACQUISITION_LABEL,
-  CONDITION_LABEL,
-  OWNERSHIP_LABEL,
-  STATUS_LABEL,
-} from '@/lib/asset-labels';
-import {
-  ACQUISITION_METHODS,
-  ASSET_CONDITIONS,
-  ASSET_STATUSES,
-  OWNERSHIP_TYPES,
-} from '@/types/api';
+import { CONDITION_LABEL, OWNERSHIP_LABEL, STATUS_LABEL } from '@/lib/asset-labels';
+import { roomsApi } from '@/lib/api/rooms';
+import { ASSET_CONDITIONS, ASSET_STATUSES, OWNERSHIP_TYPES } from '@/types/api';
+import type { Category } from '@/types/api';
 import Link from 'next/link';
 import { EmployeeLookup } from '@/features/employees/employee-lookup';
-import { FLOW_STATUSES, assetFormSchema, emptyAssetForm } from './asset-form.schema';
-import type { AssetFormValues } from './asset-form.schema';
+import { FLOW_STATUSES, assetFormSchema, emptyAssetForm, placementError, usesNoRoom } from './asset-form.schema';
+import type { AssetFormValues, PlacementType } from './asset-form.schema';
 import { AssetConditionBadge } from './asset-table';
 
 const FIELDS = Object.keys(emptyAssetForm) as (keyof AssetFormValues)[];
@@ -48,7 +40,11 @@ export interface LockedAssetFields {
   condition: AssetFormValues['condition'];
   /** The current status when a loan, repair or disposal owns it: the status select is frozen meanwhile. */
   flowStatus: AssetFormValues['status'] | null;
+  /** The sticker was printed: jenis and starting room are part of the printed code and stay as they are. */
+  printed: boolean;
 }
+
+export const CODE_LOCKED_HINT = 'Stiker sudah dicetak; jenis dan ruangan awal tidak bisa diubah. Arsipkan dan daftarkan ulang bila salah.';
 
 export function AssetForm({
   mode = 'create',
@@ -65,7 +61,7 @@ export function AssetForm({
   /** Required when `mode === 'edit'`. */
   locked?: LockedAssetFields;
   submitLabel: string;
-  onSubmit: (values: AssetFormValues) => Promise<void>;
+  onSubmit: (values: AssetFormValues, type: PlacementType) => Promise<void>;
   onCancel: () => void;
 }) {
   const isEdit = mode === 'edit';
@@ -75,10 +71,16 @@ export function AssetForm({
   const { errors, isSubmitting } = form.formState;
 
   const categories = useQuery({
-    queryKey: ['categories', { isActive: true, pageSize: 100 }],
-    queryFn: () => categoriesApi.list({ isActive: true, pageSize: 100 }),
+    queryKey: ['categories', 'all-pages', { isActive: true, isGroup: false }],
+    queryFn: () => categoriesApi.listAll({ isActive: true, isGroup: false }),
     staleTime: 60_000,
   });
+  const rooms = useQuery({ queryKey: ['rooms', 'active'], queryFn: () => roomsApi.list({ isActive: true }), staleTime: 60_000 });
+  const types: Category[] = categories.data ?? [];
+  const categoryId = useWatch({ control: form.control, name: 'categoryId' });
+  const selectedType = types.find((c) => c.id === categoryId);
+  const noRoom = selectedType ? usesNoRoom(selectedType) : false;
+  const codeLocked = Boolean(isEdit && locked?.printed);
   const departments = useQuery({
     queryKey: ['departments', { isActive: true, pageSize: 100 }],
     queryFn: () => departmentsApi.list({ isActive: true, pageSize: 100 }),
@@ -90,13 +92,30 @@ export function AssetForm({
     if (categories.data) form.setValue('categoryId', form.getValues('categoryId'));
   }, [categories.data, form]);
   useEffect(() => {
+    if (rooms.data) form.setValue('locationId', form.getValues('locationId'));
+  }, [rooms.data, form]);
+  useEffect(() => {
     if (departments.data) form.setValue('departmentId', form.getValues('departmentId'));
   }, [departments.data, form]);
 
   const submit = form.handleSubmit(async (values) => {
     setFormError(null);
+    const type = types.find((c) => c.id === values.categoryId);
+    if (!type) {
+      form.setError('categoryId', { message: 'Pilih jenis barang' });
+      return;
+    }
+    const roomProblem = codeLocked ? null : placementError(type, values.locationId);
+    if (roomProblem) {
+      form.setError('locationId', { message: roomProblem });
+      return;
+    }
+    if (isEdit && initial.acquisitionYear && !values.acquisitionYear.trim()) {
+      form.setError('acquisitionYear', { message: 'Tahun yang sudah terisi tidak bisa dikosongkan' });
+      return;
+    }
     try {
-      await onSubmit(values);
+      await onSubmit(values, type);
     } catch (error) {
       setFormError(applyApiError(error, form.setError, FIELDS));
     }
@@ -109,7 +128,7 @@ export function AssetForm({
       <Card>
         <CardHeader>
           <CardTitle>Identitas barang</CardTitle>
-          <CardDescription>Asset Code dibuat otomatis saat disimpan.</CardDescription>
+          <CardDescription>Kode barang dibuat otomatis dari golongan, ruangan, jenis, dan tahun, mis. NG.A/012/DPC/2023-01.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
           <Field className="md:col-span-2">
@@ -118,27 +137,64 @@ export function AssetForm({
             <FieldError>{errors.name?.message}</FieldError>
           </Field>
           <Field>
-            <Label htmlFor="categoryId" required>Kategori</Label>
-            <Select id="categoryId" aria-invalid={Boolean(errors.categoryId)} {...form.register('categoryId')}>
-              <option value="">{categories.isPending ? 'Memuat...' : 'Pilih kategori...'}</option>
-              {categories.data?.data.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
+            <Label htmlFor="categoryId" required>Jenis barang</Label>
+            <Select id="categoryId" disabled={codeLocked} aria-invalid={Boolean(errors.categoryId)} {...form.register('categoryId')}>
+              <option value="">{categories.isPending ? 'Memuat...' : 'Pilih jenis...'}</option>
+              <optgroup label="BG · Barang bergerak">
+                {types.filter((c) => c.golongan === 'BG').map((c) => (
+                  <option key={c.id} value={c.id}>{c.label}</option>
+                ))}
+              </optgroup>
+              <optgroup label="NG · Barang tidak bergerak">
+                {types.filter((c) => c.golongan === 'NG').map((c) => (
+                  <option key={c.id} value={c.id}>{c.label}</option>
+                ))}
+              </optgroup>
             </Select>
+            {codeLocked ? <FieldHint>{CODE_LOCKED_HINT}</FieldHint> : null}
             <FieldError>{errors.categoryId?.message}</FieldError>
           </Field>
+          {noRoom ? (
+            <Field>
+              <Label>Ruangan</Label>
+              <p className="rounded-md border border-dashed border-border px-3 py-2 text-sm text-muted-foreground">
+                {selectedType?.golongan === 'BG' ? 'Kendaraan tidak memakai ruangan.' : 'Tanah & bangunan tidak memakai ruangan.'}
+              </p>
+            </Field>
+          ) : (
+            <Field>
+              <Label htmlFor="locationId" required>Ruangan</Label>
+              <Select id="locationId" disabled={codeLocked} aria-invalid={Boolean(errors.locationId)} {...form.register('locationId')}>
+                <option value="">{rooms.isPending ? 'Memuat...' : 'Pilih ruangan...'}</option>
+                {rooms.data?.map((r) => (
+                  <option key={r.id} value={r.id}>{r.code} · {r.name}</option>
+                ))}
+              </Select>
+              {isEdit && !codeLocked ? <FieldHint>Koreksi ruangan awal mengubah kode selama stiker belum dicetak. Pindah ruangan biasa lewat mutasi.</FieldHint> : null}
+              <FieldError>{errors.locationId?.message}</FieldError>
+            </Field>
+          )}
           <Field>
-            <Label htmlFor="brand">Merek</Label>
-            <Input id="brand" {...form.register('brand')} />
-            <FieldError>{errors.brand?.message}</FieldError>
+            <Label htmlFor="acquisitionYear" required={!isEdit || Boolean(initial.acquisitionYear)}>Tahun pengadaan</Label>
+            <Input id="acquisitionYear" inputMode="numeric" placeholder="mis. 2023" aria-invalid={Boolean(errors.acquisitionYear)} {...form.register('acquisitionYear')} />
+            {isEdit && !initial.acquisitionYear ? <FieldHint>Barang ini diimpor tanpa tahun (TT). Isi bila sudah diketahui.</FieldHint> : null}
+            <FieldError>{errors.acquisitionYear?.message}</FieldError>
+          </Field>
+          {!isEdit ? (
+            <Field>
+              <Label htmlFor="quantity" required>Jumlah unit</Label>
+              <Input id="quantity" inputMode="numeric" aria-invalid={Boolean(errors.quantity)} {...form.register('quantity')} />
+              <FieldHint>Untuk barang yang sama persis. Tiap unit mendapat kode dan QR sendiri.</FieldHint>
+              <FieldError>{errors.quantity?.message}</FieldError>
+            </Field>
+          ) : null}
+          <Field className="md:col-span-2">
+            <Label htmlFor="specification">Spesifikasi (merk/tipe/warna)</Label>
+            <Input id="specification" placeholder="mis. Epson L3210 hitam" {...form.register('specification')} />
+            <FieldError>{errors.specification?.message}</FieldError>
           </Field>
           <Field>
-            <Label htmlFor="model">Tipe / model</Label>
-            <Input id="model" {...form.register('model')} />
-            <FieldError>{errors.model?.message}</FieldError>
-          </Field>
-          <Field>
-            <Label htmlFor="serialNumber">Nomor seri</Label>
+            <Label htmlFor="serialNumber">Nomor seri / nomor polisi</Label>
             <Input id="serialNumber" className="font-mono" {...form.register('serialNumber')} />
             <FieldError>{errors.serialNumber?.message}</FieldError>
           </Field>
@@ -164,12 +220,10 @@ export function AssetForm({
             </Select>
           </Field>
           <Field>
-            <Label htmlFor="acquisitionMethod" required>Metode perolehan</Label>
-            <Select id="acquisitionMethod" {...form.register('acquisitionMethod')}>
-              {ACQUISITION_METHODS.map((v) => (
-                <option key={v} value={v}>{ACQUISITION_LABEL[v]}</option>
-              ))}
-            </Select>
+            <Label htmlFor="source">Sumber</Label>
+            <Input id="source" placeholder="mis. Sumbangan Bapak ..." {...form.register('source')} />
+            <FieldHint>Kosongkan bila dibeli. Bila diisi, barang dicatat sebagai hibah.</FieldHint>
+            <FieldError>{errors.source?.message}</FieldError>
           </Field>
           <Field>
             <Label htmlFor="acquisitionDate">Tanggal perolehan</Label>

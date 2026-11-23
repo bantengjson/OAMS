@@ -31,14 +31,15 @@ export function AssetConditionBadge({ condition }: { condition: AssetListItem['c
 export const ASSET_COLUMNS: ColumnDef[] = [
   { key: 'code', label: 'Kode', required: true },
   { key: 'name', label: 'Nama barang', required: true },
-  { key: 'category', label: 'Kategori' },
+  { key: 'category', label: 'Jenis' },
+  { key: 'room', label: 'Ruangan' },
   { key: 'status', label: 'Status' },
   { key: 'condition', label: 'Kondisi' },
   { key: 'responsible', label: 'Penanggung jawab' },
   { key: 'department', label: 'Unit kerja' },
   { key: 'updatedAt', label: 'Diperbarui' },
 ];
-export const ASSET_DEFAULT_COLUMNS = ['code', 'name', 'category', 'status', 'condition', 'responsible', 'updatedAt'];
+export const ASSET_DEFAULT_COLUMNS = ['code', 'name', 'category', 'room', 'status', 'condition', 'updatedAt'];
 
 export interface AssetTableProps {
   rows: AssetListItem[];
@@ -101,7 +102,8 @@ export function AssetTable({
               <TH>Nama barang</TH>
             </>
           )}
-          {show('category') ? <TH className="hidden md:table-cell">Kategori</TH> : null}
+          {show('category') ? <TH className="hidden md:table-cell">Jenis</TH> : null}
+          {show('room') ? <TH className="hidden w-40 lg:table-cell">Ruangan</TH> : null}
           {show('status') ? <TH className="w-32">Status</TH> : null}
           {show('condition') ? <TH className="hidden w-32 lg:table-cell">Kondisi</TH> : null}
           {show('responsible') ? <TH className="hidden xl:table-cell">Penanggung jawab</TH> : null}
@@ -154,9 +156,7 @@ export function AssetTable({
                     {a.hasPhoto ? <ImageIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-label="Ada foto" /> : null}
                     {a.isArchived ? <Badge variant="muted">Arsip</Badge> : null}
                   </span>
-                  {a.brand || a.model ? (
-                    <p className="truncate text-xs text-muted-foreground">{[a.brand, a.model].filter(Boolean).join(' · ')}</p>
-                  ) : null}
+                  {a.specification ? <p className="truncate text-xs text-muted-foreground">{a.specification}</p> : null}
                   {show('category') ? <p className="text-xs text-muted-foreground md:hidden">{a.category.name}</p> : null}
                 </TD>
                 {show('category') ? (
@@ -166,6 +166,9 @@ export function AssetTable({
                       {a.category.name}
                     </span>
                   </TD>
+                ) : null}
+                {show('room') ? (
+                  <TD className="hidden whitespace-nowrap lg:table-cell">{a.room ? `${a.room.code} · ${a.room.name}` : '—'}</TD>
                 ) : null}
                 {show('status') ? <TD><AssetStatusBadge status={a.status} /></TD> : null}
                 {show('condition') ? <TD className="hidden lg:table-cell"><AssetConditionBadge condition={a.condition} /></TD> : null}

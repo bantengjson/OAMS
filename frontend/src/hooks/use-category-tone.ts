@@ -8,8 +8,8 @@ import type { Tone } from '@/lib/tones';
 
 /** All categories (active and inactive), shared by the category colours and the category filter. */
 export const ALL_CATEGORIES_QUERY = {
-  queryKey: ['categories', 'all', { pageSize: 100 }] as const,
-  queryFn: () => categoriesApi.list({ pageSize: 100 }),
+  queryKey: ['categories', 'all'] as const,
+  queryFn: async () => ({ data: await categoriesApi.listAll() }),
   staleTime: 5 * 60_000,
 };
 

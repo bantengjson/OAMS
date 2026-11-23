@@ -11,11 +11,15 @@ import { ALL_CATEGORIES_QUERY } from '@/hooks/use-category-tone';
 import type { AssetQuery } from '@/lib/api/assets';
 import { CONDITION_LABEL, OWNERSHIP_LABEL } from '@/lib/asset-labels';
 import { ASSET_CONDITIONS, OWNERSHIP_TYPES } from '@/types/api';
-import type { AssetCondition, AssetStatus, OwnershipType } from '@/types/api';
+import { roomsApi } from '@/lib/api/rooms';
+import type { AssetCondition, AssetStatus, Golongan, OwnershipType } from '@/types/api';
 
 export interface AssetFilterState {
   search: string;
   categoryId: string;
+  golongan: '' | Golongan;
+  /** Room. */
+  locationId: string;
   status: '' | AssetStatus;
   condition: '' | AssetCondition;
   ownershipType: '' | OwnershipType;
@@ -25,6 +29,8 @@ export interface AssetFilterState {
 export const emptyAssetFilters: AssetFilterState = {
   search: '',
   categoryId: '',
+  golongan: '',
+  locationId: '',
   status: '',
   condition: '',
   ownershipType: '',
@@ -35,6 +41,8 @@ export function toAssetQuery(f: AssetFilterState, debouncedSearch: string): Asse
   return {
     search: debouncedSearch.trim() || undefined,
     categoryId: f.categoryId || undefined,
+    golongan: f.golongan || undefined,
+    locationId: f.locationId || undefined,
     status: f.status || undefined,
     condition: f.condition || undefined,
     ownershipType: f.ownershipType || undefined,
@@ -53,6 +61,7 @@ export function AssetFilters({
   right?: ReactNode;
 }) {
   const categories = useQuery(ALL_CATEGORIES_QUERY);
+  const rooms = useQuery({ queryKey: ['rooms', 'all'], queryFn: () => roomsApi.list(), staleTime: 60_000 });
   const categoryChoices = categoryOptions(categories.data?.data ?? [], value.categoryId);
   const set = <K extends keyof AssetFilterState>(key: K, v: AssetFilterState[K]) =>
     onChange({ ...value, [key]: v });
@@ -64,14 +73,29 @@ export function AssetFilters({
         <Input
           value={value.search}
           onChange={(e) => set('search', e.target.value)}
-          placeholder="Cari kode, nama, merek, model, nomor seri..."
+          placeholder="Cari kode, nama, spesifikasi, nomor seri..."
           className="pl-9"
           aria-label="Cari barang"
         />
       </div>
       <div className="w-full sm:w-44">
-        <Select value={value.categoryId} onChange={(e) => set('categoryId', e.target.value)} aria-label="Filter kategori">
-          <option value="">Semua kategori</option>
+        <Select value={value.golongan} onChange={(e) => set('golongan', e.target.value as AssetFilterState['golongan'])} aria-label="Filter golongan">
+          <option value="">Semua golongan</option>
+          <option value="BG">BG · Bergerak</option>
+          <option value="NG">NG · Tidak bergerak</option>
+        </Select>
+      </div>
+      <div className="w-full sm:w-44">
+        <Select value={value.locationId} onChange={(e) => set('locationId', e.target.value)} aria-label="Filter ruangan">
+          <option value="">Semua ruangan</option>
+          {rooms.data?.map((r) => (
+            <option key={r.id} value={r.id}>{r.code} · {r.name}</option>
+          ))}
+        </Select>
+      </div>
+      <div className="w-full sm:w-44">
+        <Select value={value.categoryId} onChange={(e) => set('categoryId', e.target.value)} aria-label="Filter jenis">
+          <option value="">Semua jenis</option>
           {categoryChoices.map((c) => (
             <option key={c.value} value={c.value}>{c.label}</option>
           ))}

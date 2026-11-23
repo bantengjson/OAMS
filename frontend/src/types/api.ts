@@ -248,13 +248,19 @@ export interface AssetListItem {
   id: string;
   assetCode: string;
   name: string;
-  category: AssetRef;
-  /** Optional: single-office setups leave it empty and the UI hides it. */
+  /** Item type (Jenis Barang). */
+  category: AssetRef & { golongan: Golongan; number: number };
   location: AssetLocationRef | null;
+  /** Current room; null for vehicles and land. */
+  room: { id: string; code: string; name: string } | null;
   department: AssetRef | null;
   responsibleEmployee: AssetEmployeeRef | null;
-  brand: string | null;
-  model: string | null;
+  /** Merk/Type/Warna. */
+  specification: string | null;
+  /** Tahun pengadaan; null = TT (imported without a year). */
+  acquisitionYear: number | null;
+  /** Sumber (donor); null = bought. */
+  source: string | null;
   condition: AssetCondition;
   status: AssetStatus;
   ownershipType: OwnershipType;
@@ -314,8 +320,10 @@ export interface AssetStatistics {
   archived: number;
   byStatus: Record<AssetStatus, number>;
   byCondition: Record<AssetCondition, number>;
-  byCategory: CountByRef[];
+  byCategory: (CountByRef & { label: string })[];
+  byRoom: CountByRef[];
   byOffice: CountByRef[];
+  groupItems: { types: number; units: number };
   byAcquisitionYear: { year: number; count: number }[];
   withoutAcquisitionYear: number;
   pendingMutations: number;
@@ -331,9 +339,8 @@ export interface PublicAsset {
   assetCode: string;
   name: string;
   category: { name: string };
-  brand: string | null;
-  model: string | null;
-  location: { name: string; path: string } | null;
+  specification: string | null;
+  room: { code: string; name: string } | null;
   status: AssetStatus;
   condition: AssetCondition;
   hasPhoto: boolean;

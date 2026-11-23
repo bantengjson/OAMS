@@ -80,8 +80,8 @@ export default function MutationDetailPage() {
             <dl className="grid grid-cols-[9rem_1fr] gap-y-2 text-sm">
               {m.toLocation ? (
                 <>
-                  <Row label="Lokasi sebelum">{m.fromLocation?.path ?? '-'}</Row>
-                  <Row label="Lokasi sesudah">{m.toLocation.path}</Row>
+                  <Row label="Ruangan sebelum">{m.fromLocation?.name ?? '-'}</Row>
+                  <Row label="Ruangan sesudah">{m.toLocation.name}</Row>
                 </>
               ) : null}
               <Row label="PJ sebelum">{m.fromResponsibleEmployee?.fullName ?? '-'}</Row>

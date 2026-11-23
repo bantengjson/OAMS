@@ -36,7 +36,7 @@ export default function StockOpnameReportPage() {
       </div>
 
       <header>
-        <p className="text-sm text-muted-foreground">Laporan stock opname · DPC PDI Perjuangan</p>
+        <p className="text-sm text-muted-foreground">Laporan stock opname · DPC PDI Perjuangan Kota Surabaya</p>
         <h2 className="text-2xl font-semibold tracking-tight">{s.name}</h2>
         <p className="text-sm text-muted-foreground">
           Tanggal {formatDate(s.plannedDate)} · Status {OPNAME_STATUS_LABEL[s.status]}

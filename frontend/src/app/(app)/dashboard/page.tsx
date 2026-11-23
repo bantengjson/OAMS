@@ -57,7 +57,7 @@ export default function DashboardPage() {
     <>
       <PageHeader
         title="Dashboard"
-        description="Ringkasan inventaris DPC PDI Perjuangan"
+        description="Ringkasan inventaris DPC PDI Perjuangan Kota Surabaya"
         actions={
           <>
             <HeaderPill>{todayLabel()}</HeaderPill>

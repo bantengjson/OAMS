@@ -1,6 +1,6 @@
 'use client';
 
-import { FRAME, framedStickerGeometry } from '@/lib/sticker-layout';
+import { FRAME, FRAME_CODE_WIDTH, fitCodeFontMm, framedStickerGeometry } from '@/lib/sticker-layout';
 
 /**
  * The office frame with a QR code in its bracket window, sized in millimetres
@@ -55,7 +55,7 @@ export function FramedSticker({
           textAlign: 'center',
           fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
           fontWeight: 700,
-          fontSize: `${g.code.fontMm}mm`,
+          fontSize: `${fitCodeFontMm(assetCode, FRAME_CODE_WIDTH * widthMm, g.code.fontMm)}mm`,
           lineHeight: 1,
           color: '#111',
           whiteSpace: 'nowrap',

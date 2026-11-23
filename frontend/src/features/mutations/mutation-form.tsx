@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/input';
 import { Field, FieldError, FieldHint, Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
+import { roomsApi } from '@/lib/api/rooms';
 import { EmployeeLookup } from '@/features/employees/employee-lookup';
 import { assetsApi } from '@/lib/api/assets';
 import { applyApiError } from '@/lib/api/form-errors';
@@ -39,7 +41,8 @@ export function MutationForm({
     defaultValues: { ...emptyMutationForm, assetId: initialAssetId ?? '' },
   });
   const { errors, isSubmitting } = form.formState;
-  const releaseResponsible = useWatch({ control: form.control, name: 'releaseResponsible' });
+  const responsibleMode = useWatch({ control: form.control, name: 'responsibleMode' });
+  const rooms = useQuery({ queryKey: ['rooms', 'active'], queryFn: () => roomsApi.list({ isActive: true }), staleTime: 60_000 });
 
   // Preselected asset (from ?assetId=): load it once to show its current state.
   const preselected = useQuery({
@@ -70,7 +73,7 @@ export function MutationForm({
       <Card>
         <CardHeader>
           <CardTitle>Barang</CardTitle>
-          <CardDescription>Penanggung jawab saat ini ditampilkan sebagai acuan.</CardDescription>
+          <CardDescription>Ruangan dan penanggung jawab saat ini ditampilkan sebagai acuan. Kode barang tidak berubah.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           <Controller
@@ -95,17 +98,35 @@ export function MutationForm({
 
       <Card>
         <CardHeader>
-          <CardTitle>Penanggung jawab baru</CardTitle>
+          <CardTitle>Perubahan</CardTitle>
           <CardDescription>
-            {shownAsset ? `Saat ini: ${shownAsset.responsibleEmployee?.fullName ?? 'tidak ada'}.` : 'Pilih barang terlebih dahulu.'}
+            {shownAsset
+              ? `Saat ini: ruangan ${shownAsset.room ? `${shownAsset.room.code} · ${shownAsset.room.name}` : '-'}, penanggung jawab ${shownAsset.responsibleEmployee?.fullName ?? 'tidak ada'}.`
+              : 'Pilih barang terlebih dahulu.'}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" className="h-4 w-4" {...form.register('releaseResponsible')} />
-            Lepaskan tanpa penanggung jawab baru
-          </label>
-          {!releaseResponsible ? (
+          <Field>
+            <Label htmlFor="toLocationId">Pindah ke ruangan</Label>
+            <Select id="toLocationId" aria-invalid={Boolean(errors.toLocationId)} {...form.register('toLocationId')}>
+              <option value="">Tidak pindah ruangan</option>
+              {rooms.data
+                ?.filter((r) => r.id !== shownAsset?.room?.id)
+                .map((r) => (
+                  <option key={r.id} value={r.id}>{r.code} · {r.name}</option>
+                ))}
+            </Select>
+            <FieldError>{errors.toLocationId?.message}</FieldError>
+          </Field>
+          <Field>
+            <Label htmlFor="responsibleMode">Penanggung jawab</Label>
+            <Select id="responsibleMode" {...form.register('responsibleMode')}>
+              <option value="keep">Tetap</option>
+              <option value="change">Ganti penanggung jawab</option>
+              <option value="release">Lepaskan tanpa penanggung jawab</option>
+            </Select>
+          </Field>
+          {responsibleMode === 'change' ? (
             <Field>
               <Label htmlFor="toResponsibleEmployeeId" required>Penanggung jawab baru</Label>
               <Controller

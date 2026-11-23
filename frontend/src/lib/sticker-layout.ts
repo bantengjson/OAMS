@@ -50,3 +50,15 @@ export function framedStickerPixels(widthPx: number) {
     code: { top: Math.round(FRAME.code.top * heightPx), fontPx: Math.round(FRAME.code.fontSize * heightPx) },
   };
 }
+
+/** Average width of a monospace glyph, as a fraction of the font size. */
+const MONO_GLYPH = 0.6;
+
+/** Font size (mm) that fits `text` in `maxWidthMm`, never larger than `baseMm`; office codes are ~20 characters. */
+export function fitCodeFontMm(text: string, maxWidthMm: number, baseMm: number): number {
+  const fit = maxWidthMm / (Math.max(text.length, 1) * MONO_GLYPH);
+  return Math.min(baseMm, Math.floor(fit * 100) / 100);
+}
+
+/** Width available for the code line inside the frame's bracket window (x 159..453 of 612 px). */
+export const FRAME_CODE_WIDTH = (453 - 159) / 612;

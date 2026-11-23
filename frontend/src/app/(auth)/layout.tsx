@@ -14,7 +14,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         </div>
       </div>
       <div className="w-full max-w-sm">{children}</div>
-      <p className="mt-8 text-xs text-muted-foreground">DPC PDI Perjuangan</p>
+      <p className="mt-8 text-xs text-muted-foreground">DPC PDI Perjuangan Kota Surabaya</p>
     </main>
   );
 }

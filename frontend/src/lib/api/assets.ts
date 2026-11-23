@@ -1,5 +1,4 @@
 import type {
-  AcquisitionMethod,
   AssetCondition,
   AssetDetail,
   AssetDocument,
@@ -10,6 +9,7 @@ import type {
   AssetStatus,
   Assignment,
   ConditionLog,
+  Golongan,
   OwnershipType,
   PageQuery,
   Paginated,
@@ -19,6 +19,7 @@ import { api, apiUpload, fetchBlob } from './client';
 export interface AssetQuery extends PageQuery {
   search?: string;
   categoryId?: string;
+  golongan?: Golongan;
   locationId?: string;
   departmentId?: string;
   responsibleEmployeeId?: string;
@@ -33,14 +34,17 @@ export interface AssetQuery extends PageQuery {
 export interface AssetInput {
   name: string;
   categoryId: string;
-  /** Optional; not shown in the single-office UI. */
+  /** Room; none for vehicles (BG) and land (NG 001). */
   locationId?: string | null;
+  /** Tahun pengadaan (part of the code). */
+  acquisitionYear: number;
+  /** Identical units created at once, 1-100 (create only). */
+  quantity?: number;
   ownershipType: OwnershipType;
-  acquisitionMethod: AcquisitionMethod;
   condition: AssetCondition;
   status: AssetStatus;
-  brand?: string | null;
-  model?: string | null;
+  specification?: string | null;
+  source?: string | null;
   serialNumber?: string | null;
   description?: string | null;
   acquisitionDate?: string | null;
@@ -51,8 +55,14 @@ export interface AssetInput {
   notes?: string | null;
 }
 
-/** Editable fields: location, responsible and condition change only via mutation / condition check. */
-export type AssetUpdateInput = Partial<Omit<AssetInput, 'locationId' | 'responsibleEmployeeId' | 'condition'>>;
+/**
+ * Editable fields: responsible and condition change only via mutation / condition check; jenis and
+ * room only while the sticker was never printed (the code is regenerated).
+ */
+export type AssetUpdateInput = Partial<Omit<AssetInput, 'responsibleEmployeeId' | 'condition' | 'quantity'>>;
+
+/** POST /assets: the first unit's detail plus every unit created. */
+export type CreatedAssets = AssetDetail & { units: { id: string; assetCode: string }[] };
 
 export interface ConditionLogInput {
   condition: AssetCondition;
@@ -64,7 +74,7 @@ export const assetsApi = {
   list: (query: AssetQuery = {}) => api.get<Paginated<AssetListItem>>('/assets', { query }),
   statistics: () => api.get<AssetStatistics>('/assets/statistics'),
   get: (id: string) => api.get<AssetDetail>(`/assets/${id}`),
-  create: (input: AssetInput) => api.post<AssetDetail>('/assets', input),
+  create: (input: AssetInput) => api.post<CreatedAssets>('/assets', input),
   update: (id: string, input: AssetUpdateInput) => api.patch<AssetDetail>(`/assets/${id}`, input),
   archive: (id: string, reason?: string) =>
     api.post<AssetDetail>(`/assets/${id}/archive`, reason ? { reason } : {}),

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FRAME, framedStickerGeometry } from './sticker-layout';
+import { FRAME, fitCodeFontMm, framedStickerGeometry } from './sticker-layout';
 
 describe('framedStickerGeometry', () => {
   it('keeps the 3:2 frame ratio and places the QR inside the bracket window', () => {
@@ -35,5 +35,18 @@ describe('framedStickerGeometry', () => {
   it('describes the artwork', () => {
     expect(FRAME.src).toBe('/sticker/frame-dpc.png');
     expect(FRAME.width / FRAME.height).toBeCloseTo(1.5, 3);
+  });
+});
+
+describe('fitCodeFontMm', () => {
+  it('shrinks a long office code to fit the sticker width', () => {
+    const font = fitCodeFontMm('NG.A/012/DPC/2023-01', 26, 2.6);
+    expect(font).toBeLessThan(2.6);
+    // monospace glyphs are about 0.6 em wide
+    expect(font * 0.6 * 'NG.A/012/DPC/2023-01'.length).toBeLessThanOrEqual(26);
+  });
+
+  it('keeps the base size when the code already fits', () => {
+    expect(fitCodeFontMm('BG/004/DPC/2023-01', 80, 2.6)).toBe(2.6);
   });
 });

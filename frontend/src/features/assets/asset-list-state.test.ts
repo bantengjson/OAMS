@@ -18,6 +18,13 @@ describe('parseAssetQuery', () => {
     expect(parseAssetQuery(toSearchParams(s))).toEqual(s);
   });
 
+  it('round-trips the room and golongan filters', () => {
+    const s = parseAssetQuery(new URLSearchParams(`locationId=${CAT}&golongan=BG`));
+    expect(s).toMatchObject({ locationId: CAT, golongan: 'BG' });
+    expect(parseAssetQuery(toSearchParams(s))).toEqual(s);
+    expect(parseAssetQuery(new URLSearchParams('locationId=abc&golongan=XX'))).toMatchObject({ locationId: '', golongan: '' });
+  });
+
   it('omits defaults when serialising', () => {
     expect(toSearchParams(DEFAULT_LIST_STATE).toString()).toBe('');
   });

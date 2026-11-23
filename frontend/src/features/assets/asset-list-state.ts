@@ -23,9 +23,12 @@ export function parseAssetQuery(params: URLSearchParams): AssetListState {
   const sort = oneOf(SORT_FIELDS, params.get('sort'));
   const order = oneOf(['asc', 'desc'] as const, params.get('order'));
   const categoryId = params.get('categoryId') ?? '';
+  const locationId = params.get('locationId') ?? '';
   return {
     search: (params.get('search') ?? '').slice(0, 100),
     categoryId: UUID.test(categoryId) ? categoryId : '',
+    golongan: oneOf(['BG', 'NG'] as const, params.get('golongan')),
+    locationId: UUID.test(locationId) ? locationId : '',
     status: oneOf(ASSET_STATUSES, params.get('status')),
     condition: oneOf(ASSET_CONDITIONS, params.get('condition')),
     ownershipType: oneOf(OWNERSHIP_TYPES, params.get('ownershipType')),
@@ -41,6 +44,8 @@ export function toSearchParams(state: AssetListState): URLSearchParams {
   const p = new URLSearchParams();
   if (state.search.trim()) p.set('search', state.search.trim());
   if (state.categoryId) p.set('categoryId', state.categoryId);
+  if (state.golongan) p.set('golongan', state.golongan);
+  if (state.locationId) p.set('locationId', state.locationId);
   if (state.status) p.set('status', state.status);
   if (state.condition) p.set('condition', state.condition);
   if (state.ownershipType) p.set('ownershipType', state.ownershipType);
@@ -81,7 +86,9 @@ export function selectionFor(sel: { key: string; ids: string[] }, key: string): 
 
 /** The chip counts cover all live assets; true when other filters narrow the table, so the page can say so. */
 export function chipCountsIgnoreFilters(state: AssetListState): boolean {
-  return Boolean(state.search.trim() || state.categoryId || state.condition || state.ownershipType || state.includeArchived);
+  return Boolean(
+    state.search.trim() || state.categoryId || state.golongan || state.locationId || state.condition || state.ownershipType || state.includeArchived,
+  );
 }
 
 /** A page past the end (stale or hand-edited URL) becomes the last page; an empty list keeps the page. */

@@ -10,8 +10,9 @@ export interface PublicCardData {
   assetCode: string;
   name: string;
   categoryName: string;
-  brand: string | null;
-  model: string | null;
+  specification: string | null;
+  /** "A · Sekretariat"; null for vehicles and land. */
+  roomLabel: string | null;
   status: AssetStatus;
   condition: AssetCondition;
   hasPhoto: boolean;
@@ -27,7 +28,6 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 }
 
 export function PublicAssetCard({ token, data, footer }: { token: string; data: PublicCardData; footer?: ReactNode }) {
-  const brandModel = [data.brand, data.model].filter(Boolean).join(' ');
   return (
     <Card className="overflow-hidden">
       {data.hasPhoto ? (
@@ -48,8 +48,9 @@ export function PublicAssetCard({ token, data, footer }: { token: string; data: 
           </div>
         </div>
         <dl className="grid grid-cols-[7rem_1fr] gap-y-2 text-sm">
-          <Row label="Kategori">{data.categoryName}</Row>
-          <Row label="Merek / tipe">{brandModel || '-'}</Row>
+          <Row label="Jenis">{data.categoryName}</Row>
+          <Row label="Ruangan">{data.roomLabel ?? '-'}</Row>
+          <Row label="Spesifikasi">{data.specification || '-'}</Row>
         </dl>
         {footer}
       </CardContent>

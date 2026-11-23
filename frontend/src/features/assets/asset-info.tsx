@@ -29,12 +29,16 @@ export function AssetInfo({ asset }: { asset: AssetDetail }) {
         <CardHeader className="border-b border-border pb-3"><CardTitle>Identitas</CardTitle></CardHeader>
         <CardContent>
           <dl className="grid grid-cols-[9.5rem_1fr] gap-x-3 gap-y-2.5 text-sm">
-            <Row label="Kode inventaris"><span className="font-mono">{asset.assetCode}</span></Row>
+            <Row label="Kode barang"><span className="font-mono">{asset.assetCode}</span></Row>
             <Row label="Nama">{asset.name}</Row>
-            <Row label="Kategori">{asset.category.name}</Row>
-            <Row label="Merek">{dash(asset.brand)}</Row>
-            <Row label="Tipe / model">{dash(asset.model)}</Row>
-            <Row label="Nomor seri"><span className="font-mono">{dash(asset.serialNumber)}</span></Row>
+            <Row label="Jenis">
+              {asset.category.golongan} {String(asset.category.number).padStart(3, '0')} · {asset.category.name}
+            </Row>
+            <Row label="Ruangan">{asset.room ? `${asset.room.code} · ${asset.room.name}` : '-'}</Row>
+            <Row label="Spesifikasi">{dash(asset.specification)}</Row>
+            <Row label="Tahun pengadaan">{asset.acquisitionYear ?? 'TT (belum diketahui)'}</Row>
+            <Row label="Sumber">{asset.source ?? 'Pembelian'}</Row>
+            <Row label="Nomor seri / polisi"><span className="font-mono">{dash(asset.serialNumber)}</span></Row>
             <Row label="Deskripsi">{dash(asset.description)}</Row>
           </dl>
         </CardContent>

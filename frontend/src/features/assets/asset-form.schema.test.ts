@@ -1,99 +1,103 @@
-import { assetFormSchema, emptyAssetForm, toAssetPayload, toAssetUpdatePayload } from './asset-form.schema';
+import {
+  assetFormSchema,
+  emptyAssetForm,
+  placementError,
+  toAssetPayload,
+  toAssetUpdatePayload,
+} from './asset-form.schema';
 
 const valid = {
   ...emptyAssetForm,
   name: 'Laptop Kerja',
   categoryId: '11111111-1111-4111-8111-111111111111',
+  locationId: '22222222-2222-4222-8222-222222222222',
+  acquisitionYear: '2025',
   ownershipType: 'OFFICE' as const,
-  acquisitionMethod: 'PURCHASE' as const,
   condition: 'GOOD' as const,
   status: 'AVAILABLE' as const,
 };
 
+const NG = { golongan: 'NG' as const, number: 12 };
+const BG = { golongan: 'BG' as const, number: 4 };
+const LAND = { golongan: 'NG' as const, number: 1 };
+
 describe('assetFormSchema', () => {
-  it('requires name and category but no location', () => {
-    const result = assetFormSchema.safeParse({ ...valid, name: ' ', categoryId: '' });
-    expect(result.success).toBe(false);
+  it('requires name, type and year', () => {
+    const result = assetFormSchema.safeParse({ ...valid, name: ' ', categoryId: '', acquisitionYear: '' });
     const fields = result.success ? [] : result.error.issues.map((i) => i.path[0]);
-    expect(fields).toEqual(expect.arrayContaining(['name', 'categoryId']));
-    expect(fields).not.toContain('locationId');
-    expect(assetFormSchema.safeParse({ ...valid, locationId: undefined }).success).toBe(true);
+    expect(fields).toEqual(expect.arrayContaining(['name', 'categoryId', 'acquisitionYear']));
+  });
+
+  it('takes a four-digit year and a quantity of 1-100', () => {
+    expect(assetFormSchema.safeParse({ ...valid, acquisitionYear: '23' }).success).toBe(false);
+    expect(assetFormSchema.safeParse({ ...valid, quantity: '0' }).success).toBe(false);
+    expect(assetFormSchema.safeParse({ ...valid, quantity: '101' }).success).toBe(false);
+    expect(assetFormSchema.safeParse({ ...valid, quantity: '12' }).success).toBe(true);
   });
 
   it('accepts a plain numeric price and rejects thousand separators or negatives', () => {
-    expect(assetFormSchema.safeParse({ ...valid, purchasePrice: '1500000' }).success).toBe(true);
     expect(assetFormSchema.safeParse({ ...valid, purchasePrice: '1500000.50' }).success).toBe(true);
-    expect(assetFormSchema.safeParse({ ...valid, purchasePrice: '' }).success).toBe(true);
     expect(assetFormSchema.safeParse({ ...valid, purchasePrice: '1.500.000' }).success).toBe(false);
     expect(assetFormSchema.safeParse({ ...valid, purchasePrice: '-5' }).success).toBe(false);
   });
+});
 
-  it('validates the acquisition date format when given', () => {
-    expect(assetFormSchema.safeParse({ ...valid, acquisitionDate: '2026-01-15' }).success).toBe(true);
-    expect(assetFormSchema.safeParse({ ...valid, acquisitionDate: '15/01/2026' }).success).toBe(false);
+describe('placementError', () => {
+  it('needs a room for ordinary NG items', () => {
+    expect(placementError(NG, '')).toBe('Ruangan wajib diisi.');
+    expect(placementError(NG, 'room')).toBeNull();
+  });
+
+  it('refuses a room for vehicles and land', () => {
+    expect(placementError(BG, 'room')).toBe('Kendaraan tidak memakai ruangan.');
+    expect(placementError(BG, '')).toBeNull();
+    expect(placementError(LAND, 'room')).toBe('Tanah & bangunan tidak memakai ruangan.');
   });
 });
 
 describe('toAssetPayload', () => {
-  it('turns empty optionals into null and the price into a number', () => {
-    const payload = toAssetPayload({
-      ...valid,
-      brand: '  Lenovo ',
-      model: '',
-      purchasePrice: '1500000',
-      acquisitionDate: '',
-      departmentId: '',
-      responsibleEmployeeId: '',
-      notes: '',
-    });
+  it('sends year, specification, source and quantity; empty optionals become null', () => {
+    const payload = toAssetPayload({ ...valid, specification: '  Lenovo T14 ', source: '', quantity: '3', purchasePrice: '1500000' }, NG);
     expect(payload).toMatchObject({
       name: 'Laptop Kerja',
-      brand: 'Lenovo',
-      model: null,
+      acquisitionYear: 2025,
+      specification: 'Lenovo T14',
+      source: null,
+      quantity: 3,
+      locationId: valid.locationId,
       purchasePrice: 1500000,
-      acquisitionDate: null,
       departmentId: null,
-      responsibleEmployeeId: null,
-      notes: null,
     });
+    expect(payload).not.toHaveProperty('acquisitionMethod');
   });
 
-  it('keeps a filled price and date', () => {
-    const payload = toAssetPayload({ ...valid, purchasePrice: '250000.75', acquisitionDate: '2026-02-01' });
-    expect(payload.purchasePrice).toBe(250000.75);
-    expect(payload.acquisitionDate).toBe('2026-02-01');
+  it('drops the room for a vehicle', () => {
+    expect(toAssetPayload({ ...valid }, BG).locationId).toBeNull();
   });
 });
 
 describe('toAssetUpdatePayload', () => {
-  it('never sends the fields that only a mutation or a condition check may change', () => {
-    const payload = toAssetUpdatePayload({
-      ...valid,
-      responsibleEmployeeId: '33333333-3333-4333-8333-333333333333',
-      condition: 'NEEDS_REPAIR',
-      status: 'STORED',
-      notes: 'disimpan',
-    });
-    expect(payload).not.toHaveProperty('locationId');
+  it('never sends responsible, condition or quantity; keeps jenis and room while unprinted', () => {
+    const payload = toAssetUpdatePayload({ ...valid, responsibleEmployeeId: 'x', condition: 'NEEDS_REPAIR', status: 'STORED', quantity: '4' }, NG, false);
     expect(payload).not.toHaveProperty('responsibleEmployeeId');
     expect(payload).not.toHaveProperty('condition');
-    expect(payload).toMatchObject({ status: 'STORED', notes: 'disimpan', name: 'Laptop Kerja' });
+    expect(payload).not.toHaveProperty('quantity');
+    expect(payload).toMatchObject({ categoryId: valid.categoryId, locationId: valid.locationId, status: 'STORED' });
   });
-});
 
-describe('toAssetUpdatePayload while borrowed', () => {
-  it('drops a loan-managed status so the rest of the form can still be saved', () => {
-    const payload = toAssetUpdatePayload({ ...valid, status: 'BORROWED', notes: 'masih dipinjam' });
-    expect(payload).not.toHaveProperty('status');
-    expect(payload).toMatchObject({ notes: 'masih dipinjam' });
-    expect(toAssetUpdatePayload({ ...valid, status: 'STORED' })).toMatchObject({ status: 'STORED' });
+  it('leaves jenis and room out once the sticker was printed', () => {
+    const payload = toAssetUpdatePayload({ ...valid }, NG, true);
+    expect(payload).not.toHaveProperty('categoryId');
+    expect(payload).not.toHaveProperty('locationId');
   });
-});
 
-describe('toAssetUpdatePayload while a repair or disposal owns the status', () => {
-  it.each(['UNDER_MAINTENANCE', 'MISSING', 'DISPOSED'] as const)('drops %s so other fields can still be saved', (status) => {
-    const payload = toAssetUpdatePayload({ ...valid, status, name: 'Printer Lantai 1' });
+  it('does not send an empty year (an imported TT item stays TT)', () => {
+    expect(toAssetUpdatePayload({ ...valid, acquisitionYear: '' }, NG, false)).not.toHaveProperty('acquisitionYear');
+  });
+
+  it.each(['BORROWED', 'UNDER_MAINTENANCE', 'MISSING', 'DISPOSED'] as const)('drops the flow status %s', (status) => {
+    const payload = toAssetUpdatePayload({ ...valid, status, name: 'Printer' }, NG, false);
     expect(payload).not.toHaveProperty('status');
-    expect(payload).toMatchObject({ name: 'Printer Lantai 1' });
+    expect(payload).toMatchObject({ name: 'Printer' });
   });
 });

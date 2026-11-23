@@ -1,5 +1,6 @@
 'use client';
 
+import { fitCodeFontMm } from '@/lib/sticker-layout';
 import { useQuery } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { chunk, sheetLayoutFor, stickerDims, type StickerSpec } from '@/lib/print-layout';
@@ -71,7 +72,9 @@ export function PrintSheet({
                 ) : (
                   <span className="text-[2.5mm] text-slate-400">...</span>
                 )}
-                <span className="code">{item.assetCode}</span>
+                <span className="code" style={{ fontSize: `${fitCodeFontMm(item.assetCode, widthMm * 0.92, 2.6)}mm` }}>
+                  {item.assetCode}
+                </span>
               </div>
             );
             if (!controls) return sticker;

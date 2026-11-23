@@ -1,5 +1,5 @@
 import { qrDataUrl } from './qr-image';
-import { FRAME, framedStickerPixels } from './sticker-layout';
+import { FRAME, FRAME_CODE_WIDTH, fitCodeFontMm, framedStickerPixels } from './sticker-layout';
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -27,7 +27,9 @@ export async function framedStickerPng(qrText: string, assetCode: string, widthP
   ctx.fillRect(g.qr.left, g.qr.top, g.qr.size, g.qr.size);
   ctx.drawImage(qr, g.qr.left, g.qr.top, g.qr.size, g.qr.size);
   ctx.fillStyle = '#111';
-  ctx.font = `700 ${g.code.fontPx}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
+  // Units cancel out: the same fit works in pixels.
+  const fontPx = fitCodeFontMm(assetCode, FRAME_CODE_WIDTH * widthPx, g.code.fontPx);
+  ctx.font = `700 ${fontPx}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
   ctx.fillText(assetCode, g.widthPx / 2, g.code.top);
