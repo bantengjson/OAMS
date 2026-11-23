@@ -1,7 +1,7 @@
 'use client';
 
 import type { UseQueryResult } from '@tanstack/react-query';
-import { AlertTriangle, ArrowLeftRight, ClipboardList, Clock, HandCoins, PackageX, Wrench } from 'lucide-react';
+import { AlertTriangle, ArrowLeftRight, ClipboardList, Clock, HandCoins, PackageX, Utensils, Wrench } from 'lucide-react';
 import Link from 'next/link';
 import { Alert } from '@/components/ui/alert';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -47,6 +47,10 @@ export function OperationsPanel({
       { key: 'report', label: 'Laporan kerusakan baru', value: s?.openMaintenance, icon: AlertTriangle, tone: FLOW_TONE.damageReport, href: '/maintenance?status=REPORTED', alertOnly: true },
       { key: 'out', label: 'Barang dilepas', value: s?.disposed, icon: PackageX, tone: FLOW_TONE.disposal, href: '/disposals' },
     );
+  }
+  // Counted goods (kitchenware) are not in the asset total; show them on their own.
+  if (s && s.groupItems.units > 0) {
+    items.push({ key: 'group', label: `Barang kelompok (${s.groupItems.types} jenis)`, value: s.groupItems.units, icon: Utensils, tone: 'teal', href: '/assets?tab=kelompok' });
   }
   const opname = canOpname ? s?.openOpname : null;
   return (

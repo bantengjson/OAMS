@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { PageSpinner } from '@/components/ui/spinner';
 import { Tabs } from '@/components/ui/tabs';
 import { OpnameCounters } from '@/features/stock-opnames/opname-counters';
+import { OpnameGroupLines } from '@/features/stock-opnames/opname-group-lines';
 import { OpnameItemList } from '@/features/stock-opnames/opname-item-list';
 import { OpnameScanner } from '@/features/stock-opnames/opname-scanner';
 import { getErrorMessage } from '@/lib/api/form-errors';
@@ -180,6 +181,8 @@ export default function StockOpnameDetailPage() {
         </div>
       </div>
 
+      <OpnameGroupLines opnameId={s.id} canCount={canScan} />
+
       <ConfirmDialog
         open={pending === 'close'}
         onClose={() => setPending(null)}
@@ -188,8 +191,8 @@ export default function StockOpnameDetailPage() {
         confirmLabel="Ya, tutup"
         loading={finish.isPending}
       >
-        Barang yang belum dipindai akan dinilai otomatis: sedang dipinjam, sedang diperbaiki, atau tidak ditemukan. Setelah
-        ditutup, pemindaian tidak bisa dilanjutkan.
+        Barang yang belum dipindai akan dinilai otomatis: sedang dipinjam, sedang diperbaiki, atau tidak ditemukan. Hasil
+        hitung barang kelompok menjadi jumlah baru. Setelah ditutup, pemindaian tidak bisa dilanjutkan.
       </ConfirmDialog>
       <ConfirmDialog
         open={pending === 'cancel'}

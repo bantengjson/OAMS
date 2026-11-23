@@ -1,30 +1,53 @@
-'use client';
+"use client";
 
-import { useQuery } from '@tanstack/react-query';
-import { Plus, Printer } from 'lucide-react';
-import Link from 'next/link';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useState } from 'react';
-import { Alert } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { ColumnMenu } from '@/components/ui/column-menu';
-import { BulkBar } from '@/components/ui/filter-bar';
-import { HeaderPill, PageHeader } from '@/components/ui/page-header';
-import { Pagination } from '@/components/ui/pagination';
-import { PageSpinner } from '@/components/ui/spinner';
-import { StatusChips } from '@/components/ui/status-chips';
-import { AssetFilters, toAssetQuery } from '@/features/assets/asset-filters';
-import { chipCountsIgnoreFilters, clampPage, parseAssetQuery, selectionFor, statusChipItems, toSearchParams } from '@/features/assets/asset-list-state';
-import type { AssetListState, ChipKey } from '@/features/assets/asset-list-state';
-import { ASSET_COLUMNS, ASSET_DEFAULT_COLUMNS, AssetTable } from '@/features/assets/asset-table';
-import { useDebouncedValue } from '@/hooks/use-debounced-value';
-import { assetsApi } from '@/lib/api/assets';
-import { getErrorMessage } from '@/lib/api/form-errors';
-import { useAuth } from '@/lib/auth/use-auth';
-import { loadColumnPrefs, saveColumnPrefs } from '@/lib/column-prefs';
+import { useQuery } from "@tanstack/react-query";
+import { ChevronDown, Download, Plus, Printer } from "lucide-react";
+import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { downloadBlob } from "@/components/ui/auth-image";
+import { ColumnMenu } from "@/components/ui/column-menu";
+import { DropdownMenu } from "@/components/ui/dropdown-menu";
+import { BulkBar } from "@/components/ui/filter-bar";
+import { HeaderPill, PageHeader } from "@/components/ui/page-header";
+import { Pagination } from "@/components/ui/pagination";
+import { PageSpinner } from "@/components/ui/spinner";
+import { StatusChips } from "@/components/ui/status-chips";
+import { Tabs } from "@/components/ui/tabs";
+import { AssetFilters, toAssetQuery } from "@/features/assets/asset-filters";
+import {
+  chipCountsIgnoreFilters,
+  clampPage,
+  parseAssetQuery,
+  selectionFor,
+  statusChipItems,
+  toSearchParams,
+} from "@/features/assets/asset-list-state";
+import type {
+  AssetListState,
+  ChipKey,
+} from "@/features/assets/asset-list-state";
+import {
+  ASSET_COLUMNS,
+  ASSET_DEFAULT_COLUMNS,
+  AssetTable,
+} from "@/features/assets/asset-table";
+import { GroupItemsPanel } from "@/features/group-items/group-items-panel";
+import { inventoryTab } from "@/features/group-items/group-items-model";
+import type { InventoryTab } from "@/features/group-items/group-items-model";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { assetsApi } from "@/lib/api/assets";
+import { getErrorMessage } from "@/lib/api/form-errors";
+import { reportsApi } from "@/lib/api/reports";
+import type { InventoryReportMode } from "@/lib/api/reports";
+import { toast } from "sonner";
+import { useAuth } from "@/lib/auth/use-auth";
+import { loadColumnPrefs, saveColumnPrefs } from "@/lib/column-prefs";
 
 const PAGE_SIZE = 20;
-const TABLE_ID = 'assets';
+const TABLE_ID = "assets";
 
 export default function AssetsPage() {
   return (
@@ -40,15 +63,40 @@ function AssetsContent() {
   const pathname = usePathname();
   const params = useSearchParams();
   const state = parseAssetQuery(new URLSearchParams(params.toString()));
+  const tab = inventoryTab(new URLSearchParams(params.toString()));
+  const switchTab = (next: InventoryTab) => {
+    // Each tab keeps its own filters; switching starts from a clean URL.
+    window.history.replaceState(
+      null,
+      "",
+      next === "kelompok" ? `${pathname}?tab=kelompok` : pathname,
+    );
+  };
+  const downloadReport = async (mode: InventoryReportMode) => {
+    try {
+      const blob = await reportsApi.inventory(mode);
+      const date = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Jakarta",
+      }).format(new Date());
+      downloadBlob(
+        blob,
+        `Daftar Inventaris DPC ${mode === "per-room" ? "per ruangan" : "keseluruhan"} ${date}.xlsx`,
+      );
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    }
+  };
   const listKey = toSearchParams(state).toString();
 
   // Changes are merged into the URL as it is right now (window.location, which replaceState updates
   // synchronously), not into the last render's state, so quick changes in a row all land.
   // replaceState also skips the server round trip that router.replace would make.
   const update = (next: Partial<AssetListState>) => {
-    const current = parseAssetQuery(new URLSearchParams(window.location.search));
+    const current = parseAssetQuery(
+      new URLSearchParams(window.location.search),
+    );
     const qs = toSearchParams({ ...current, ...next }).toString();
-    window.history.replaceState(null, '', qs ? `${pathname}?${qs}` : pathname);
+    window.history.replaceState(null, "", qs ? `${pathname}?${qs}` : pathname);
   };
 
   // Typing stays local; the URL (and the query) follow the debounced text.
@@ -61,113 +109,218 @@ function AssetsContent() {
   }
   const debounced = useDebouncedValue(searchText);
   useEffect(() => {
-    if (debounced.trim() !== state.search) update({ search: debounced, page: 1 });
+    if (debounced.trim() !== state.search)
+      update({ search: debounced, page: 1 });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only the debounced text drives this
   }, [debounced]);
 
   // Safe to read storage here: this content only renders in the browser (behind the auth check).
-  const [visible, setVisible] = useState<Set<string>>(() => loadColumnPrefs(TABLE_ID, ASSET_COLUMNS, ASSET_DEFAULT_COLUMNS));
+  const [visible, setVisible] = useState<Set<string>>(() =>
+    loadColumnPrefs(TABLE_ID, ASSET_COLUMNS, ASSET_DEFAULT_COLUMNS),
+  );
 
-  const [selection, setSelection] = useState<{ key: string; ids: string[] }>({ key: listKey, ids: [] });
+  const [selection, setSelection] = useState<{ key: string; ids: string[] }>({
+    key: listKey,
+    ids: [],
+  });
   const selected = selectionFor(selection, listKey);
-  const canPrint = hasPermission('qr.generate');
+  const canPrint = hasPermission("qr.generate");
 
-  const query = { ...toAssetQuery(state, state.search), sort: state.sort, order: state.order, page: state.page, pageSize: PAGE_SIZE };
-  const list = useQuery({ queryKey: ['assets', query], queryFn: () => assetsApi.list(query) });
+  const query = {
+    ...toAssetQuery(state, state.search),
+    sort: state.sort,
+    order: state.order,
+    page: state.page,
+    pageSize: PAGE_SIZE,
+  };
+  const list = useQuery({
+    queryKey: ["assets", query],
+    queryFn: () => assetsApi.list(query),
+  });
   // A stale or hand-edited ?page past the end goes to the last page instead of an empty table.
   const totalPages = list.data?.meta.totalPages;
   useEffect(() => {
-    if (totalPages !== undefined && clampPage(state.page, totalPages) !== state.page) update({ page: clampPage(state.page, totalPages) });
+    if (
+      totalPages !== undefined &&
+      clampPage(state.page, totalPages) !== state.page
+    )
+      update({ page: clampPage(state.page, totalPages) });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reacts to the loaded page count only
   }, [totalPages, state.page]);
-  const stats = useQuery({ queryKey: ['assets', 'statistics'], queryFn: assetsApi.statistics });
+  const stats = useQuery({
+    queryKey: ["assets", "statistics"],
+    queryFn: assetsApi.statistics,
+  });
 
-  const chipValue: ChipKey = state.status || 'ALL';
+  const chipValue: ChipKey = state.status || "ALL";
 
   return (
     <>
       <PageHeader
         title="Inventaris"
         description="Semua barang milik dan titipan kantor. Klik baris untuk melihat detail."
-        meta={stats.data ? <HeaderPill>{stats.data.active} barang aktif</HeaderPill> : null}
+        meta={
+          stats.data ? (
+            <HeaderPill>{stats.data.active} barang aktif</HeaderPill>
+          ) : null
+        }
         actions={
           <>
+            <DropdownMenu
+              triggerLabel="Unduh Daftar Inventaris"
+              trigger={
+                <Button
+                  variant="outline"
+                  leftIcon={<Download className="h-4 w-4" />}
+                >
+                  Unduh Daftar Inventaris{" "}
+                  <ChevronDown className="ml-1 h-4 w-4" />
+                </Button>
+              }
+              items={[
+                {
+                  label: "Per ruangan (.xlsx)",
+                  onSelect: () => downloadReport("per-room"),
+                },
+                {
+                  label: "Keseluruhan (.xlsx)",
+                  onSelect: () => downloadReport("overall"),
+                },
+              ]}
+            />
             {canPrint ? (
               <Link href="/qr/print">
-                <Button variant="outline" leftIcon={<Printer className="h-4 w-4" />}>Cetak QR</Button>
+                <Button
+                  variant="outline"
+                  leftIcon={<Printer className="h-4 w-4" />}
+                >
+                  Cetak QR
+                </Button>
               </Link>
             ) : null}
-            {hasPermission('assets.create') ? (
+            {hasPermission("assets.create") ? (
               <Link href="/assets/create">
-                <Button leftIcon={<Plus className="h-4 w-4" />}>Tambah barang</Button>
+                <Button leftIcon={<Plus className="h-4 w-4" />}>
+                  Tambah barang
+                </Button>
               </Link>
             ) : null}
           </>
         }
       />
 
-      {stats.data ? (
-        <div className="flex flex-col gap-1.5">
-        <StatusChips<ChipKey>
-          items={statusChipItems(stats.data, { selected: state.status, includeArchived: state.includeArchived })}
-          value={chipValue}
-          onChange={(key) => update({ status: key === 'ALL' ? '' : key, page: 1 })}
+      <Tabs<InventoryTab>
+        items={[
+          { key: "barang", label: "Barang", badge: stats.data?.active },
+          {
+            key: "kelompok",
+            label: "Barang Kelompok",
+            badge: stats.data?.groupItems.units,
+          },
+        ]}
+        value={tab}
+        onChange={switchTab}
+      />
+
+      {tab === "kelompok" ? (
+        <GroupItemsPanel
+          canCreate={hasPermission("assets.create")}
+          canUpdate={hasPermission("assets.update")}
+          canArchive={hasPermission("assets.archive")}
         />
-        {chipCountsIgnoreFilters(state) ? (
-          <p className="text-xs text-muted-foreground">Jumlah pada tombol status menghitung semua barang aktif, tanpa filter lain.</p>
-        ) : null}
-        </div>
-      ) : null}
+      ) : (
+        <>
+          {stats.data ? (
+            <div className="flex flex-col gap-1.5">
+              <StatusChips<ChipKey>
+                items={statusChipItems(stats.data, {
+                  selected: state.status,
+                  includeArchived: state.includeArchived,
+                })}
+                value={chipValue}
+                onChange={(key) =>
+                  update({ status: key === "ALL" ? "" : key, page: 1 })
+                }
+              />
+              {chipCountsIgnoreFilters(state) ? (
+                <p className="text-xs text-muted-foreground">
+                  Jumlah pada tombol status menghitung semua barang aktif, tanpa
+                  filter lain.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
 
-      <AssetFilters
-        value={{ ...state, search: searchText }}
-        onChange={(next) => {
-          if (next.search !== searchText) {
-            setSearchText(next.search);
-            return;
-          }
-          // The search box follows its own debounced path; keep whatever search the URL has.
-          const { search: _typed, ...filters } = next;
-          void _typed;
-          update({ ...filters, page: 1 });
-        }}
-        right={
-          <ColumnMenu
-            columns={ASSET_COLUMNS}
-            visible={visible}
+          <AssetFilters
+            value={{ ...state, search: searchText }}
             onChange={(next) => {
-              setVisible(next);
-              saveColumnPrefs(TABLE_ID, next);
+              if (next.search !== searchText) {
+                setSearchText(next.search);
+                return;
+              }
+              // The search box follows its own debounced path; keep whatever search the URL has.
+              const { search: _typed, ...filters } = next;
+              void _typed;
+              update({ ...filters, page: 1 });
             }}
+            right={
+              <ColumnMenu
+                columns={ASSET_COLUMNS}
+                visible={visible}
+                onChange={(next) => {
+                  setVisible(next);
+                  saveColumnPrefs(TABLE_ID, next);
+                }}
+              />
+            }
           />
-        }
-      />
 
-      {canPrint ? (
-        <BulkBar count={selected.length} onClear={() => setSelection({ key: listKey, ids: [] })}>
-          <Button
-            size="sm"
-            variant="outline"
-            leftIcon={<Printer className="h-4 w-4" />}
-            onClick={() => router.push(`/qr/print?ids=${selected.join(',')}`)}
-          >
-            Cetak QR terpilih
-          </Button>
-        </BulkBar>
-      ) : null}
+          {canPrint ? (
+            <BulkBar
+              count={selected.length}
+              onClear={() => setSelection({ key: listKey, ids: [] })}
+            >
+              <Button
+                size="sm"
+                variant="outline"
+                leftIcon={<Printer className="h-4 w-4" />}
+                onClick={() =>
+                  router.push(`/qr/print?ids=${selected.join(",")}`)
+                }
+              >
+                Cetak QR terpilih
+              </Button>
+            </BulkBar>
+          ) : null}
 
-      {list.isError ? <Alert variant="error">{getErrorMessage(list.error)}</Alert> : null}
-      <AssetTable
-        rows={list.data?.data ?? []}
-        loading={list.isPending}
-        visible={visible}
-        sort={state.sort}
-        order={state.order}
-        onSort={(sort, order) => update({ sort, order, page: 1 })}
-        selection={canPrint ? { ids: selected, onChange: (ids) => setSelection({ key: listKey, ids }) } : undefined}
-        canEdit={hasPermission('assets.update')}
-      />
-      {list.data ? <Pagination meta={list.data.meta} onPageChange={(page) => update({ page })} /> : null}
+          {list.isError ? (
+            <Alert variant="error">{getErrorMessage(list.error)}</Alert>
+          ) : null}
+          <AssetTable
+            rows={list.data?.data ?? []}
+            loading={list.isPending}
+            visible={visible}
+            sort={state.sort}
+            order={state.order}
+            onSort={(sort, order) => update({ sort, order, page: 1 })}
+            selection={
+              canPrint
+                ? {
+                    ids: selected,
+                    onChange: (ids) => setSelection({ key: listKey, ids }),
+                  }
+                : undefined
+            }
+            canEdit={hasPermission("assets.update")}
+          />
+          {list.data ? (
+            <Pagination
+              meta={list.data.meta}
+              onPageChange={(page) => update({ page })}
+            />
+          ) : null}
+        </>
+      )}
     </>
   );
 }

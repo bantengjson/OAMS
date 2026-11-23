@@ -106,6 +106,54 @@ export function OpnameReportView({ report, canApply }: { report: Report; canAppl
           </section>
         );
       })}
+      {report.groupLines ? <GroupLinesReport lines={report.groupLines} /> : null}
     </div>
+  );
+}
+
+function GroupLinesReport({ lines }: { lines: NonNullable<Report['groupLines']> }) {
+  const sections = [
+    { key: 'different', title: 'Barang kelompok: selisih (jumlah baru dipakai)', rows: lines.different },
+    { key: 'notCounted', title: 'Barang kelompok: tidak dihitung (jumlah tetap)', rows: lines.notCounted },
+    { key: 'matched', title: 'Barang kelompok: sesuai', rows: lines.matched },
+  ];
+  const fmt = (c: { good: number; needsRepair: number; damaged: number } | null) =>
+    c ? `${c.good} / ${c.needsRepair} / ${c.damaged}` : '-';
+  return (
+    <>
+      {sections
+        .filter((s) => s.rows.length > 0)
+        .map((s) => (
+          <section key={s.key} className="report-section flex flex-col gap-2">
+            <h2 className="text-sm font-semibold text-foreground">
+              {s.title} ({s.rows.length})
+            </h2>
+            <div className="overflow-x-auto rounded-md border border-border">
+              <table className="w-full text-sm">
+                <thead className="bg-muted text-left text-xs text-muted-foreground">
+                  <tr>
+                    <th className="px-3 py-2">Kode</th>
+                    <th className="px-3 py-2">Nama</th>
+                    <th className="px-3 py-2">Ruangan</th>
+                    <th className="px-3 py-2">Tercatat (B/PP/R)</th>
+                    <th className="px-3 py-2">Dihitung (B/PP/R)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {s.rows.map((l) => (
+                    <tr key={l.id} className="border-t border-border">
+                      <td className="px-3 py-2 font-mono text-xs">{l.groupItem.code}</td>
+                      <td className="px-3 py-2">{l.groupItem.name}</td>
+                      <td className="px-3 py-2">{l.groupItem.room.code} · {l.groupItem.room.name}</td>
+                      <td className="px-3 py-2 tabular-nums">{fmt(l.expected)}</td>
+                      <td className="px-3 py-2 tabular-nums">{fmt(l.counted)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        ))}
+    </>
   );
 }

@@ -1,13 +1,4 @@
-import type {
-  AssetCondition,
-  OpnameItem,
-  OpnameReport,
-  OpnameResult,
-  PageQuery,
-  Paginated,
-  ScanResult,
-  StockOpname,
-} from '@/types/api';
+import type { AssetCondition, OpnameGroupLine, OpnameItem, OpnameReport, OpnameResult, PageQuery, Paginated, ScanResult, StockOpname } from '@/types/api';
 import { api } from './client';
 
 export interface OpnameInput {
@@ -25,6 +16,9 @@ export interface OpnameItemQuery extends PageQuery {
 export const stockOpnamesApi = {
   list: (query: PageQuery = {}) => api.get<Paginated<StockOpname>>('/stock-opnames', { query }),
   get: (id: string) => api.get<StockOpname>(`/stock-opnames/${id}`),
+  groupLines: (id: string) => api.get<OpnameGroupLine[]>(`/stock-opnames/${id}/group-lines`),
+  countGroupLine: (id: string, lineId: string, counts: { good: number; needsRepair: number; damaged: number }) =>
+    api.put<OpnameGroupLine>(`/stock-opnames/${id}/group-lines/${lineId}`, counts),
   create: (input: OpnameInput) => api.post<StockOpname>('/stock-opnames', input),
   items: (id: string, query: OpnameItemQuery = {}) =>
     api.get<Paginated<OpnameItem>>(`/stock-opnames/${id}/items`, { query: { pageSize: 2000, ...query } }),

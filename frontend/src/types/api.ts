@@ -597,7 +597,37 @@ export interface ScanResult {
   alreadyScanned: boolean;
 }
 
+export interface OpnameGroupLine {
+  id: string;
+  groupItem: { id: string; name: string; code: string; room: { code: string; name: string } };
+  expected: { good: number; needsRepair: number; damaged: number };
+  counted: { good: number; needsRepair: number; damaged: number } | null;
+  countedAt: string | null;
+  countedBy: { id: string; fullName: string } | null;
+}
+
 export interface OpnameReport {
   session: StockOpname;
   groups: Record<OpnameReportResult, OpnameItem[]>;
+  groupLines: { matched: OpnameGroupLine[]; different: OpnameGroupLine[]; notCounted: OpnameGroupLine[] };
+}
+
+/** Counted goods (Barang Kelompok), e.g. kitchenware: quantities per condition, no QR. */
+export interface GroupItem {
+  id: string;
+  /** e.g. NG.I/110/DPC/TT (no unit number). */
+  code: string;
+  type: { id: string; golongan: Golongan; number: number; name: string };
+  room: { id: string; code: string; name: string };
+  name: string;
+  specification: string | null;
+  acquisitionYear: number | null;
+  source: string | null;
+  qtyGood: number;
+  qtyNeedsRepair: number;
+  qtyDamaged: number;
+  total: number;
+  notes: string | null;
+  archivedAt: string | null;
+  updatedAt: string;
 }
