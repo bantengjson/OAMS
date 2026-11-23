@@ -130,7 +130,7 @@ describe('categories & departments (e2e)', () => {
 
       const all = await ctx.http().get(URL).query({ pageSize: 100 }).set(bearer(admin)).expect(200);
       const keys = all.body.data.map((c: { golongan: string; number: number }) => `${c.golongan}${String(c.number).padStart(3, '0')}`);
-      expect(keys).toEqual([...keys].sort());
+      expect(keys).toEqual([...keys].sort((a: string, b: string) => a.localeCompare(b)));
     });
 
     it('deactivates and reactivates, filtering by isActive', async () => {

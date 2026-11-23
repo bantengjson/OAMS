@@ -40,7 +40,7 @@ describe('audit logs (e2e)', () => {
       .http()
       .post('/api/v1/categories')
       .set(bearer(admin))
-      .send({ code: 'AUDIT_CAT', name: 'Kategori Audit' })
+      .send({ golongan: 'NG', name: 'Kategori Audit' })
       .expect(201);
     categoryId = cat.body.id;
   });
@@ -95,7 +95,7 @@ describe('audit logs (e2e)', () => {
       entityId: categoryId,
       actor: { id: admin.userId, email: admin.email },
     });
-    expect(res.body.data[0].after).toMatchObject({ code: 'AUDIT_CAT' });
+    expect(res.body.data[0].after).toMatchObject({ name: 'Kategori Audit', golongan: 'NG' });
 
     const byActor = await ctx
       .http()
