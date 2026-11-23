@@ -52,7 +52,7 @@ describe('asset photos & documents (e2e)', () => {
       categoryId: category.id,
       locationId: room.id,
       ownershipType: 'OFFICE',
-      acquisitionMethod: 'PURCHASE',
+      acquisitionYear: 2024,
       condition: 'GOOD',
       status: 'IN_USE',
     };

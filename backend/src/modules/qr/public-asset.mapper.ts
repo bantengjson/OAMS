@@ -9,7 +9,7 @@ export interface PublicAssetSource {
   status: AssetStatus;
   condition: AssetCondition;
   category: { name: string };
-  location: { name: string; path: string } | null;
+  room: { code: string; name: string } | null;
   photos: { id: string }[];
 }
 
@@ -19,7 +19,7 @@ export const PUBLIC_ASSET_KEYS = [
   'name',
   'category',
   'specification',
-  'location',
+  'room',
   'status',
   'condition',
   'hasPhoto',
@@ -31,7 +31,7 @@ export function toPublicAsset(source: PublicAssetSource): PublicAssetDto {
     name: source.name,
     category: { name: source.category.name },
     specification: source.specification,
-    location: source.location ? { name: source.location.name, path: source.location.path } : null,
+    room: source.room ? { code: source.room.code, name: source.room.name } : null,
     status: source.status,
     condition: source.condition,
     hasPhoto: source.photos.length > 0,

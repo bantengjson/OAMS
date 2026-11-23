@@ -1,6 +1,7 @@
 import { PUBLIC_TOKEN_PATTERN } from '../qr/qr-token.js';
 
-const ASSET_CODE = /^INV-\d{4}-\d{4,}$/;
+/** Office codes (`NG.A/012/DPC/2023-01`, `BG/004/DPC/2023-01`, `…/TT-01`) and the old `INV-2026-0001`. */
+const ASSET_CODE = /^(?:(?:BG|NG)(?:\.[A-Z0-9_]{1,20})?\/\d{3}\/[A-Z0-9]{2,10}\/(?:\d{4}|TT)-\d{2,}|INV-\d{4}-\d{4,})$/;
 const TOKEN_IN_PATH = /\/a\/([A-Za-z0-9_-]{43})(?:[/?#]|$)/;
 
 /**

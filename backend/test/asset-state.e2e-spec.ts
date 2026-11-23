@@ -25,7 +25,7 @@ describe('asset state guard (e2e)', () => {
           name,
           categoryId,
           ownershipType: 'OFFICE',
-          acquisitionMethod: 'PURCHASE',
+          acquisitionYear: 2024,
           condition: 'GOOD',
           status: 'IN_USE',
         })
@@ -95,7 +95,7 @@ describe('asset state guard (e2e)', () => {
     ctx = await createTestApp();
     admin = await ctx.loginAs('ADMIN_INVENTARIS');
     petugas = await ctx.loginAs('PETUGAS_INVENTARIS');
-    categoryId = ((await testTypes(ctx.prisma)).ng).id;
+    categoryId = ((await testTypes(ctx.prisma)).bg).id;
     employeeId = (await ctx.prisma.employee.create({ data: { fullName: 'Pegawai Balapan' } })).id;
     roomId = (await ctx.prisma.location.create({ data: { code: 'BALAPAN_RUANG', name: 'Ruang Balapan', type: 'OFFICE' } }))
       .id;

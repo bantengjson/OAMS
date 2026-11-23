@@ -31,7 +31,7 @@ describe('mutations (e2e)', () => {
           categoryId,
           locationId: room1,
           ownershipType: 'OFFICE',
-          acquisitionMethod: 'PURCHASE',
+          acquisitionYear: 2024,
           condition: 'GOOD',
           status: 'IN_USE',
           responsibleEmployeeId: emp1,
@@ -355,7 +355,7 @@ describe('mutations (e2e)', () => {
   });
 
   it('changes the responsible of an asset that has no location', async () => {
-    const asset = await createAsset('Barang Tanpa Lokasi Mutasi', { locationId: undefined });
+    const asset = await createAsset('Barang Tanpa Lokasi Mutasi', { locationId: undefined, categoryId: (await testTypes(ctx.prisma)).land.id });
     const res = await ctx
       .http()
       .post(URL)

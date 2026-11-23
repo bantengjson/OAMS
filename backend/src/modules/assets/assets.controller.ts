@@ -10,7 +10,7 @@ import { PaginationQueryDto } from '../../common/dto/pagination.dto.js';
 import { ParseUuid } from '../../common/pipes/uuid.pipe.js';
 import { AssetsService } from './assets.service.js';
 import { ArchiveAssetDto } from './dto/archive-asset.dto.js';
-import { AssetDetailDto, AssetListItemDto } from './dto/asset.dto.js';
+import { AssetDetailDto, AssetListItemDto, CreatedAssetsDto } from './dto/asset.dto.js';
 import { AssetQueryDto } from './dto/asset-query.dto.js';
 import { AssetStatisticsDto } from './dto/asset-statistics.dto.js';
 import { CreateAssetDto } from './dto/create-asset.dto.js';
@@ -40,8 +40,8 @@ export class AssetsController {
   @Post()
   @RequirePermissions(PERMISSIONS.ASSETS_CREATE)
   @ApiOperation({ summary: 'Tambah barang (Asset Code dan QR dibuat otomatis)' })
-  @ApiCreatedResponse({ type: AssetDetailDto })
-  create(@Body() dto: CreateAssetDto, @CurrentUser() actor: AuthUser): Promise<AssetDetailDto> {
+  @ApiCreatedResponse({ type: CreatedAssetsDto })
+  create(@Body() dto: CreateAssetDto, @CurrentUser() actor: AuthUser): Promise<CreatedAssetsDto> {
     return this.assets.create(dto, actor);
   }
 

@@ -9,12 +9,15 @@ export const ASSET_SORT_FIELDS = ['name', 'assetCode', 'updatedAt', 'createdAt']
 export type AssetSortField = (typeof ASSET_SORT_FIELDS)[number];
 
 export class AssetQueryDto extends PaginationQueryDto {
-  @ApiPropertyOptional({ description: 'Cari pada kode, nama, merek, model, nomor seri' })
+  @ApiPropertyOptional({ description: 'Cari pada kode, nama, spesifikasi, nomor seri' })
   @IsOptional() @IsString() @MaxLength(100)
   search?: string;
 
   @ApiPropertyOptional({ format: 'uuid' }) @IsOptional() @IsUUID('all')
   categoryId?: string;
+
+  @ApiPropertyOptional({ enum: ['BG', 'NG'] }) @IsOptional() @IsIn(['BG', 'NG'])
+  golongan?: 'BG' | 'NG';
 
   @ApiPropertyOptional({ format: 'uuid', description: 'Termasuk semua lokasi turunannya' })
   @IsOptional() @IsUUID('all')

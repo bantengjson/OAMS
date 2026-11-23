@@ -7,7 +7,7 @@ export class PublicAssetDto {
   @ApiProperty() name!: string;
   @ApiProperty() category!: { name: string };
   @ApiProperty({ nullable: true, description: 'Merk/Type/Warna' }) specification!: string | null;
-  @ApiProperty({ nullable: true }) location!: { name: string; path: string } | null;
+  @ApiProperty({ nullable: true, description: 'Ruangan saat ini' }) room!: { code: string; name: string } | null;
   @ApiProperty() status!: AssetStatus;
   @ApiProperty() condition!: AssetCondition;
   @ApiProperty() hasPhoto!: boolean;

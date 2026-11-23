@@ -13,7 +13,7 @@ import { AssetCondition, AssetStatus } from '../../generated/prisma/client.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 import { EmployeesService } from '../employees/employees.service.js';
 import { generatePublicToken } from '../qr/qr-token.js';
-import { AssetCodeService } from './asset-code.js';
+import { AssetCodeService, codePrefix, jakartaYear } from './asset-code.js';
 import { AssetConditionsService } from './asset-conditions.service.js';
 import { AssetStateGuard, MSG_IN_MAINTENANCE, MSG_STATUS_CHANGED } from './asset-state.guard.js';
 import {
@@ -24,13 +24,23 @@ import {
   toAssetListItem,
 } from './assets.mapper.js';
 import type { AssetDetailRow, PathIndex } from './assets.mapper.js';
-import type { AssetDetailDto, AssetListItemDto } from './dto/asset.dto.js';
+import type { AssetDetailDto, AssetListItemDto, CreatedAssetsDto, CreatedUnitDto } from './dto/asset.dto.js';
 import type { AssetQueryDto } from './dto/asset-query.dto.js';
 import type { AssetStatisticsDto, CountByRefDto } from './dto/asset-statistics.dto.js';
 import type { CreateAssetDto } from './dto/create-asset.dto.js';
 import type { UpdateAssetDto } from './dto/update-asset.dto.js';
 
 export const ASSET_NOT_FOUND = 'Barang tidak ditemukan.';
+export const TYPE_INVALID = 'Jenis barang tidak ditemukan atau nonaktif.';
+export const TYPE_IS_GROUP = 'Jenis ini untuk Barang Kelompok.';
+export const ROOM_REQUIRED = 'Ruangan wajib diisi.';
+export const VEHICLE_NO_ROOM = 'Kendaraan tidak memakai ruangan.';
+export const LAND_NO_ROOM = 'Tanah & bangunan tidak memakai ruangan.';
+export const ROOM_INVALID = 'Ruangan tidak ditemukan atau nonaktif.';
+export const YEAR_LOCKED = 'Tahun pengadaan yang sudah terisi tidak bisa dikosongkan.';
+export const YEAR_IN_FUTURE = 'Tahun pengadaan tidak boleh lebih dari tahun depan.';
+export const CODE_LOCKED =
+  'Stiker sudah dicetak; jenis dan ruangan awal tidak bisa diubah. Arsipkan dan daftarkan ulang bila salah.';
 export const ASSET_ARCHIVED = 'Barang sudah diarsipkan.';
 export const ASSET_NOT_ARCHIVED = 'Barang tidak dalam arsip.';
 export const ASSET_BORROWED = 'Barang sedang dipinjam.';
@@ -79,6 +89,7 @@ export class AssetsService {
       ];
     }
     if (q.categoryId) where.categoryId = q.categoryId;
+    if (q.golongan) where.category = { golongan: q.golongan };
     if (q.departmentId) where.departmentId = q.departmentId;
     if (q.responsibleEmployeeId) where.responsibleEmployeeId = q.responsibleEmployeeId;
     if (q.condition) where.condition = q.condition;
@@ -211,40 +222,52 @@ export class AssetsService {
 
   // -------------------------------------------------------------- mutations
 
-  async create(dto: CreateAssetDto, actor: AuthUser): Promise<AssetDetailDto> {
-    await this.assertReferences(dto);
+  async create(dto: CreateAssetDto, actor: AuthUser): Promise<CreatedAssetsDto> {
+    assertYear(dto.acquisitionYear);
+    const placement = await this.resolvePlacement(dto.categoryId, dto.locationId ?? null);
+    await this.assertReferences({ departmentId: dto.departmentId });
     if (dto.responsibleEmployeeId) await this.employees.assertActive(this.prisma, dto.responsibleEmployeeId);
-    const { id } = await this.prisma.$transaction(async (tx) => {
-      const assetCode = await this.codes.nextLegacy(tx);
-      const asset = await tx.asset.create({
-        data: { ...this.toCreateData(dto), assetCode, createdById: actor.id },
-        select: { id: true },
+    const quantity = dto.quantity ?? 1;
+    const units = await this.prisma.$transaction(
+      async (tx) => {
+        const prefix = codePrefix({ ...placement.parts, org: await this.codes.org(tx), year: dto.acquisitionYear });
+        const created: CreatedUnitDto[] = [];
+        for (let i = 0; i < quantity; i += 1) {
+          const assetCode = await this.codes.next(tx, prefix);
+          const asset = await tx.asset.create({
+            data: { ...this.toCreateData(dto, placement.locationId), assetCode, createdById: actor.id },
+            select: { id: true },
+          });
+          await tx.assetLabel.create({ data: { assetId: asset.id, publicToken: generatePublicToken() } });
+          // The form's condition is the first inspection; the first responsible is the first assignment.
+          await this.conditions.record(tx, asset.id, { condition: dto.condition, source: 'CREATE' }, actor);
+          if (dto.responsibleEmployeeId) {
+            await tx.assetAssignment.create({
+              data: {
+                assetId: asset.id,
+                fromEmployeeId: null,
+                toEmployeeId: dto.responsibleEmployeeId,
+                source: 'CREATE',
+                changedById: actor.id,
+              },
+            });
+          }
+          created.push({ id: asset.id, assetCode });
+        }
+        return created;
+      },
+      { timeout: 60_000 },
+    );
+    for (const unit of units) {
+      await this.audit.record({
+        action: 'asset.created',
+        module: MODULE,
+        entityId: unit.id,
+        after: assetSnapshot(await this.getRow(unit.id)),
       });
-      await tx.assetLabel.create({ data: { assetId: asset.id, publicToken: generatePublicToken() } });
-      // The form's condition is the first inspection; the first responsible is the first assignment.
-      await this.conditions.record(tx, asset.id, { condition: dto.condition, source: 'CREATE' }, actor);
-      if (dto.responsibleEmployeeId) {
-        await tx.assetAssignment.create({
-          data: {
-            assetId: asset.id,
-            fromEmployeeId: null,
-            toEmployeeId: dto.responsibleEmployeeId,
-            source: 'CREATE',
-            changedById: actor.id,
-          },
-        });
-      }
-      return asset;
-    });
-    const created = await this.getRow(id);
-    await this.audit.record({
-      action: 'asset.created',
-      module: MODULE,
-      entityId: id,
-      after: assetSnapshot(created),
-    });
-    await this.audit.record({ action: 'qr.generated', module: 'qr', entityId: id });
-    return this.get(id);
+      await this.audit.record({ action: 'qr.generated', module: 'qr', entityId: unit.id });
+    }
+    return { ...(await this.get(units[0].id)), units };
   }
 
   async update(id: string, dto: UpdateAssetDto): Promise<AssetDetailDto> {
@@ -255,15 +278,50 @@ export class AssetsService {
       // A flow (loan, repair, disposal) owns the status while it runs.
       this.guard.assertFree(await this.guard.load(this.prisma, id), ['pendingMutation', 'archived']);
     }
-    await this.assertReferences({ categoryId: dto.categoryId, departmentId: dto.departmentId });
+    await this.assertReferences({ departmentId: dto.departmentId });
+    if (dto.acquisitionYear === null && before.acquisitionYear !== null) throw new BadRequestException(YEAR_LOCKED);
+    if (dto.acquisitionYear != null) assertYear(dto.acquisitionYear);
+
+    // Jenis, starting room and year are part of the code: corrected (and re-coded) only while the
+    // sticker was never printed; afterwards jenis and room are locked and a late year is just stored.
+    const categoryChanged = dto.categoryId !== undefined && dto.categoryId !== before.categoryId;
+    const roomChanged = dto.locationId !== undefined && (dto.locationId ?? null) !== before.locationId;
+    const yearChanged = dto.acquisitionYear != null && dto.acquisitionYear !== before.acquisitionYear;
+    const printed = (before.label?.printedCount ?? 0) > 0;
+    if (printed && (categoryChanged || roomChanged)) throw new ConflictException(CODE_LOCKED);
+    const placement =
+      categoryChanged || roomChanged || (yearChanged && !printed)
+        ? await this.resolvePlacement(
+            dto.categoryId ?? before.categoryId,
+            dto.locationId !== undefined ? (dto.locationId ?? null) : before.locationId,
+          )
+        : null;
+
     const data = this.toData(dto, true);
+    if (placement) {
+      data.categoryId = placement.categoryId;
+      data.locationId = placement.locationId;
+    }
     const after = await this.prisma.$transaction(async (tx) => {
       if (statusChanges) {
         await this.guard.setStatus(tx, id, before.status, dto.status!);
         delete data.status;
       }
+      if (placement && !printed) {
+        const year = dto.acquisitionYear ?? before.acquisitionYear;
+        data.assetCode = await this.codes.next(tx, codePrefix({ ...placement.parts, org: await this.codes.org(tx), year }));
+      }
       return tx.asset.update({ where: { id }, data, include: assetDetailInclude });
     });
+    if (after.assetCode !== before.assetCode) {
+      await this.audit.record({
+        action: 'asset.code_changed',
+        module: MODULE,
+        entityId: id,
+        before: { assetCode: before.assetCode },
+        after: { assetCode: after.assetCode },
+      });
+    }
     await this.audit.record({
       action: 'asset.updated',
       module: MODULE,
@@ -345,7 +403,7 @@ export class AssetsService {
     return new Map(rows.map((r) => [r.id, { name: r.name, parentId: r.parentId }]));
   }
 
-  private toCreateData(dto: CreateAssetDto): Omit<Prisma.AssetUncheckedCreateInput, 'assetCode'> {
+  private toCreateData(dto: CreateAssetDto, locationId: string | null): Omit<Prisma.AssetUncheckedCreateInput, 'assetCode'> {
     return {
       name: dto.name,
       categoryId: dto.categoryId,
@@ -353,11 +411,13 @@ export class AssetsService {
       serialNumber: dto.serialNumber ?? null,
       description: dto.description ?? null,
       ownershipType: dto.ownershipType,
-      acquisitionMethod: dto.acquisitionMethod,
+      acquisitionMethod: dto.source ? 'GRANT' : 'PURCHASE',
+      acquisitionYear: dto.acquisitionYear,
+      source: dto.source ?? null,
       acquisitionDate: dto.acquisitionDate ? new Date(`${dto.acquisitionDate}T00:00:00Z`) : null,
       purchasePrice: dto.purchasePrice ?? null,
       vendor: dto.vendor ?? null,
-      locationId: dto.locationId ?? null,
+      locationId,
       departmentId: dto.departmentId ?? null,
       condition: dto.condition,
       status: dto.status,
@@ -375,12 +435,15 @@ export class AssetsService {
       if (value !== undefined || !partial) data[key] = value as Prisma.AssetUncheckedUpdateInput[K];
     };
     set('name', dto.name);
-    set('categoryId', dto.categoryId);
     set('specification', dto.specification);
     set('serialNumber', dto.serialNumber);
     set('description', dto.description);
     set('ownershipType', dto.ownershipType);
-    set('acquisitionMethod', dto.acquisitionMethod);
+    if (dto.source !== undefined) {
+      set('source', dto.source);
+      set('acquisitionMethod', dto.source ? 'GRANT' : 'PURCHASE');
+    }
+    if (dto.acquisitionYear != null) set('acquisitionYear', dto.acquisitionYear);
     set(
       'acquisitionDate',
       dto.acquisitionDate === undefined
@@ -395,6 +458,28 @@ export class AssetsService {
     set('status', dto.status);
     set('notes', dto.notes);
     return data;
+  }
+
+  /**
+   * The item type and room of a unit, checked against the office rules: vehicles (BG) and land
+   * (NG 001) have no room, every other NG unit needs an active room, group types are refused.
+   */
+  private async resolvePlacement(
+    categoryId: string,
+    locationId: string | null,
+  ): Promise<{ categoryId: string; locationId: string | null; parts: { golongan: 'BG' | 'NG'; roomCode: string | null; typeNumber: number } }> {
+    const type = await this.prisma.category.findUnique({ where: { id: categoryId } });
+    if (!type || !type.isActive) throw new BadRequestException(TYPE_INVALID);
+    if (type.isGroup) throw new BadRequestException(TYPE_IS_GROUP);
+    const isLand = type.golongan === 'NG' && type.number === 1;
+    if (type.golongan === 'BG' || isLand) {
+      if (locationId) throw new BadRequestException(type.golongan === 'BG' ? VEHICLE_NO_ROOM : LAND_NO_ROOM);
+      return { categoryId, locationId: null, parts: { golongan: type.golongan, roomCode: null, typeNumber: type.number } };
+    }
+    if (!locationId) throw new BadRequestException(ROOM_REQUIRED);
+    const room = await this.prisma.location.findUnique({ where: { id: locationId } });
+    if (!room || room.type !== 'ROOM' || !room.isActive) throw new BadRequestException(ROOM_INVALID);
+    return { categoryId, locationId, parts: { golongan: 'NG', roomCode: room.code, typeNumber: type.number } };
   }
 
   /** Every referenced row must exist and be active; the message names the field. */
@@ -444,4 +529,8 @@ export function rootOf(id: string, paths: PathIndex): string {
     current = parent;
   }
   return current;
+}
+
+function assertYear(year: number): void {
+  if (year > jakartaYear() + 1) throw new BadRequestException(YEAR_IN_FUTURE);
 }

@@ -12,7 +12,8 @@ const source = {
   vendor: 'PT Rahasia',
   notes: 'catatan internal',
   category: { id: 'c1', code: 'ELEKTRONIK', name: 'Elektronik' },
-  location: { id: 'l1', code: 'R1', name: 'Ruang 201', path: 'Kantor / Gedung A / Lantai 2 / Ruang 201' },
+  location: { id: 'l1', code: 'A', name: 'Sekretariat', path: 'Kantor / Sekretariat' },
+  room: { id: 'l1', code: 'A', name: 'Sekretariat' },
   responsibleEmployee: { id: 'e1', fullName: 'Budi', department: null },
   photos: [{ id: 'p1' }],
 };
@@ -28,7 +29,7 @@ describe('toPublicAsset', () => {
       status: 'IN_USE',
       condition: 'GOOD',
       category: { name: 'Elektronik' },
-      location: { name: 'Ruang 201', path: 'Kantor / Gedung A / Lantai 2 / Ruang 201' },
+      room: { code: 'A', name: 'Sekretariat' },
       hasPhoto: true,
     });
     expect(JSON.stringify(dto)).not.toMatch(/RAHASIA|15000000|Rahasia|catatan|Budi|u1|c1|l1/);
@@ -39,10 +40,10 @@ describe('toPublicAsset', () => {
   });
 });
 
-describe('toPublicAsset without a location', () => {
-  it('keeps the location key as null', () => {
-    const result = toPublicAsset({ ...source, location: null } as never);
-    expect(result.location).toBeNull();
+describe('toPublicAsset without a room', () => {
+  it('keeps the room key as null', () => {
+    const result = toPublicAsset({ ...source, location: null, room: null } as never);
+    expect(result.room).toBeNull();
     expect(Object.keys(result).sort()).toEqual([...PUBLIC_ASSET_KEYS].sort());
   });
 });

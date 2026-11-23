@@ -29,7 +29,7 @@ describe('stock opname (e2e)', () => {
           name: `Opname ${key}`,
           categoryId,
           ownershipType: 'OFFICE',
-          acquisitionMethod: 'PURCHASE',
+          acquisitionYear: 2024,
           condition: 'GOOD',
           status: 'IN_USE',
           ...extra,
@@ -62,7 +62,7 @@ describe('stock opname (e2e)', () => {
       create: { userId: other.id, roleId: role.id },
     });
     petugas2 = await ctx.login('petugas-opname2@test.local', 'Petugas2Pass!');
-    categoryId = ((await testTypes(p)).ng).id;
+    categoryId = ((await testTypes(p)).bg).id;
     employeeId = (await p.employee.create({ data: { fullName: 'Pegawai Opname' } })).id;
     // Leave no OPEN session from another spec file in this shared database.
     await p.stockOpname.updateMany({ where: { status: 'OPEN' }, data: { status: 'CANCELLED', cancelledAt: new Date() } });

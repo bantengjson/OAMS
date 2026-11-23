@@ -1,5 +1,6 @@
 import { createTestApp } from './utils/app.js';
 import { extraType, testTypes } from './utils/fixtures.js';
+import type { TestTypes } from './utils/fixtures.js';
 import type { LoginResult, TestContext } from './utils/app.js';
 
 const URL = '/api/v1/assets';
@@ -34,7 +35,7 @@ describe('assets (e2e)', () => {
     categoryId: ids.category,
     locationId: ids.room1,
     ownershipType: 'OFFICE',
-    acquisitionMethod: 'PURCHASE',
+    acquisitionYear: 2026,
     condition: 'GOOD',
     status: 'AVAILABLE',
     specification: 'Lenovo ThinkPad T14',
@@ -109,7 +110,7 @@ describe('assets (e2e)', () => {
       .expect(201);
     firstId = res.body.id;
     firstCode = res.body.assetCode;
-    expect(firstCode).toMatch(/^INV-\d{4}-\d{4,}$/);
+    expect(firstCode).toMatch(/^NG\.AST_R1\/900\/DPC\/2026-\d{2,}$/);
     expect(res.body).toMatchObject({
       name: 'Laptop Kerja A',
       specification: 'Lenovo ThinkPad T14',
@@ -160,7 +161,7 @@ describe('assets (e2e)', () => {
       .set(bearer(admin))
       .send({ ...baseAsset(), categoryId: ids.categoryInactive })
       .expect(400);
-    expect(cat.body.message).toBe('Kategori tidak ditemukan atau nonaktif.');
+    expect(cat.body.message).toBe('Jenis barang tidak ditemukan atau nonaktif.');
 
     const loc = await ctx
       .http()
@@ -168,7 +169,7 @@ describe('assets (e2e)', () => {
       .set(bearer(admin))
       .send({ ...baseAsset(), locationId: ids.roomInactive })
       .expect(400);
-    expect(loc.body.message).toBe('Lokasi tidak ditemukan atau nonaktif.');
+    expect(loc.body.message).toBe('Ruangan tidak ditemukan atau nonaktif.');
 
     const pj = await ctx
       .http()
@@ -230,7 +231,6 @@ describe('assets (e2e)', () => {
       .patch(`${URL}/${firstId}`)
       .set(bearer(admin))
       .send({
-        locationId: ids.room2,
         responsibleEmployeeId: ids.employee,
         condition: 'NEEDS_REPAIR',
         status: 'RETURNED',
@@ -238,7 +238,6 @@ describe('assets (e2e)', () => {
       .expect(400);
     expect(locked.body.message).toBe('Validasi gagal.');
     expect(locked.body.errors).toMatchObject({
-      locationId: ['Ubah lewat mutasi'],
       responsibleEmployeeId: ['Ubah lewat mutasi'],
       condition: ['Ubah lewat pemeriksaan kondisi'],
       status: ['Status ini diatur oleh peminjaman'],
@@ -248,14 +247,20 @@ describe('assets (e2e)', () => {
     expect(unchanged.body.condition).toBe('GOOD');
   });
 
-  it('creates an asset without a location; the public page shows none', async () => {
+  it('creates an asset without a room (land); the public page shows none', async () => {
     const { locationId: _omit, ...noLocation } = baseAsset();
-    const res = await ctx.http().post(URL).set(bearer(admin)).send({ ...noLocation, name: 'Barang Tanpa Lokasi' }).expect(201);
+    const land = (await testTypes(ctx.prisma)).land;
+    const res = await ctx
+      .http()
+      .post(URL)
+      .set(bearer(admin))
+      .send({ ...noLocation, categoryId: land.id, name: 'Barang Tanpa Lokasi' })
+      .expect(201);
     expect(res.body.location).toBeNull();
     const list = await ctx.http().get(`${URL}?search=Tanpa%20Lokasi`).set(bearer(viewer)).expect(200);
     expect(list.body.data[0].location).toBeNull();
     const pub = await ctx.http().get(`/api/v1/qr/public/${res.body.label.token}`).expect(200);
-    expect(pub.body.location).toBeNull();
+    expect(pub.body.room).toBeNull();
     expect(pub.body.assetCode).toBe(res.body.assetCode);
     const stats = await ctx.http().get(`${URL}/statistics`).set(bearer(viewer)).expect(200);
     expect(Array.isArray(stats.body.byOffice)).toBe(true);
@@ -498,5 +503,202 @@ describe('assets (e2e)', () => {
     const years = after.byAcquisitionYear.map((r: { year: number }) => r.year);
     expect(years).toEqual([...years].sort((a, b) => a - b));
     expect(after.withoutAcquisitionYear - before.withoutAcquisitionYear).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe('assets: office format (e2e)', () => {
+  let ctx: TestContext;
+  let admin: LoginResult;
+  let viewer: LoginResult;
+  let t: TestTypes;
+  let codeType: { id: string };
+  const URL = '/api/v1/assets';
+  const bearer = (s: LoginResult) => ({ Authorization: `Bearer ${s.accessToken}` });
+  const body = (extra: Record<string, unknown> = {}) => ({
+    name: 'Meja Uji Kode',
+    categoryId: codeType.id,
+    locationId: t.roomA.id,
+    acquisitionYear: 2019,
+    ownershipType: 'OFFICE',
+    condition: 'GOOD',
+    status: 'IN_USE',
+    ...extra,
+  });
+  const printed = (id: string) =>
+    ctx.http().post('/api/v1/qr/mark-printed').set(bearer(admin)).send({ assetIds: [id] }).expect(200);
+  const token = (n: number) => `tokttuji${n}`.padEnd(43, 'x');
+
+  beforeAll(async () => {
+    ctx = await createTestApp();
+    admin = await ctx.loginAs('ADMIN_INVENTARIS');
+    viewer = await ctx.loginAs('VIEWER');
+    t = await testTypes(ctx.prisma);
+    codeType = await extraType(ctx.prisma, 960, 'Meja Uji Kode');
+  });
+
+  afterAll(async () => {
+    await ctx.close();
+  });
+
+  it('creates 3 units with consecutive codes', async () => {
+    const res = await ctx.http().post(URL).set(bearer(admin)).send(body({ quantity: 3, specification: 'Kayu jati' })).expect(201);
+    expect(res.body.units.map((u: { assetCode: string }) => u.assetCode)).toEqual([
+      'NG.A/960/DPC/2019-01',
+      'NG.A/960/DPC/2019-02',
+      'NG.A/960/DPC/2019-03',
+    ]);
+    expect(res.body).toMatchObject({ assetCode: 'NG.A/960/DPC/2019-01', acquisitionYear: 2019, specification: 'Kayu jati' });
+    expect(res.body.category).toMatchObject({ golongan: 'NG', number: 960 });
+    expect(res.body.room).toEqual({ id: t.roomA.id, code: 'A', name: 'Sekretariat' });
+    const ids = res.body.units.map((u: { id: string }) => u.id);
+    expect(await ctx.prisma.assetLabel.count({ where: { assetId: { in: ids } } })).toBe(3);
+  });
+
+  it('vehicle code has no room', async () => {
+    const res = await ctx
+      .http()
+      .post(URL)
+      .set(bearer(admin))
+      .send(body({ categoryId: t.bg.id, locationId: undefined, acquisitionYear: 2023, name: 'Motor Uji' }))
+      .expect(201);
+    expect(res.body.assetCode).toMatch(/^BG\/900\/DPC\/2023-\d{2,}$/);
+    expect(res.body.room).toBeNull();
+  });
+
+  it('land without room', async () => {
+    const res = await ctx
+      .http()
+      .post(URL)
+      .set(bearer(admin))
+      .send(body({ categoryId: t.land.id, locationId: undefined, acquisitionYear: 2018, name: 'Tanah Uji' }))
+      .expect(201);
+    expect(res.body.assetCode).toMatch(/^NG\/001\/DPC\/2018-\d{2,}$/);
+  });
+
+  it('NG without room → 400', async () => {
+    const res = await ctx.http().post(URL).set(bearer(admin)).send(body({ locationId: undefined })).expect(400);
+    expect(res.body.message).toBe('Ruangan wajib diisi.');
+  });
+
+  it('BG with room → 400', async () => {
+    const res = await ctx.http().post(URL).set(bearer(admin)).send(body({ categoryId: t.bg.id })).expect(400);
+    expect(res.body.message).toBe('Kendaraan tidak memakai ruangan.');
+  });
+
+  it('group type → 400', async () => {
+    const res = await ctx.http().post(URL).set(bearer(admin)).send(body({ categoryId: t.group.id })).expect(400);
+    expect(res.body.message).toBe('Jenis ini untuk Barang Kelompok.');
+  });
+
+  it('year required → 400, quantity limited to 1-100', async () => {
+    const noYear = await ctx.http().post(URL).set(bearer(admin)).send(body({ acquisitionYear: undefined })).expect(400);
+    expect(noYear.body.errors).toHaveProperty('acquisitionYear');
+    await ctx.http().post(URL).set(bearer(admin)).send(body({ quantity: 0 })).expect(400);
+    await ctx.http().post(URL).set(bearer(admin)).send(body({ quantity: 101 })).expect(400);
+    await ctx.http().post(URL).set(bearer(admin)).send(body({ acquisitionMethod: 'LOAN' })).expect(400);
+  });
+
+  it('source sets GRANT', async () => {
+    const res = await ctx.http().post(URL).set(bearer(admin)).send(body({ source: 'Hibah Bapak Uji' })).expect(201);
+    expect(res.body).toMatchObject({ source: 'Hibah Bapak Uji', acquisitionMethod: 'GRANT' });
+    const bought = await ctx.http().post(URL).set(bearer(admin)).send(body()).expect(201);
+    expect(bought.body.acquisitionMethod).toBe('PURCHASE');
+  });
+
+  it('corrects jenis before printing and re-codes', async () => {
+    const other = await extraType(ctx.prisma, 961, 'Lemari Uji Kode');
+    const created = await ctx.http().post(URL).set(bearer(admin)).send(body({ acquisitionYear: 2017 })).expect(201);
+    const res = await ctx
+      .http()
+      .patch(`${URL}/${created.body.id}`)
+      .set(bearer(admin))
+      .send({ categoryId: other.id, locationId: t.roomB.id })
+      .expect(200);
+    expect(res.body.assetCode).toBe('NG.B/961/DPC/2017-01');
+    expect(res.body.room.code).toBe('B');
+    const audit = await ctx.prisma.auditLog.findFirst({ where: { action: 'asset.code_changed', entityId: created.body.id } });
+    expect(audit?.before).toMatchObject({ assetCode: created.body.assetCode });
+    expect(audit?.after).toMatchObject({ assetCode: 'NG.B/961/DPC/2017-01' });
+  });
+
+  it('refuses jenis change after printing (409)', async () => {
+    const other = await extraType(ctx.prisma, 962, 'Rak Uji Kode');
+    const created = await ctx.http().post(URL).set(bearer(admin)).send(body()).expect(201);
+    await printed(created.body.id);
+    const res = await ctx.http().patch(`${URL}/${created.body.id}`).set(bearer(admin)).send({ categoryId: other.id }).expect(409);
+    expect(res.body.message).toBe(
+      'Stiker sudah dicetak; jenis dan ruangan awal tidak bisa diubah. Arsipkan dan daftarkan ulang bila salah.',
+    );
+    await ctx.http().patch(`${URL}/${created.body.id}`).set(bearer(admin)).send({ locationId: t.roomB.id }).expect(409);
+    // other fields stay editable
+    await ctx.http().patch(`${URL}/${created.body.id}`).set(bearer(admin)).send({ specification: 'Besi' }).expect(200);
+  });
+
+  it('keeps code when year filled after printing', async () => {
+    const created = await ctx.prisma.asset.create({
+      data: {
+        assetCode: 'NG.A/960/DPC/TT-01',
+        name: 'Meja Tanpa Tahun',
+        categoryId: codeType.id,
+        locationId: t.roomA.id,
+        ownershipType: 'OFFICE',
+        acquisitionMethod: 'PURCHASE',
+        condition: 'GOOD',
+        status: 'IN_USE',
+        label: { create: { publicToken: token(1), printedCount: 1 } },
+      },
+    });
+    const res = await ctx.http().patch(`${URL}/${created.id}`).set(bearer(admin)).send({ acquisitionYear: 2016 }).expect(200);
+    expect(res.body).toMatchObject({ assetCode: 'NG.A/960/DPC/TT-01', acquisitionYear: 2016 });
+  });
+
+  it('re-codes a TT item when its year is filled before printing', async () => {
+    const created = await ctx.prisma.asset.create({
+      data: {
+        assetCode: 'NG.A/960/DPC/TT-02',
+        name: 'Meja Tanpa Tahun 2',
+        categoryId: codeType.id,
+        locationId: t.roomA.id,
+        ownershipType: 'OFFICE',
+        acquisitionMethod: 'PURCHASE',
+        condition: 'GOOD',
+        status: 'IN_USE',
+        label: { create: { publicToken: token(2) } },
+      },
+    });
+    const res = await ctx.http().patch(`${URL}/${created.id}`).set(bearer(admin)).send({ acquisitionYear: 2015 }).expect(200);
+    expect(res.body.assetCode).toBe('NG.A/960/DPC/2015-01');
+  });
+
+  it('cannot clear a stored year (400)', async () => {
+    const created = await ctx.http().post(URL).set(bearer(admin)).send(body()).expect(201);
+    const res = await ctx.http().patch(`${URL}/${created.body.id}`).set(bearer(admin)).send({ acquisitionYear: null }).expect(400);
+    expect(res.body.message).toBe('Tahun pengadaan yang sudah terisi tidak bisa dikosongkan.');
+  });
+
+  it('mutation to room B keeps code', async () => {
+    const created = await ctx.http().post(URL).set(bearer(admin)).send(body()).expect(201);
+    const m = await ctx
+      .http()
+      .post('/api/v1/mutations')
+      .set(bearer(admin))
+      .send({ assetId: created.body.id, toLocationId: t.roomB.id, reason: 'Pindah ruangan' })
+      .expect(201);
+    if (m.body.status === 'PENDING') {
+      const superAdmin = await ctx.loginAs('SUPER_ADMIN');
+      await ctx.http().post(`/api/v1/mutations/${m.body.id}/approve`).set(bearer(superAdmin)).send({}).expect(200);
+    }
+    const after = await ctx.http().get(`${URL}/${created.body.id}`).set(bearer(viewer)).expect(200);
+    expect(after.body.assetCode).toBe(created.body.assetCode);
+    expect(after.body.room.code).toBe('B');
+  });
+
+  it('search finds by specification; filters by golongan', async () => {
+    await ctx.http().post(URL).set(bearer(admin)).send(body({ specification: 'Merk Unik Zebra' })).expect(201);
+    const res = await ctx.http().get(URL).query({ search: 'unik zebra' }).set(bearer(viewer)).expect(200);
+    expect(res.body.data).toHaveLength(1);
+    const bg = await ctx.http().get(URL).query({ golongan: 'BG', pageSize: 100 }).set(bearer(viewer)).expect(200);
+    expect(bg.body.data.length).toBeGreaterThanOrEqual(1);
+    expect(bg.body.data.every((a: { category: { golongan: string } }) => a.category.golongan === 'BG')).toBe(true);
   });
 });

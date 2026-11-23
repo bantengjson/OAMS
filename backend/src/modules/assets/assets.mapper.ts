@@ -4,7 +4,7 @@ import { buildPath } from '../locations/locations.rules.js';
 import type { AssetDetailDto, AssetDocumentDto, AssetListItemDto, AssetPhotoDto } from './dto/asset.dto.js';
 
 export const assetListInclude = {
-  category: { select: { id: true, code: true, name: true } },
+  category: { select: { id: true, code: true, name: true, golongan: true, number: true } },
   location: { select: { id: true, code: true, name: true, type: true, parentId: true } },
   department: { select: { id: true, code: true, name: true } },
   responsibleEmployee: { select: { id: true, fullName: true, department: { select: { id: true, name: true } } } },
@@ -53,6 +53,7 @@ function listFields(row: AssetListRow, paths: PathIndex) {
           path: buildPath(row.location.id, paths),
         }
       : null,
+    room: row.location && row.location.type === 'ROOM' ? { id: row.location.id, code: row.location.code, name: row.location.name } : null,
     department: row.department,
     responsibleEmployee: row.responsibleEmployee,
     specification: row.specification,

@@ -10,8 +10,16 @@ import type {
 
 export class AssetCategoryRefDto {
   @ApiProperty() id!: string;
-  @ApiProperty() code!: string;
+  @ApiProperty({ example: 'NG-012' }) code!: string;
   @ApiProperty() name!: string;
+  @ApiProperty({ enum: ['BG', 'NG'] }) golongan!: 'BG' | 'NG';
+  @ApiProperty({ example: 12 }) number!: number;
+}
+
+export class AssetRoomRefDto {
+  @ApiProperty() id!: string;
+  @ApiProperty({ example: 'A' }) code!: string;
+  @ApiProperty({ example: 'Sekretariat' }) name!: string;
 }
 
 export class AssetLocationRefDto {
@@ -102,6 +110,8 @@ export class AssetListItemDto {
   @ApiProperty({ type: AssetCategoryRefDto }) category!: AssetCategoryRefDto;
   @ApiProperty({ type: AssetLocationRefDto, nullable: true, description: 'Opsional; disembunyikan di UI kantor tunggal' })
   location!: AssetLocationRefDto | null;
+  @ApiProperty({ type: AssetRoomRefDto, nullable: true, description: 'Ruangan saat ini (lokasi bertipe ROOM)' })
+  room!: AssetRoomRefDto | null;
   @ApiProperty({ type: AssetDepartmentRefDto, nullable: true }) department!: AssetDepartmentRefDto | null;
   @ApiProperty({ type: AssetEmployeeRefDto, nullable: true }) responsibleEmployee!: AssetEmployeeRefDto | null;
   @ApiProperty({ nullable: true, description: 'Merk/Type/Warna' }) specification!: string | null;
@@ -139,4 +149,14 @@ export class AssetDetailDto extends AssetListItemDto {
   openMaintenance!: { id: string; status: 'REPORTED' | 'IN_PROGRESS'; description: string; reportedAt: Date } | null;
   @ApiProperty({ nullable: true, description: 'Pelepasan yang berlaku' })
   activeDisposal!: { id: string; reason: DisposalReason; disposedAt: string } | null;
+}
+
+export class CreatedUnitDto {
+  @ApiProperty() id!: string;
+  @ApiProperty({ example: 'NG.A/012/DPC/2023-01' }) assetCode!: string;
+}
+
+/** POST /assets: the first unit's detail plus every unit created in the same request. */
+export class CreatedAssetsDto extends AssetDetailDto {
+  @ApiProperty({ type: [CreatedUnitDto] }) units!: CreatedUnitDto[];
 }

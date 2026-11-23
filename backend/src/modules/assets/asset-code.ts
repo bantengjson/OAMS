@@ -68,11 +68,4 @@ export class AssetCodeService {
     const row = await tx.systemSetting.findUnique({ where: { key: ASSET_CODE_ORG_KEY } });
     return typeof row?.value === 'string' && row.value ? row.value : DEFAULT_ASSET_CODE_ORG;
   }
-
-  /** @deprecated Old `INV-2026-0001` codes; only until asset creation uses office codes (Task 5). */
-  async nextLegacy(tx: Prisma.TransactionClient, year: number = jakartaYear()): Promise<string> {
-    const code = await this.next(tx, `INV-${year}`);
-    const unit = Number(code.slice(code.lastIndexOf('-') + 1));
-    return `INV-${year}-${String(unit).padStart(4, '0')}`;
-  }
 }

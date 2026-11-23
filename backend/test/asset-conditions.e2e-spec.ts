@@ -26,9 +26,9 @@ describe('asset condition logs & assignments (e2e)', () => {
     const base = {
       name: 'Kursi Kondisi',
       categoryId: category.id,
-      locationId: office.id,
+      locationId: (await testTypes(p)).roomA.id,
       ownershipType: 'OFFICE',
-      acquisitionMethod: 'PURCHASE',
+      acquisitionYear: 2024,
       condition: 'GOOD',
       status: 'IN_USE',
       responsibleEmployeeId: employeeId,

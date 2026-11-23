@@ -36,7 +36,7 @@ describe('loans (e2e)', () => {
           categoryId,
           locationId: room,
           ownershipType: 'OFFICE',
-          acquisitionMethod: 'PURCHASE',
+          acquisitionYear: 2024,
           condition: 'GOOD',
           status: 'IN_USE',
           ...extra,
@@ -62,7 +62,7 @@ describe('loans (e2e)', () => {
     const p = ctx.prisma;
     categoryId = ((await testTypes(p)).ng).id;
     const office = await p.location.create({ data: { code: 'LN_HQ', name: 'Kantor Pinjam', type: 'OFFICE' } });
-    room = office.id;
+    room = (await testTypes(p)).roomA.id;
     room2 = (await p.location.create({ data: { code: 'LN_B', name: 'Gedung Pinjam', type: 'BUILDING', parentId: office.id } })).id;
     departmentId = (await p.department.create({ data: { code: 'LN_KEU', name: 'Keuangan Pinjam' } })).id;
     emp1 = (await p.employee.create({ data: { fullName: 'Peminjam Satu', departmentId } })).id;

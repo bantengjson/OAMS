@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
   IsEnum,
+  IsInt,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -17,7 +18,6 @@ import {
 import type { ValidationArguments, ValidatorConstraintInterface } from 'class-validator';
 import { trim } from '../../../common/dto/transforms.js';
 import {
-  AcquisitionMethod,
   AssetCondition,
   AssetStatus,
   OwnershipType,
@@ -76,6 +76,9 @@ export class IsCalendarDate implements ValidatorConstraintInterface {
   }
 }
 
+export const YEAR_MESSAGE = 'Tahun pengadaan harus angka 4 digit (1900-2100)';
+export const QUANTITY_MESSAGE = 'Jumlah unit harus 1-100';
+
 /** Decimal(15,2): 13 integer digits. */
 export const MAX_PURCHASE_PRICE = 9_999_999_999_999;
 
@@ -107,9 +110,25 @@ export class CreateAssetDto {
   @IsEnum(OwnershipType, { message: enumMessage('Kepemilikan', OwnershipType) })
   ownershipType!: OwnershipType;
 
-  @ApiProperty({ enum: AcquisitionMethod })
-  @IsEnum(AcquisitionMethod, { message: enumMessage('Metode perolehan', AcquisitionMethod) })
-  acquisitionMethod!: AcquisitionMethod;
+  @ApiProperty({ example: 2023, description: 'Tahun pengadaan; bagian dari kode barang' })
+  @IsInt({ message: YEAR_MESSAGE })
+  @Min(1900, { message: YEAR_MESSAGE })
+  @Max(2100, { message: YEAR_MESSAGE })
+  acquisitionYear!: number;
+
+  @ApiPropertyOptional({ description: 'Sumber/penyumbang; kosong = dibeli (cara perolehan diisi otomatis)' })
+  @IsOptional()
+  @Transform(emptyToNull)
+  @IsString()
+  @MaxLength(300)
+  source?: string | null;
+
+  @ApiPropertyOptional({ default: 1, description: 'Jumlah unit identik yang dibuat sekaligus (1-100)' })
+  @IsOptional()
+  @IsInt({ message: QUANTITY_MESSAGE })
+  @Min(1, { message: QUANTITY_MESSAGE })
+  @Max(100, { message: QUANTITY_MESSAGE })
+  quantity?: number;
 
   @ApiPropertyOptional({ example: '2026-01-15', description: 'Tanggal (YYYY-MM-DD)' })
   @IsOptional()
@@ -129,10 +148,10 @@ export class CreateAssetDto {
   @ApiPropertyOptional() @IsOptional() @Transform(emptyToNull) @IsString() @MaxLength(150)
   vendor?: string | null;
 
-  @ApiPropertyOptional({ format: 'uuid', nullable: true, description: 'Opsional; kantor tunggal tidak memakainya' })
+  @ApiPropertyOptional({ format: 'uuid', nullable: true, description: 'Ruangan; wajib untuk NG kecuali NG 001, tidak dipakai untuk BG' })
   @IsOptional()
   @Transform(emptyToNull)
-  @IsUUID('all', { message: 'Lokasi tidak valid' })
+  @IsUUID('all', { message: 'Ruangan tidak valid' })
   locationId?: string | null;
 
   @ApiPropertyOptional({ format: 'uuid', nullable: true })

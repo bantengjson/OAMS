@@ -2,6 +2,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
   IsEnum,
+  IsInt,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -16,12 +17,13 @@ import {
 } from 'class-validator';
 import { Forbidden } from '../../../common/dto/forbidden.validator.js';
 import { trim } from '../../../common/dto/transforms.js';
-import { AcquisitionMethod, AssetStatus, OwnershipType } from '../../../generated/prisma/client.js';
+import { AssetStatus, OwnershipType } from '../../../generated/prisma/client.js';
 import {
   CREATABLE_STATUSES,
   IsManualStatus,
   IsCalendarDate,
   MAX_PURCHASE_PRICE,
+  YEAR_MESSAGE,
   emptyToNull,
   enumMessage,
   toNumberOrNull,
@@ -66,10 +68,25 @@ export class UpdateAssetDto {
   @IsEnum(OwnershipType, { message: enumMessage('Jenis kepemilikan', OwnershipType) })
   ownershipType?: OwnershipType;
 
-  @ApiPropertyOptional({ enum: AcquisitionMethod })
-  @IfPresent()
-  @IsEnum(AcquisitionMethod, { message: enumMessage('Metode perolehan', AcquisitionMethod) })
-  acquisitionMethod?: AcquisitionMethod;
+  @ApiPropertyOptional({ example: 2023, nullable: true, description: 'Tahun pengadaan; tidak bisa dikosongkan bila sudah terisi' })
+  @IsOptional()
+  @IsInt({ message: YEAR_MESSAGE })
+  @Min(1900, { message: YEAR_MESSAGE })
+  @Max(2100, { message: YEAR_MESSAGE })
+  acquisitionYear?: number | null;
+
+  @ApiPropertyOptional({ nullable: true, description: 'Sumber/penyumbang; kosong = dibeli' })
+  @IsOptional()
+  @Transform(emptyToNull)
+  @IsString()
+  @MaxLength(300)
+  source?: string | null;
+
+  @ApiPropertyOptional({ format: 'uuid', description: 'Koreksi ruangan awal; hanya selama stiker belum dicetak (pindah ruangan lewat mutasi)' })
+  @IsOptional()
+  @Transform(emptyToNull)
+  @IsUUID('all', { message: 'Ruangan tidak valid' })
+  locationId?: string | null;
 
   @ApiPropertyOptional({ example: '2026-01-15', nullable: true })
   @IsOptional()
@@ -105,11 +122,6 @@ export class UpdateAssetDto {
   notes?: string | null;
 
   // ---- refused keys: present only to produce a per-field 400 ----
-
-  @ApiPropertyOptional({ description: 'Ditolak: ubah lewat mutasi' })
-  @IsOptional()
-  @Validate(Forbidden, [LOCKED_BY_MUTATION])
-  locationId?: unknown;
 
   @ApiPropertyOptional({ description: 'Ditolak: ubah lewat mutasi' })
   @IsOptional()

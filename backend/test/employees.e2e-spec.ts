@@ -25,7 +25,7 @@ describe('employees (e2e)', () => {
     const p = ctx.prisma;
     departmentId = (await p.department.create({ data: { code: 'EMP_KEU', name: 'Keuangan Pegawai' } })).id;
     categoryId = ((await testTypes(p)).ng).id;
-    locationId = (await p.location.create({ data: { code: 'EMP_HQ', name: 'Kantor Pegawai', type: 'OFFICE' } })).id;
+    locationId = (await testTypes(p)).roomA.id;
   });
 
   afterAll(async () => {
@@ -158,7 +158,7 @@ describe('employees (e2e)', () => {
         categoryId,
         locationId,
         ownershipType: 'OFFICE',
-        acquisitionMethod: 'PURCHASE',
+        acquisitionYear: 2024,
         condition: 'GOOD',
         status: 'IN_USE',
         responsibleEmployeeId: budiId,

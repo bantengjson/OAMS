@@ -34,7 +34,7 @@ describe('qr (e2e)', () => {
       categoryId: category.id,
       locationId: room.id,
       ownershipType: 'OFFICE',
-      acquisitionMethod: 'PURCHASE',
+      acquisitionYear: 2024,
       condition: 'GOOD',
       status: 'IN_USE',
       specification: 'Epson EB-X51',
@@ -68,13 +68,13 @@ describe('qr (e2e)', () => {
   it('anonymous visitors get only the public fields', async () => {
     const res = await ctx.http().get(publicUrl(token)).expect(200);
     expect(Object.keys(res.body).sort()).toEqual(
-      ['assetCode', 'category', 'condition', 'hasPhoto', 'location', 'name', 'specification', 'status'].sort(),
+      ['assetCode', 'category', 'condition', 'hasPhoto', 'name', 'room', 'specification', 'status'].sort(),
     );
     expect(res.body).toMatchObject({
       assetCode,
       name: 'Proyektor Rapat',
       category: { name: 'Barang Uji' },
-      location: { name: 'Ruang QR', path: 'Kantor QR / Blok QR / Lantai QR / Ruang QR' },
+      room: { code: 'QR_R', name: 'Ruang QR' },
       hasPhoto: true,
     });
     const text = JSON.stringify(res.body);
