@@ -94,11 +94,8 @@ export class CreateAssetDto {
   @IsUUID('all', { message: 'Kategori tidak valid' })
   categoryId!: string;
 
-  @ApiPropertyOptional() @IsOptional() @Transform(emptyToNull) @IsString() @MaxLength(100)
-  brand?: string | null;
-
-  @ApiPropertyOptional() @IsOptional() @Transform(emptyToNull) @IsString() @MaxLength(100)
-  model?: string | null;
+  @ApiPropertyOptional({ description: 'Merk/Type/Warna' }) @IsOptional() @Transform(emptyToNull) @IsString() @MaxLength(500)
+  specification?: string | null;
 
   @ApiPropertyOptional() @IsOptional() @Transform(emptyToNull) @IsString() @MaxLength(100)
   serialNumber?: string | null;

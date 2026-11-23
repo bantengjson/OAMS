@@ -2,6 +2,7 @@ import { existsSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import sharp from 'sharp';
 import { createTestApp } from './utils/app.js';
+import { testTypes } from './utils/fixtures.js';
 import type { LoginResult, TestContext } from './utils/app.js';
 
 const UPLOAD_ROOT = resolve(process.cwd(), '.test-uploads');
@@ -35,7 +36,7 @@ describe('asset photos & documents (e2e)', () => {
     viewer = await ctx.loginAs('VIEWER');
     petugas = await ctx.loginAs('PETUGAS_INVENTARIS');
     const p = ctx.prisma;
-    const category = await p.category.findUniqueOrThrow({ where: { code: 'FURNITURE' } });
+    const category = (await testTypes(p)).ng;
     const office = await p.location.create({ data: { code: 'FIL_HQ', name: 'Kantor Berkas', type: 'OFFICE' } });
     const building = await p.location.create({
       data: { code: 'FIL_B', name: 'Blok Berkas', type: 'BUILDING', parentId: office.id },
@@ -155,7 +156,7 @@ describe('asset photos & documents (e2e)', () => {
         .http()
         .post(`/api/v1/assets/${assetId}/condition-logs`)
         .set(bearer(petugas))
-        .send({ condition: 'MINOR_DAMAGE', notes: 'Goresan di sisi kiri' })
+        .send({ condition: 'NEEDS_REPAIR', notes: 'Goresan di sisi kiri' })
         .expect(201)
     ).body;
     const foreign = (

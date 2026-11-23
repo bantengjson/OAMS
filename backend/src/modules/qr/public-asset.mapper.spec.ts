@@ -4,8 +4,7 @@ import { PUBLIC_ASSET_KEYS, toPublicAsset } from './public-asset.mapper.js';
 const source = {
   assetCode: 'INV-2026-0001',
   name: 'Laptop',
-  brand: 'Lenovo',
-  model: 'T14',
+  specification: 'Lenovo T14',
   status: 'IN_USE' as const,
   condition: 'GOOD' as const,
   serialNumber: 'SN-RAHASIA',
@@ -25,8 +24,7 @@ describe('toPublicAsset', () => {
     expect(dto).toEqual({
       assetCode: 'INV-2026-0001',
       name: 'Laptop',
-      brand: 'Lenovo',
-      model: 'T14',
+      specification: 'Lenovo T14',
       status: 'IN_USE',
       condition: 'GOOD',
       category: { name: 'Elektronik' },

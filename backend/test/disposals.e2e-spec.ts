@@ -1,4 +1,5 @@
 import { createTestApp } from './utils/app.js';
+import { testTypes } from './utils/fixtures.js';
 import type { LoginResult, TestContext } from './utils/app.js';
 
 const URL = '/api/v1/disposals';
@@ -21,7 +22,7 @@ describe('disposals (e2e)', () => {
         .http()
         .post('/api/v1/assets')
         .set(bearer(admin))
-        .send({ name, categoryId, ownershipType: 'OFFICE', acquisitionMethod: 'PURCHASE', condition: 'MAJOR_DAMAGE', status })
+        .send({ name, categoryId, ownershipType: 'OFFICE', acquisitionMethod: 'PURCHASE', condition: 'DAMAGED', status })
         .expect(201)
     ).body as { id: string; assetCode: string; label: { token: string } };
 
@@ -37,7 +38,7 @@ describe('disposals (e2e)', () => {
     admin = await ctx.loginAs('ADMIN_INVENTARIS');
     petugas = await ctx.loginAs('PETUGAS_INVENTARIS');
     viewer = await ctx.loginAs('VIEWER');
-    categoryId = (await ctx.prisma.category.findUniqueOrThrow({ where: { code: 'ELEKTRONIK' } })).id;
+    categoryId = ((await testTypes(ctx.prisma)).ng).id;
     employeeId = (await ctx.prisma.employee.create({ data: { fullName: 'Pegawai Lepas' } })).id;
   });
 

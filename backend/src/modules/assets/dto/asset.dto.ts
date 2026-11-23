@@ -104,8 +104,9 @@ export class AssetListItemDto {
   location!: AssetLocationRefDto | null;
   @ApiProperty({ type: AssetDepartmentRefDto, nullable: true }) department!: AssetDepartmentRefDto | null;
   @ApiProperty({ type: AssetEmployeeRefDto, nullable: true }) responsibleEmployee!: AssetEmployeeRefDto | null;
-  @ApiProperty({ nullable: true }) brand!: string | null;
-  @ApiProperty({ nullable: true }) model!: string | null;
+  @ApiProperty({ nullable: true, description: 'Merk/Type/Warna' }) specification!: string | null;
+  @ApiProperty({ nullable: true, description: 'Tahun pengadaan; null = TT' }) acquisitionYear!: number | null;
+  @ApiProperty({ nullable: true, description: 'Sumber (penyumbang); kosong = dibeli' }) source!: string | null;
   @ApiProperty() condition!: AssetCondition;
   @ApiProperty() status!: AssetStatus;
   @ApiProperty() ownershipType!: OwnershipType;

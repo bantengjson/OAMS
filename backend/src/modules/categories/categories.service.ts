@@ -49,8 +49,10 @@ export class CategoriesService {
   }
 
   async create(dto: CreateCategoryDto): Promise<CategoryDto> {
+    // Temporary until item types get their own numbering (Task 2): NG, next free number.
+    const last = await this.prisma.category.aggregate({ where: { golongan: 'NG' }, _max: { number: true } });
     const row = await this.prisma.category.create({
-      data: { code: dto.code, name: dto.name, description: dto.description ?? null },
+      data: { code: dto.code, name: dto.name, description: dto.description ?? null, golongan: 'NG', number: (last._max.number ?? 0) + 1 },
     });
     await this.audit.record({
       action: 'category.created',

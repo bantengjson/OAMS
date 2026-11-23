@@ -74,8 +74,7 @@ export class AssetsService {
       where.OR = [
         { assetCode: contains },
         { name: contains },
-        { brand: contains },
-        { model: contains },
+        { specification: contains },
         { serialNumber: contains },
       ];
     }
@@ -350,8 +349,7 @@ export class AssetsService {
     return {
       name: dto.name,
       categoryId: dto.categoryId,
-      brand: dto.brand ?? null,
-      model: dto.model ?? null,
+      specification: dto.specification ?? null,
       serialNumber: dto.serialNumber ?? null,
       description: dto.description ?? null,
       ownershipType: dto.ownershipType,
@@ -378,8 +376,7 @@ export class AssetsService {
     };
     set('name', dto.name);
     set('categoryId', dto.categoryId);
-    set('brand', dto.brand);
-    set('model', dto.model);
+    set('specification', dto.specification);
     set('serialNumber', dto.serialNumber);
     set('description', dto.description);
     set('ownershipType', dto.ownershipType);

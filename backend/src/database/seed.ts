@@ -1,5 +1,5 @@
 /**
- * Seed data dasar OAMS: permission, role, kategori awal, dan Super Admin.
+ * Seed data dasar OAMS: permission, role, kantor + ruangan A–O, pengaturan kode, dan Super Admin.
  * Idempoten: aman dijalankan berulang kali (juga saat container start).
  */
 import argon2 from 'argon2';
@@ -20,17 +20,31 @@ export interface SeedOptions {
 
 export const USERNAME_PATTERN = /^[a-z0-9._-]{3,50}$/;
 
-export const INITIAL_CATEGORIES: readonly { code: string; name: string }[] = [
-  { code: 'ELEKTRONIK', name: 'Elektronik' },
-  { code: 'KOMPUTER_IT', name: 'Komputer dan IT' },
-  { code: 'FURNITURE', name: 'Furniture' },
-  { code: 'ADMINISTRASI', name: 'Peralatan Administrasi' },
-  { code: 'RAPAT', name: 'Peralatan Rapat' },
-  { code: 'INFRASTRUKTUR', name: 'Infrastruktur' },
-  { code: 'KENDARAAN', name: 'Kendaraan' },
-  { code: 'KEBERSIHAN', name: 'Peralatan Kebersihan' },
-  { code: 'LAINNYA', name: 'Lainnya' },
+export const OFFICE_CODE = 'KANTOR';
+export const OFFICE_NAME = 'DPC PDI Perjuangan Kota Surabaya';
+
+/** The office's rooms; the letter is part of every asset code registered in the room. */
+export const OFFICE_ROOMS: readonly { code: string; name: string }[] = [
+  { code: 'A', name: 'Sekretariat' },
+  { code: 'B', name: 'Ketua, Sekretaris & Bendahara' },
+  { code: 'C', name: 'Bendahara' },
+  { code: 'D', name: 'Fraksi' },
+  { code: 'E', name: 'Rapat Internal' },
+  { code: 'F', name: 'Rapat Bersama' },
+  { code: 'G', name: 'Data & Pencetakan KTA' },
+  { code: 'H', name: 'Mushalla' },
+  { code: 'I', name: 'Dapur' },
+  { code: 'J', name: 'BBHAR' },
+  { code: 'K', name: 'Gudang' },
+  { code: 'L', name: 'Balai Kreasi' },
+  { code: 'M', name: 'Meja Satgas' },
+  { code: 'N', name: 'Ruang Tengah' },
+  { code: 'O', name: 'Halaman Parkiran' },
 ];
+
+/** Setting key of the organisation part of asset codes ("DPC"). */
+export const ASSET_CODE_ORG_KEY = 'asset_code_org';
+export const DEFAULT_ASSET_CODE_ORG = 'DPC';
 
 export async function hashPassword(plain: string): Promise<string> {
   return argon2.hash(plain, { type: argon2.argon2id });
@@ -78,14 +92,24 @@ export async function seed(prisma: PrismaClient, opts: SeedOptions): Promise<voi
     });
   }
 
-  // 3. Initial categories
-  for (const cat of INITIAL_CATEGORIES) {
-    await prisma.category.upsert({
-      where: { code: cat.code },
+  // 3. The office and its rooms A–O (existing names are left as the admin set them).
+  const office = await prisma.location.upsert({
+    where: { code: OFFICE_CODE },
+    update: {},
+    create: { code: OFFICE_CODE, name: OFFICE_NAME, type: 'OFFICE' },
+  });
+  for (const room of OFFICE_ROOMS) {
+    await prisma.location.upsert({
+      where: { code: room.code },
       update: {},
-      create: { code: cat.code, name: cat.name },
+      create: { code: room.code, name: room.name, type: 'ROOM', parentId: office.id },
     });
   }
+  await prisma.systemSetting.upsert({
+    where: { key: ASSET_CODE_ORG_KEY },
+    update: {},
+    create: { key: ASSET_CODE_ORG_KEY, value: DEFAULT_ASSET_CODE_ORG },
+  });
 
   // 4. Super Admin. Never resets an existing user's password; fills in the
   //    username when the account has none yet.

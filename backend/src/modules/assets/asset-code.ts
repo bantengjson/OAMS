@@ -28,9 +28,9 @@ export function jakartaYear(date: Date = new Date()): number {
 export class AssetCodeService {
   async next(tx: Prisma.TransactionClient, year: number = jakartaYear()): Promise<string> {
     const rows = await tx.$queryRaw<{ last_number: number }[]>`
-      INSERT INTO asset_code_sequences (year, last_number)
-      VALUES (${year}, 1)
-      ON CONFLICT (year)
+      INSERT INTO asset_code_sequences (prefix, last_number)
+      VALUES (${`${ASSET_CODE_PREFIX}-${year}`}, 1)
+      ON CONFLICT (prefix)
       DO UPDATE SET last_number = asset_code_sequences.last_number + 1
       RETURNING last_number
     `;

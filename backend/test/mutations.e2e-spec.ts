@@ -1,4 +1,5 @@
 import { createTestApp } from './utils/app.js';
+import { testTypes } from './utils/fixtures.js';
 import type { LoginResult, TestContext } from './utils/app.js';
 
 const URL = '/api/v1/mutations';
@@ -64,7 +65,7 @@ describe('mutations (e2e)', () => {
     });
     petugas2 = await ctx.login('petugas2@test.local', 'Petugas2Pass!');
 
-    categoryId = (await p.category.findUniqueOrThrow({ where: { code: 'ELEKTRONIK' } })).id;
+    categoryId = ((await testTypes(p)).ng).id;
     const office = await p.location.create({ data: { code: 'MUT_HQ', name: 'Kantor Mutasi', type: 'OFFICE' } });
     const building = await p.location.create({
       data: { code: 'MUT_B', name: 'Gedung Mutasi', type: 'BUILDING', parentId: office.id },

@@ -6,8 +6,7 @@ export class PublicAssetDto {
   @ApiProperty({ example: 'INV-2026-0001' }) assetCode!: string;
   @ApiProperty() name!: string;
   @ApiProperty() category!: { name: string };
-  @ApiProperty({ nullable: true }) brand!: string | null;
-  @ApiProperty({ nullable: true }) model!: string | null;
+  @ApiProperty({ nullable: true, description: 'Merk/Type/Warna' }) specification!: string | null;
   @ApiProperty({ nullable: true }) location!: { name: string; path: string } | null;
   @ApiProperty() status!: AssetStatus;
   @ApiProperty() condition!: AssetCondition;

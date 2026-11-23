@@ -1,4 +1,5 @@
 import { createTestApp } from './utils/app.js';
+import { testTypes } from './utils/fixtures.js';
 import type { LoginResult, TestContext } from './utils/app.js';
 
 const URL = '/api/v1/employees';
@@ -23,7 +24,7 @@ describe('employees (e2e)', () => {
     viewer = await ctx.loginAs('VIEWER');
     const p = ctx.prisma;
     departmentId = (await p.department.create({ data: { code: 'EMP_KEU', name: 'Keuangan Pegawai' } })).id;
-    categoryId = (await p.category.findUniqueOrThrow({ where: { code: 'ELEKTRONIK' } })).id;
+    categoryId = ((await testTypes(p)).ng).id;
     locationId = (await p.location.create({ data: { code: 'EMP_HQ', name: 'Kantor Pegawai', type: 'OFFICE' } })).id;
   });
 

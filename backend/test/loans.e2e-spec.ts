@@ -1,4 +1,5 @@
 import { createTestApp } from './utils/app.js';
+import { testTypes } from './utils/fixtures.js';
 import type { LoginResult, TestContext } from './utils/app.js';
 
 const URL = '/api/v1/loans';
@@ -59,7 +60,7 @@ describe('loans (e2e)', () => {
     petugas = await ctx.loginAs('PETUGAS_INVENTARIS');
     viewer = await ctx.loginAs('VIEWER');
     const p = ctx.prisma;
-    categoryId = (await p.category.findUniqueOrThrow({ where: { code: 'ELEKTRONIK' } })).id;
+    categoryId = ((await testTypes(p)).ng).id;
     const office = await p.location.create({ data: { code: 'LN_HQ', name: 'Kantor Pinjam', type: 'OFFICE' } });
     room = office.id;
     room2 = (await p.location.create({ data: { code: 'LN_B', name: 'Gedung Pinjam', type: 'BUILDING', parentId: office.id } })).id;
@@ -121,11 +122,11 @@ describe('loans (e2e)', () => {
       .http()
       .post(`${URL}/${res.body.id}/return`)
       .set(bearer(petugas))
-      .send({ condition: 'MINOR_DAMAGE', notes: 'Kabel HDMI lecet' })
+      .send({ condition: 'NEEDS_REPAIR', notes: 'Kabel HDMI lecet' })
       .expect(200);
     expect(returned.body).toMatchObject({
       status: 'RETURNED',
-      returnCondition: 'MINOR_DAMAGE',
+      returnCondition: 'NEEDS_REPAIR',
       returnNotes: 'Kabel HDMI lecet',
       returnedBy: { id: petugas.userId },
     });
@@ -133,14 +134,14 @@ describe('loans (e2e)', () => {
 
     const after = await ctx.http().get(`/api/v1/assets/${asset.id}`).set(bearer(viewer)).expect(200);
     expect(after.body.status).toBe('IN_USE');
-    expect(after.body.condition).toBe('MINOR_DAMAGE');
+    expect(after.body.condition).toBe('NEEDS_REPAIR');
     expect(after.body.activeLoan).toBeNull();
 
     const logs = await ctx.http().get(`/api/v1/assets/${asset.id}/condition-logs`).set(bearer(viewer)).expect(200);
     expect(logs.body.data[0]).toMatchObject({
       source: 'LOAN_RETURN',
       loanId: res.body.id,
-      condition: 'MINOR_DAMAGE',
+      condition: 'NEEDS_REPAIR',
       previousCondition: 'GOOD',
       notes: 'Kabel HDMI lecet',
     });

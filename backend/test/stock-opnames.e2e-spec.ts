@@ -1,5 +1,6 @@
 import argon2 from 'argon2';
 import { createTestApp } from './utils/app.js';
+import { testTypes } from './utils/fixtures.js';
 import type { LoginResult, TestContext } from './utils/app.js';
 
 const URL = '/api/v1/stock-opnames';
@@ -61,7 +62,7 @@ describe('stock opname (e2e)', () => {
       create: { userId: other.id, roleId: role.id },
     });
     petugas2 = await ctx.login('petugas-opname2@test.local', 'Petugas2Pass!');
-    categoryId = (await p.category.findUniqueOrThrow({ where: { code: 'FURNITURE' } })).id;
+    categoryId = ((await testTypes(p)).ng).id;
     employeeId = (await p.employee.create({ data: { fullName: 'Pegawai Opname' } })).id;
     // Leave no OPEN session from another spec file in this shared database.
     await p.stockOpname.updateMany({ where: { status: 'OPEN' }, data: { status: 'CANCELLED', cancelledAt: new Date() } });
@@ -140,9 +141,9 @@ describe('stock opname (e2e)', () => {
       .http()
       .post(`${URL}/${sessionId}/items/${itemId}/confirm`)
       .set(bearer(petugas))
-      .send({ observedCondition: 'MINOR_DAMAGE', note: 'Kaki goyang' })
+      .send({ observedCondition: 'NEEDS_REPAIR', note: 'Kaki goyang' })
       .expect(200);
-    expect(c2.body).toMatchObject({ result: 'CONDITION_DIFFERS', observedCondition: 'MINOR_DAMAGE', note: 'Kaki goyang' });
+    expect(c2.body).toMatchObject({ result: 'CONDITION_DIFFERS', observedCondition: 'NEEDS_REPAIR', note: 'Kaki goyang' });
   });
 
   it('records an unknown QR once as unregistered', async () => {
@@ -216,7 +217,7 @@ describe('stock opname (e2e)', () => {
     const applied = await ctx.http().post(`${URL}/${sessionId}/items/${row.id}/apply-condition`).set(bearer(admin)).expect(200);
     expect(applied.body.conditionAppliedAt).toBeTruthy();
     const asset = await ctx.http().get(`/api/v1/assets/${assets.differs.id}`).set(bearer(admin)).expect(200);
-    expect(asset.body.condition).toBe('MINOR_DAMAGE');
+    expect(asset.body.condition).toBe('NEEDS_REPAIR');
     const logs = await ctx.http().get(`/api/v1/assets/${assets.differs.id}/condition-logs`).set(bearer(admin)).expect(200);
     expect(logs.body.data[0].source).toBe('OPNAME');
     await ctx.http().post(`${URL}/${sessionId}/items/${row.id}/apply-condition`).set(bearer(admin)).expect(409);
@@ -295,7 +296,7 @@ describe('stock opname (e2e)', () => {
             .http()
             .post(`${URL}/${id}/items/${itemId}/confirm`)
             .set(bearer(petugas))
-            .send({ observedCondition: 'UNUSABLE' })
+            .send({ observedCondition: 'DAMAGED' })
             .then((r) => (confirmRes = r));
           await sleep(400);
           void ctx

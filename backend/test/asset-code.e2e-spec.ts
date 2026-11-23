@@ -9,11 +9,11 @@ describe('asset code sequence (e2e)', () => {
   beforeAll(async () => {
     ctx = await createTestApp();
     service = ctx.app.get(AssetCodeService);
-    await ctx.prisma.assetCodeSequence.deleteMany({ where: { year: { in: [2090, 2091] } } });
+    await ctx.prisma.assetCodeSequence.deleteMany({ where: { prefix: { in: ['INV-2090', 'INV-2091'] } } });
   });
 
   afterAll(async () => {
-    await ctx.prisma.assetCodeSequence.deleteMany({ where: { year: { in: [2090, 2091] } } });
+    await ctx.prisma.assetCodeSequence.deleteMany({ where: { prefix: { in: ['INV-2090', 'INV-2091'] } } });
     await ctx.close();
   });
 

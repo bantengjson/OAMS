@@ -1,6 +1,6 @@
 import request from 'supertest';
 import { PERMISSION_DEFINITIONS, ROLE_DEFINITIONS } from '../src/common/auth/permissions.catalog.js';
-import { INITIAL_CATEGORIES, seed } from '../src/database/seed.js';
+import { OFFICE_ROOMS, seed } from '../src/database/seed.js';
 import { createTestApp, TEST_ADMIN } from './utils/app.js';
 import type { TestContext } from './utils/app.js';
 
@@ -15,16 +15,24 @@ describe('database seed (e2e)', () => {
     await ctx.close();
   });
 
-  it('seeds roles, permissions, categories and the super admin', async () => {
+  it('seeds roles, permissions, the office rooms and the super admin', async () => {
     expect(await ctx.prisma.role.count()).toBe(ROLE_DEFINITIONS.length);
     expect(await ctx.prisma.permission.count()).toBe(PERMISSION_DEFINITIONS.length);
-    // other suites may add categories; assert the seeded nine specifically
-    expect(
-      await ctx.prisma.category.count({
-        where: { code: { in: INITIAL_CATEGORIES.map((c) => c.code) } },
-      }),
-    ).toBe(9);
-    expect(INITIAL_CATEGORIES).toHaveLength(9);
+    // item types come from the office import, not from the seed
+    expect(await ctx.prisma.category.count({ where: { code: { in: ['ELEKTRONIK', 'KOMPUTER_IT', 'LAINNYA'] } } })).toBe(0);
+
+    const office = await ctx.prisma.location.findUniqueOrThrow({ where: { code: 'KANTOR' } });
+    expect(office).toMatchObject({ type: 'OFFICE', name: 'DPC PDI Perjuangan Kota Surabaya', parentId: null });
+    const rooms = await ctx.prisma.location.findMany({
+      where: { parentId: office.id, type: 'ROOM', code: { in: OFFICE_ROOMS.map((r) => r.code) } },
+      orderBy: { code: 'asc' },
+    });
+    expect(rooms.map((r) => r.code)).toEqual('ABCDEFGHIJKLMNO'.split(''));
+    expect(rooms[0].name).toBe('Sekretariat');
+    expect(rooms[14].name).toBe('Halaman Parkiran');
+
+    const org = await ctx.prisma.systemSetting.findUniqueOrThrow({ where: { key: 'asset_code_org' } });
+    expect(org.value).toBe('DPC');
 
     const admin = await ctx.prisma.user.findUnique({
       where: { email: TEST_ADMIN.email },
@@ -61,6 +69,7 @@ describe('database seed (e2e)', () => {
       roles: await ctx.prisma.role.count(),
       permissions: await ctx.prisma.permission.count(),
       categories: await ctx.prisma.category.count(),
+      locations: await ctx.prisma.location.count(),
       users: await ctx.prisma.user.count(),
     };
     await seed(ctx.prisma, {
@@ -72,6 +81,7 @@ describe('database seed (e2e)', () => {
       roles: await ctx.prisma.role.count(),
       permissions: await ctx.prisma.permission.count(),
       categories: await ctx.prisma.category.count(),
+      locations: await ctx.prisma.location.count(),
       users: await ctx.prisma.user.count(),
     }).toEqual(before);
   });

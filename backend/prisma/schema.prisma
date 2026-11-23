@@ -133,17 +133,30 @@ model Department {
   @@map("departments")
 }
 
+/// BG = barang bergerak (vehicles), NG = barang tidak bergerak/tetap.
+enum ItemGolongan {
+  BG
+  NG
+}
+
+/// Item type ("Jenis Barang") of the office format; number is unique within its golongan and never changes once used.
 model Category {
-  id          String   @id @default(uuid()) @db.Uuid
-  code        String   @unique @db.VarChar(20)
-  name        String   @db.VarChar(150)
+  id          String       @id @default(uuid()) @db.Uuid
+  code        String       @unique @db.VarChar(20)
+  golongan    ItemGolongan
+  number      Int
+  /// Counted goods (kitchenware): used by group items only, never by single units.
+  isGroup     Boolean      @default(false) @map("is_group")
+  name        String       @db.VarChar(150)
   description String?
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  isActive    Boolean      @default(true) @map("is_active")
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  assets Asset[]
+  assets     Asset[]
+  groupItems GroupItem[]
 
+  @@unique([golongan, number])
   @@map("categories")
 }
 
@@ -168,6 +181,7 @@ model Location {
   parent        Location?       @relation("LocationTree", fields: [parentId], references: [id])
   children      Location[]      @relation("LocationTree")
   assets        Asset[]
+  groupItems    GroupItem[]
   mutationsFrom AssetMutation[] @relation("MutationFrom")
   mutationsTo   AssetMutation[] @relation("MutationTo")
 
@@ -242,11 +256,11 @@ enum AcquisitionMethod {
   OTHER
 }
 
+/// Baik / Perlu Perbaikan / Rusak.
 enum AssetCondition {
   GOOD
-  MINOR_DAMAGE
-  MAJOR_DAMAGE
-  UNUSABLE
+  NEEDS_REPAIR
+  DAMAGED
 }
 
 enum AssetStatus {
@@ -265,13 +279,17 @@ model Asset {
   assetCode             String            @unique @map("asset_code") @db.VarChar(30)
   name                  String            @db.VarChar(200)
   categoryId            String            @map("category_id") @db.Uuid
-  brand                 String?           @db.VarChar(100)
-  model                 String?           @db.VarChar(100)
+  /// Merk/Type/Warna, free text as in the office list.
+  specification         String?           @db.VarChar(500)
   serialNumber          String?           @map("serial_number") @db.VarChar(100)
   description           String?
   ownershipType         OwnershipType     @map("ownership_type")
   acquisitionMethod     AcquisitionMethod @map("acquisition_method")
   acquisitionDate       DateTime?         @map("acquisition_date") @db.Date
+  /// Year in the asset code; null (code "TT") only for items imported without a year.
+  acquisitionYear       Int?              @map("acquisition_year")
+  /// "Sumber": donor for granted items; empty = bought.
+  source                String?           @db.VarChar(300)
   purchasePrice         Decimal?          @map("purchase_price") @db.Decimal(15, 2)
   vendor                String?           @db.VarChar(150)
   locationId            String?           @map("location_id") @db.Uuid
@@ -316,9 +334,10 @@ model Asset {
 }
 
 /// Penomoran Asset Code per tahun; diperbarui atomik dalam transaksi pembuatan barang.
+/// Last unit number per code prefix, e.g. "NG.A/012/DPC/2023".
 model AssetCodeSequence {
-  year       Int @id
-  lastNumber Int @map("last_number")
+  prefix     String @id @db.VarChar(40)
+  lastNumber Int    @map("last_number")
 
   @@map("asset_code_sequences")
 }
@@ -620,8 +639,9 @@ model StockOpname {
 
   createdBy User                 @relation("OpnameCreatedBy", fields: [createdById], references: [id])
   closedBy  User?                @relation("OpnameClosedBy", fields: [closedById], references: [id])
-  officers  StockOpnameOfficer[]
-  items     StockOpnameItem[]
+  officers   StockOpnameOfficer[]
+  items      StockOpnameItem[]
+  groupLines StockOpnameGroupLine[]
 
   @@index([status, createdAt])
   @@map("stock_opnames")
@@ -725,4 +745,54 @@ model AssetDisposal {
   @@index([assetId])
   @@index([reason, disposedAt])
   @@map("asset_disposals")
+}
+
+/// Counted goods (kitchenware): one row per type + room (+ year/spec/source), quantities per condition, no QR.
+model GroupItem {
+  id              String    @id @default(uuid()) @db.Uuid
+  categoryId      String    @map("category_id") @db.Uuid
+  locationId      String    @map("location_id") @db.Uuid
+  name            String    @db.VarChar(200)
+  specification   String?   @db.VarChar(500)
+  acquisitionYear Int?      @map("acquisition_year")
+  source          String?   @db.VarChar(300)
+  qtyGood         Int       @default(0) @map("qty_good")
+  qtyNeedsRepair  Int       @default(0) @map("qty_needs_repair")
+  qtyDamaged      Int       @default(0) @map("qty_damaged")
+  notes           String?
+  archivedAt      DateTime? @map("archived_at") @db.Timestamptz(6)
+  archiveReason   String?   @map("archive_reason")
+  createdById     String?   @map("created_by_id") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  category    Category               @relation(fields: [categoryId], references: [id])
+  location    Location               @relation(fields: [locationId], references: [id])
+  opnameLines StockOpnameGroupLine[]
+
+  @@index([categoryId])
+  @@index([locationId])
+  @@index([archivedAt])
+  @@map("group_items")
+}
+
+/// A group item's expected and counted quantities in one stock opname.
+model StockOpnameGroupLine {
+  id                   String    @id @default(uuid()) @db.Uuid
+  opnameId             String    @map("opname_id") @db.Uuid
+  groupItemId          String    @map("group_item_id") @db.Uuid
+  expectedGood         Int       @map("expected_good")
+  expectedNeedsRepair  Int       @map("expected_needs_repair")
+  expectedDamaged      Int       @map("expected_damaged")
+  countedGood          Int?      @map("counted_good")
+  countedNeedsRepair   Int?      @map("counted_needs_repair")
+  countedDamaged       Int?      @map("counted_damaged")
+  countedAt            DateTime? @map("counted_at") @db.Timestamptz(6)
+  countedById          String?   @map("counted_by_id") @db.Uuid
+
+  opname    StockOpname @relation(fields: [opnameId], references: [id], onDelete: Cascade)
+  groupItem GroupItem   @relation(fields: [groupItemId], references: [id])
+
+  @@unique([opnameId, groupItemId])
+  @@map("stock_opname_group_lines")
 }

@@ -52,11 +52,8 @@ export class UpdateAssetDto {
   @IsUUID('all', { message: 'Kategori tidak valid' })
   categoryId?: string;
 
-  @ApiPropertyOptional({ nullable: true }) @IsOptional() @Transform(emptyToNull) @IsString() @MaxLength(100)
-  brand?: string | null;
-
-  @ApiPropertyOptional({ nullable: true }) @IsOptional() @Transform(emptyToNull) @IsString() @MaxLength(100)
-  model?: string | null;
+  @ApiPropertyOptional({ nullable: true, description: 'Merk/Type/Warna' }) @IsOptional() @Transform(emptyToNull) @IsString() @MaxLength(500)
+  specification?: string | null;
 
   @ApiPropertyOptional({ nullable: true }) @IsOptional() @Transform(emptyToNull) @IsString() @MaxLength(100)
   serialNumber?: string | null;

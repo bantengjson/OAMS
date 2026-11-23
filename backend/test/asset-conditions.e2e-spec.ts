@@ -1,4 +1,5 @@
 import { createTestApp } from './utils/app.js';
+import { testTypes } from './utils/fixtures.js';
 import type { LoginResult, TestContext } from './utils/app.js';
 
 describe('asset condition logs & assignments (e2e)', () => {
@@ -19,7 +20,7 @@ describe('asset condition logs & assignments (e2e)', () => {
     petugas = await ctx.loginAs('PETUGAS_INVENTARIS');
     viewer = await ctx.loginAs('VIEWER');
     const p = ctx.prisma;
-    const category = await p.category.findUniqueOrThrow({ where: { code: 'FURNITURE' } });
+    const category = (await testTypes(p)).ng;
     const office = await p.location.create({ data: { code: 'CND_HQ', name: 'Kantor Kondisi', type: 'OFFICE' } });
     employeeId = (await p.employee.create({ data: { fullName: 'Pegawai Kondisi' } })).id;
     const base = {
@@ -67,16 +68,16 @@ describe('asset condition logs & assignments (e2e)', () => {
   });
 
   it('PETUGAS records a condition check that updates the asset; VIEWER cannot', async () => {
-    await ctx.http().post(logsUrl()).set(bearer(viewer)).send({ condition: 'MINOR_DAMAGE' }).expect(403);
+    await ctx.http().post(logsUrl()).set(bearer(viewer)).send({ condition: 'NEEDS_REPAIR' }).expect(403);
 
     const res = await ctx
       .http()
       .post(logsUrl())
       .set(bearer(petugas))
-      .send({ condition: 'MINOR_DAMAGE', notes: 'Engsel longgar' })
+      .send({ condition: 'NEEDS_REPAIR', notes: 'Engsel longgar' })
       .expect(201);
     expect(res.body).toMatchObject({
-      condition: 'MINOR_DAMAGE',
+      condition: 'NEEDS_REPAIR',
       previousCondition: 'GOOD',
       notes: 'Engsel longgar',
       source: 'MANUAL',
@@ -85,7 +86,7 @@ describe('asset condition logs & assignments (e2e)', () => {
     expect(res.body.checkedAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 
     const asset = await ctx.http().get(`/api/v1/assets/${assetId}`).set(bearer(viewer)).expect(200);
-    expect(asset.body.condition).toBe('MINOR_DAMAGE');
+    expect(asset.body.condition).toBe('NEEDS_REPAIR');
 
     const logs = await ctx.http().get(logsUrl()).set(bearer(viewer)).expect(200);
     expect(logs.body.data.map((l: { source: string }) => l.source)).toEqual(['MANUAL', 'CREATE']);
@@ -112,7 +113,7 @@ describe('asset condition logs & assignments (e2e)', () => {
     const entry = history.body.data.find((h: { action: string }) => h.action === 'asset.condition_recorded');
     expect(entry).toBeDefined();
     expect(entry.module).toBe('condition_logs');
-    expect(entry.after).toMatchObject({ condition: 'MINOR_DAMAGE' });
+    expect(entry.after).toMatchObject({ condition: 'NEEDS_REPAIR' });
     expect(entry.after.conditionLogId).toBeDefined();
   });
 });

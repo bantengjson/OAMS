@@ -1,4 +1,5 @@
 import { createTestApp } from './utils/app.js';
+import { extraType, testTypes } from './utils/fixtures.js';
 import type { LoginResult, TestContext } from './utils/app.js';
 
 const URL = '/api/v1/assets';
@@ -36,8 +37,7 @@ describe('assets (e2e)', () => {
     acquisitionMethod: 'PURCHASE',
     condition: 'GOOD',
     status: 'AVAILABLE',
-    brand: 'Lenovo',
-    model: 'ThinkPad T14',
+    specification: 'Lenovo ThinkPad T14',
     serialNumber: 'SN-0001',
     purchasePrice: 15000000,
     acquisitionDate: '2026-01-15',
@@ -54,10 +54,8 @@ describe('assets (e2e)', () => {
     viewer = await ctx.loginAs('VIEWER');
 
     const p = ctx.prisma;
-    const category = await p.category.findUniqueOrThrow({ where: { code: 'ELEKTRONIK' } });
-    const categoryInactive = await p.category.create({
-      data: { code: 'AST_NONAKTIF', name: 'Kategori Nonaktif', isActive: false },
-    });
+    const category = (await testTypes(p)).ng;
+    const categoryInactive = await extraType(p, 950, 'Kategori Nonaktif', false);
     const office = await p.location.create({ data: { code: 'AST_HQ', name: 'Kantor Aset', type: 'OFFICE' } });
     const building = await p.location.create({
       data: { code: 'AST_G1', name: 'Menara Aset', type: 'BUILDING', parentId: office.id },
@@ -114,7 +112,7 @@ describe('assets (e2e)', () => {
     expect(firstCode).toMatch(/^INV-\d{4}-\d{4,}$/);
     expect(res.body).toMatchObject({
       name: 'Laptop Kerja A',
-      brand: 'Lenovo',
+      specification: 'Lenovo ThinkPad T14',
       status: 'AVAILABLE',
       condition: 'GOOD',
       ownershipType: 'OFFICE',
@@ -123,7 +121,7 @@ describe('assets (e2e)', () => {
       purchasePrice: '15000000.00',
       isArchived: false,
       hasPhoto: false,
-      category: { code: 'ELEKTRONIK' },
+      category: { code: 'NG-900' },
       location: { id: ids.room1, path: 'Kantor Aset / Menara Aset / Lantai Aset / Ruang Aset 1' },
       department: { code: 'AST_TU' },
       responsibleEmployee: { id: ids.employee, fullName: 'Pegawai Aset' },
@@ -234,7 +232,7 @@ describe('assets (e2e)', () => {
       .send({
         locationId: ids.room2,
         responsibleEmployeeId: ids.employee,
-        condition: 'MINOR_DAMAGE',
+        condition: 'NEEDS_REPAIR',
         status: 'RETURNED',
       })
       .expect(400);
@@ -324,12 +322,12 @@ describe('assets (e2e)', () => {
       .http()
       .patch(`${URL}/${firstId}`)
       .set(bearer(admin))
-      .send({ status: 'STORED', brand: 'Lenovo Baru', notes: null })
+      .send({ status: 'STORED', specification: 'Lenovo Baru', notes: null })
       .expect(200);
     expect(res.body).toMatchObject({
       status: 'STORED',
       location: { id: ids.room1 },
-      brand: 'Lenovo Baru',
+      specification: 'Lenovo Baru',
       notes: null,
       assetCode: firstCode,
     });
@@ -338,8 +336,8 @@ describe('assets (e2e)', () => {
       where: { action: 'asset.updated', entityId: firstId },
       orderBy: { createdAt: 'desc' },
     });
-    expect(audit?.before).toMatchObject({ status: 'AVAILABLE', brand: 'Lenovo' });
-    expect(audit?.after).toMatchObject({ status: 'STORED', brand: 'Lenovo Baru', locationId: ids.room1 });
+    expect(audit?.before).toMatchObject({ status: 'AVAILABLE', specification: 'Lenovo ThinkPad T14' });
+    expect(audit?.after).toMatchObject({ status: 'STORED', specification: 'Lenovo Baru', locationId: ids.room1 });
   });
 
   it('archives, hides, blocks edits, and unarchives', async () => {
@@ -417,7 +415,7 @@ describe('assets (e2e)', () => {
       .http()
       .post(URL)
       .set(bearer(admin))
-      .send({ ...baseAsset(), name: 'Kursi Arsip', condition: 'UNUSABLE', status: 'STORED' })
+      .send({ ...baseAsset(), name: 'Kursi Arsip', condition: 'DAMAGED', status: 'STORED' })
       .expect(201);
     await ctx.http().post(`${URL}/${third.body.id}/archive`).set(bearer(admin)).send({}).expect(200);
 
@@ -431,7 +429,9 @@ describe('assets (e2e)', () => {
     expect(res.body.active).toBeGreaterThanOrEqual(1);
     expect(res.body.byStatus.STORED).toBeGreaterThanOrEqual(1);
     expect(res.body.byStatus.IN_USE).toBeGreaterThanOrEqual(1);
-    expect(res.body.byCondition.UNUSABLE ?? 0).toBe(0);
+    // The archived damaged chair is not counted; other suites may own active damaged items.
+    const activeDamaged = await ctx.prisma.asset.count({ where: { condition: 'DAMAGED', archivedAt: null, status: { not: 'DISPOSED' } } });
+    expect(res.body.byCondition.DAMAGED ?? 0).toBe(activeDamaged);
     expect(res.body.byCategory).toEqual(
       expect.arrayContaining([expect.objectContaining({ id: ids.category })]),
     );

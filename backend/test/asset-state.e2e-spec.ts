@@ -1,5 +1,6 @@
 import { AssetStateGuard } from '../src/modules/assets/asset-state.guard.js';
 import { createTestApp } from './utils/app.js';
+import { testTypes } from './utils/fixtures.js';
 import type { LoginResult, TestContext } from './utils/app.js';
 
 /** Cross-flow races: whichever flow changes the asset first wins; the others get 409 and leave no trace. */
@@ -94,7 +95,7 @@ describe('asset state guard (e2e)', () => {
     ctx = await createTestApp();
     admin = await ctx.loginAs('ADMIN_INVENTARIS');
     petugas = await ctx.loginAs('PETUGAS_INVENTARIS');
-    categoryId = (await ctx.prisma.category.findUniqueOrThrow({ where: { code: 'ELEKTRONIK' } })).id;
+    categoryId = ((await testTypes(ctx.prisma)).ng).id;
     employeeId = (await ctx.prisma.employee.create({ data: { fullName: 'Pegawai Balapan' } })).id;
     roomId = (await ctx.prisma.location.create({ data: { code: 'BALAPAN_RUANG', name: 'Ruang Balapan', type: 'OFFICE' } }))
       .id;

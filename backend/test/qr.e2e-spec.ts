@@ -1,5 +1,6 @@
 import sharp from 'sharp';
 import { createTestApp } from './utils/app.js';
+import { testTypes } from './utils/fixtures.js';
 import type { LoginResult, TestContext } from './utils/app.js';
 
 const PUBLIC_MESSAGE = 'QR Code tidak dikenal atau sudah tidak aktif.';
@@ -23,7 +24,7 @@ describe('qr (e2e)', () => {
     admin = await ctx.loginAs('ADMIN_INVENTARIS');
     viewer = await ctx.loginAs('VIEWER');
     const p = ctx.prisma;
-    const category = await p.category.findUniqueOrThrow({ where: { code: 'KOMPUTER_IT' } });
+    const category = (await testTypes(p)).ng;
     const office = await p.location.create({ data: { code: 'QR_HQ', name: 'Kantor QR', type: 'OFFICE' } });
     const building = await p.location.create({ data: { code: 'QR_B', name: 'Blok QR', type: 'BUILDING', parentId: office.id } });
     const floor = await p.location.create({ data: { code: 'QR_F', name: 'Lantai QR', type: 'FLOOR', parentId: building.id } });
@@ -36,8 +37,7 @@ describe('qr (e2e)', () => {
       acquisitionMethod: 'PURCHASE',
       condition: 'GOOD',
       status: 'IN_USE',
-      brand: 'Epson',
-      model: 'EB-X51',
+      specification: 'Epson EB-X51',
       serialNumber: 'SN-QR-RAHASIA',
       purchasePrice: 7500000,
       vendor: 'CV Vendor Rahasia',
@@ -68,12 +68,12 @@ describe('qr (e2e)', () => {
   it('anonymous visitors get only the public fields', async () => {
     const res = await ctx.http().get(publicUrl(token)).expect(200);
     expect(Object.keys(res.body).sort()).toEqual(
-      ['assetCode', 'brand', 'category', 'condition', 'hasPhoto', 'location', 'model', 'name', 'status'].sort(),
+      ['assetCode', 'category', 'condition', 'hasPhoto', 'location', 'name', 'specification', 'status'].sort(),
     );
     expect(res.body).toMatchObject({
       assetCode,
       name: 'Proyektor Rapat',
-      category: { name: 'Komputer dan IT' },
+      category: { name: 'Barang Uji' },
       location: { name: 'Ruang QR', path: 'Kantor QR / Blok QR / Lantai QR / Ruang QR' },
       hasPhoto: true,
     });

@@ -1,5 +1,6 @@
 import sharp from 'sharp';
 import { createTestApp } from './utils/app.js';
+import { testTypes } from './utils/fixtures.js';
 import type { LoginResult, TestContext } from './utils/app.js';
 
 const URL = '/api/v1/maintenance';
@@ -22,7 +23,7 @@ describe('maintenance (e2e)', () => {
         .http()
         .post('/api/v1/assets')
         .set(bearer(admin))
-        .send({ name, categoryId, ownershipType: 'OFFICE', acquisitionMethod: 'PURCHASE', condition: 'MINOR_DAMAGE', status })
+        .send({ name, categoryId, ownershipType: 'OFFICE', acquisitionMethod: 'PURCHASE', condition: 'NEEDS_REPAIR', status })
         .expect(201)
     ).body as { id: string };
 
@@ -31,7 +32,7 @@ describe('maintenance (e2e)', () => {
     admin = await ctx.loginAs('ADMIN_INVENTARIS');
     petugas = await ctx.loginAs('PETUGAS_INVENTARIS');
     viewer = await ctx.loginAs('VIEWER');
-    categoryId = (await ctx.prisma.category.findUniqueOrThrow({ where: { code: 'ELEKTRONIK' } })).id;
+    categoryId = ((await testTypes(ctx.prisma)).ng).id;
     employeeId = (await ctx.prisma.employee.create({ data: { fullName: 'Pegawai Servis' } })).id;
   });
 

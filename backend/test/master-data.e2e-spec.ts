@@ -1,4 +1,5 @@
 import { createTestApp } from './utils/app.js';
+import { testTypes } from './utils/fixtures.js';
 import type { LoginResult, TestContext } from './utils/app.js';
 
 describe('categories & departments (e2e)', () => {
@@ -24,11 +25,12 @@ describe('categories & departments (e2e)', () => {
     const URL = '/api/v1/categories';
     let printerId: string;
 
-    it('VIEWER can list the seeded categories but cannot create', async () => {
+    it('VIEWER can list the item types but cannot create', async () => {
+      await testTypes(ctx.prisma);
       const list = await ctx.http().get(URL).set(bearer(viewer)).expect(200);
-      expect(list.body.meta.total).toBeGreaterThanOrEqual(9);
+      expect(list.body.meta.total).toBeGreaterThanOrEqual(4);
       const codes = list.body.data.map((c: { code: string }) => c.code);
-      expect(codes).toEqual(expect.arrayContaining(['ELEKTRONIK', 'KOMPUTER_IT', 'LAINNYA']));
+      expect(codes).toEqual(expect.arrayContaining(['NG-900', 'BG-900']));
 
       await ctx.http().post(URL).set(bearer(viewer)).send({ code: 'X', name: 'X' }).expect(403);
       await ctx.http().get(URL).expect(401);

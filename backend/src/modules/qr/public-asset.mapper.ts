@@ -5,8 +5,7 @@ import type { PublicAssetDto } from './dto/public-asset.dto.js';
 export interface PublicAssetSource {
   assetCode: string;
   name: string;
-  brand: string | null;
-  model: string | null;
+  specification: string | null;
   status: AssetStatus;
   condition: AssetCondition;
   category: { name: string };
@@ -19,8 +18,7 @@ export const PUBLIC_ASSET_KEYS = [
   'assetCode',
   'name',
   'category',
-  'brand',
-  'model',
+  'specification',
   'location',
   'status',
   'condition',
@@ -32,8 +30,7 @@ export function toPublicAsset(source: PublicAssetSource): PublicAssetDto {
     assetCode: source.assetCode,
     name: source.name,
     category: { name: source.category.name },
-    brand: source.brand,
-    model: source.model,
+    specification: source.specification,
     location: source.location ? { name: source.location.name, path: source.location.path } : null,
     status: source.status,
     condition: source.condition,
