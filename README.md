@@ -111,6 +111,9 @@ npm run lint
 - Desain redesign UI: [docs/superpowers/specs/2026-11-20-oams-ui-redesign-design.md](docs/superpowers/specs/2026-11-20-oams-ui-redesign-design.md)
 - Rencana redesign UI: [docs/superpowers/plans/2026-11-21-oams-ui-redesign.md](docs/superpowers/plans/2026-11-21-oams-ui-redesign.md)
 - Dokumentasi redesign UI (warna, komponen, sidebar terkunci): [docs/redesign-ui.md](docs/redesign-ui.md)
+- Desain format inventaris kantor: [docs/superpowers/specs/2026-11-23-oams-format-inventaris-kantor-design.md](docs/superpowers/specs/2026-11-23-oams-format-inventaris-kantor-design.md)
+- Rencana format inventaris kantor: [docs/superpowers/plans/2026-11-23-oams-format-inventaris-kantor.md](docs/superpowers/plans/2026-11-23-oams-format-inventaris-kantor.md)
+- Dokumentasi format inventaris kantor (kode, jenis, ruangan, barang kelompok, laporan, impor): [docs/format-inventaris-kantor.md](docs/format-inventaris-kantor.md)
 
 ## Deployment (server dengan Docker)
 
