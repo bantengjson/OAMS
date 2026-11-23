@@ -7,8 +7,10 @@ describe('tones', () => {
     expect(STATUS_TONE.UNDER_MAINTENANCE).toBe('orange');
     expect(STATUS_TONE.DISPOSED).toBe('slate');
     expect(STATUS_TONE.AVAILABLE).toBe('green');
-    expect(CONDITION_TONE.MINOR_DAMAGE).toBe('amber');
-    expect(CONDITION_TONE.UNUSABLE).toBe('red');
+    expect(CONDITION_TONE.GOOD).toBe('green');
+    expect(CONDITION_TONE.NEEDS_REPAIR).toBe('amber');
+    expect(CONDITION_TONE.DAMAGED).toBe('red');
+    expect(Object.keys(CONDITION_TONE)).toHaveLength(3);
     expect(FLOW_TONE.overdue).toBe('red');
     expect(FLOW_TONE.opname).toBe('teal');
   });

@@ -42,14 +42,35 @@ export interface MasterDataQuery extends PageQuery {
   isActive?: boolean;
 }
 
+export type Golongan = 'BG' | 'NG';
+
+/** Item type ("Jenis Barang"), numbered per golongan; the API path stays /categories. */
 export interface Category {
   id: string;
+  /** e.g. NG-012 */
   code: string;
+  golongan: Golongan;
+  number: number;
+  /** Counted goods (Barang Kelompok), no QR. */
+  isGroup: boolean;
   name: string;
+  /** e.g. "NG 012 · Kursi Merah" */
+  label: string;
   description: string | null;
   isActive: boolean;
+  /** Used by items: golongan, number and isGroup are locked. */
+  inUse: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface Room {
+  id: string;
+  /** Room letter, e.g. "A"; never changes. */
+  code: string;
+  name: string;
+  isActive: boolean;
+  inUse: boolean;
 }
 
 export interface Department {
@@ -153,7 +174,7 @@ export const OWNERSHIP_TYPES = ['OFFICE', 'THIRD_PARTY'] as const;
 export type OwnershipType = (typeof OWNERSHIP_TYPES)[number];
 export const ACQUISITION_METHODS = ['PURCHASE', 'GRANT', 'LOAN', 'OTHER'] as const;
 export type AcquisitionMethod = (typeof ACQUISITION_METHODS)[number];
-export const ASSET_CONDITIONS = ['GOOD', 'MINOR_DAMAGE', 'MAJOR_DAMAGE', 'UNUSABLE'] as const;
+export const ASSET_CONDITIONS = ['GOOD', 'NEEDS_REPAIR', 'DAMAGED'] as const;
 export type AssetCondition = (typeof ASSET_CONDITIONS)[number];
 export const ASSET_STATUSES = [
   'AVAILABLE',

@@ -26,16 +26,14 @@ export const STATUS_VARIANT: Record<AssetStatus, BadgeVariant> = {
 
 export const CONDITION_LABEL: Record<AssetCondition, string> = {
   GOOD: 'Baik',
-  MINOR_DAMAGE: 'Rusak ringan',
-  MAJOR_DAMAGE: 'Rusak berat',
-  UNUSABLE: 'Tidak layak pakai',
+  NEEDS_REPAIR: 'Perlu Perbaikan',
+  DAMAGED: 'Rusak',
 };
 
 export const CONDITION_VARIANT: Record<AssetCondition, BadgeVariant> = {
   GOOD: 'success',
-  MINOR_DAMAGE: 'warning',
-  MAJOR_DAMAGE: 'destructive',
-  UNUSABLE: 'destructive',
+  NEEDS_REPAIR: 'warning',
+  DAMAGED: 'destructive',
 };
 
 export const OWNERSHIP_LABEL: Record<OwnershipType, string> = {

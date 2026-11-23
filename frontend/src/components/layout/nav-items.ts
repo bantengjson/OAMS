@@ -15,6 +15,7 @@ import {
   Tags,
   UserCircle,
   Users,
+  DoorOpen,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -55,7 +56,8 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { href: '/disposals', label: 'Pelepasan', icon: PackageX, section: 'Inventaris', permissions: ['disposals.manage'] },
   { href: '/users', label: 'Pengguna', icon: Users, section: 'Administrasi', permissions: ['users.manage'] },
   { href: '/roles', label: 'Role & Izin', icon: ShieldCheck, section: 'Administrasi', permissions: ['roles.view'] },
-  { href: '/categories', label: 'Kategori', icon: Tags, section: 'Data Master', permissions: ['categories.manage'] },
+  { href: '/categories', label: 'Jenis Barang', icon: Tags, section: 'Data Master', permissions: ['categories.manage'] },
+  { href: '/rooms', label: 'Ruangan', icon: DoorOpen, section: 'Data Master', permissions: ['locations.manage'] },
   { href: '/departments', label: 'Unit Kerja', icon: Building2, section: 'Data Master', permissions: ['departments.manage'] },
   { href: '/employees', label: 'Pegawai', icon: IdCard, section: 'Data Master', permissions: ['employees.manage'] },
   {

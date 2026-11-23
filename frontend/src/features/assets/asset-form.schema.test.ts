@@ -70,7 +70,7 @@ describe('toAssetUpdatePayload', () => {
     const payload = toAssetUpdatePayload({
       ...valid,
       responsibleEmployeeId: '33333333-3333-4333-8333-333333333333',
-      condition: 'MINOR_DAMAGE',
+      condition: 'NEEDS_REPAIR',
       status: 'STORED',
       notes: 'disimpan',
     });

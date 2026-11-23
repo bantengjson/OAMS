@@ -18,9 +18,8 @@ export const STATUS_TONE: Record<AssetStatus, Tone> = {
 
 export const CONDITION_TONE: Record<AssetCondition, Tone> = {
   GOOD: 'green',
-  MINOR_DAMAGE: 'amber',
-  MAJOR_DAMAGE: 'orange',
-  UNUSABLE: 'red',
+  NEEDS_REPAIR: 'amber',
+  DAMAGED: 'red',
 };
 
 export type Flow = 'mutation' | 'loan' | 'overdue' | 'maintenance' | 'damageReport' | 'disposal' | 'opname';
