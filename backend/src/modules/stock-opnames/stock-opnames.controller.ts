@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Put, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { AuthUser } from '../../common/auth/auth-user.js';
 import { CurrentUser } from '../../common/auth/current-user.decorator.js';
@@ -9,7 +9,9 @@ import { PaginationQueryDto } from '../../common/dto/pagination.dto.js';
 import { ParseUuid } from '../../common/pipes/uuid.pipe.js';
 import {
   ConfirmItemDto,
+  CountGroupLineDto,
   CreateStockOpnameDto,
+  OpnameGroupLineDto,
   OpnameItemDto,
   OpnameItemQueryDto,
   OpnameReportDto,
@@ -71,6 +73,26 @@ export class StockOpnamesController {
   @ApiOkResponse({ type: ScanResultDto })
   scan(@Param('id', ParseUuid) id: string, @Body() dto: ScanDto, @CurrentUser() actor: AuthUser): Promise<ScanResultDto> {
     return this.opnames.scan(id, dto.value, actor);
+  }
+
+  @Get(':id/group-lines')
+  @ApiOperation({ summary: 'Barang kelompok yang dihitung di sesi ini' })
+  @ApiOkResponse({ type: [OpnameGroupLineDto] })
+  groupLines(@Param('id', ParseUuid) id: string, @CurrentUser() actor: AuthUser): Promise<OpnameGroupLineDto[]> {
+    return this.opnames.groupLines(id, actor);
+  }
+
+  @Put(':id/group-lines/:lineId')
+  @RequirePermissions(PERMISSIONS.STOCK_OPNAMES_EXECUTE)
+  @ApiOperation({ summary: 'Isi hasil hitung barang kelompok (boleh diulang selama sesi terbuka)' })
+  @ApiOkResponse({ type: OpnameGroupLineDto })
+  countGroupLine(
+    @Param('id', ParseUuid) id: string,
+    @Param('lineId', ParseUuid) lineId: string,
+    @Body() dto: CountGroupLineDto,
+    @CurrentUser() actor: AuthUser,
+  ): Promise<OpnameGroupLineDto> {
+    return this.opnames.countGroupLine(id, lineId, dto, actor);
   }
 
   @Post(':id/items/:itemId/confirm')

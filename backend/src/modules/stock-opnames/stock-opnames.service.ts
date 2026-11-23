@@ -15,11 +15,14 @@ import { pageArgs, type PaginationQueryDto } from '../../common/dto/pagination.d
 import { isUniqueViolation } from '../../common/prisma/prisma-errors.js';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
 import type { OpnameResult, Prisma } from '../../generated/prisma/client.js';
+import { AssetCodeService, codePrefix } from '../assets/asset-code.js';
 import { AssetConditionsService } from '../assets/asset-conditions.service.js';
 import {
   REPORT_RESULTS,
   type ConfirmItemDto,
+  type CountGroupLineDto,
   type CreateStockOpnameDto,
+  type OpnameGroupLineDto,
   type OpnameItemDto,
   type OpnameItemQueryDto,
   type OpnameReportDto,
@@ -49,6 +52,7 @@ export class StockOpnamesService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly conditions: AssetConditionsService,
+    private readonly codes: AssetCodeService,
   ) {}
 
   // ---------------------------------------------------------------- reads
@@ -110,7 +114,21 @@ export class StockOpnamesService {
       OpnameItemDto[]
     >;
     for (const row of rows) groups[row.result as ReportResult].push(toItemDto(row));
-    return { session, groups };
+    const lines = await this.groupLineDtos(id);
+    const same = (l: OpnameGroupLineDto) =>
+      l.counted !== null &&
+      l.counted.good === l.expected.good &&
+      l.counted.needsRepair === l.expected.needsRepair &&
+      l.counted.damaged === l.expected.damaged;
+    return {
+      session,
+      groups,
+      groupLines: {
+        matched: lines.filter((l) => l.counted && same(l)),
+        different: lines.filter((l) => l.counted && !same(l)),
+        notCounted: lines.filter((l) => !l.counted),
+      },
+    };
   }
 
   // ---------------------------------------------------------------- session lifecycle
@@ -147,6 +165,20 @@ export class StockOpnamesService {
             expectedStatus: a.status,
           })),
         });
+        // Counted goods are counted, not scanned: one line per active group item.
+        const groupItems = await tx.groupItem.findMany({
+          where: { archivedAt: null },
+          select: { id: true, qtyGood: true, qtyNeedsRepair: true, qtyDamaged: true },
+        });
+        await tx.stockOpnameGroupLine.createMany({
+          data: groupItems.map((g) => ({
+            opnameId: session.id,
+            groupItemId: g.id,
+            expectedGood: g.qtyGood,
+            expectedNeedsRepair: g.qtyNeedsRepair,
+            expectedDamaged: g.qtyDamaged,
+          })),
+        });
         return session.id;
       });
     } catch (error) {
@@ -166,6 +198,8 @@ export class StockOpnamesService {
   async close(id: string, actor: AuthUser): Promise<StockOpnameDto> {
     const session = await this.getRow(id);
     if (session.status !== 'OPEN') throw new ConflictException(OPNAME_NOT_OPEN);
+    type Counts = { qtyGood: number; qtyNeedsRepair: number; qtyDamaged: number };
+    const applied: { id: string; before: Counts; after: Counts }[] = [];
     await this.prisma.$transaction(async (tx) => {
       // Claiming the session first waits for scans and confirmations in flight (they hold it FOR SHARE)
       // and makes every later one see a closed session.
@@ -201,7 +235,34 @@ export class StockOpnamesService {
       for (const [result, ids] of byResult) {
         await tx.stockOpnameItem.updateMany({ where: { id: { in: ids }, result: 'PENDING', scannedAt: null }, data: { result } });
       }
+      // Counted group lines become the new quantities; uncounted lines leave the item as it was.
+      const counted = await tx.stockOpnameGroupLine.findMany({
+        where: { opnameId: id, countedAt: { not: null } },
+        include: { groupItem: true },
+      });
+      for (const line of counted) {
+        const g = line.groupItem;
+        const next = { qtyGood: line.countedGood!, qtyNeedsRepair: line.countedNeedsRepair!, qtyDamaged: line.countedDamaged! };
+        if (g.archivedAt || (g.qtyGood === next.qtyGood && g.qtyNeedsRepair === next.qtyNeedsRepair && g.qtyDamaged === next.qtyDamaged)) {
+          continue;
+        }
+        await tx.groupItem.update({ where: { id: g.id }, data: next });
+        applied.push({
+          id: g.id,
+          before: { qtyGood: g.qtyGood, qtyNeedsRepair: g.qtyNeedsRepair, qtyDamaged: g.qtyDamaged },
+          after: next,
+        });
+      }
     });
+    for (const a of applied) {
+      await this.audit.record({
+        action: 'group_item.opname_applied',
+        module: 'group_items',
+        entityId: a.id,
+        before: a.before,
+        after: { ...a.after, opnameId: id },
+      });
+    }
     const result = await this.toDto(await this.getRow(id));
     await this.audit.record({ action: 'opname.closed', module: MODULE, entityId: id, after: { counts: result.counts } });
     return result;
@@ -218,6 +279,77 @@ export class StockOpnamesService {
     }
     await this.audit.record({ action: 'opname.cancelled', module: MODULE, entityId: id });
     return this.toDto(await this.getRow(id));
+  }
+
+  // ---------------------------------------------------------------- group lines
+
+  async groupLines(id: string, actor: AuthUser): Promise<OpnameGroupLineDto[]> {
+    this.assertCanView(actor);
+    await this.getRow(id);
+    return this.groupLineDtos(id);
+  }
+
+  async countGroupLine(id: string, lineId: string, dto: CountGroupLineDto, actor: AuthUser): Promise<OpnameGroupLineDto> {
+    const session = await this.getRow(id);
+    this.assertCanScan(session, actor);
+    await this.prisma.$transaction(async (tx) => {
+      await this.lockOpen(tx, id);
+      const updated = await tx.stockOpnameGroupLine.updateMany({
+        where: { id: lineId, opnameId: id },
+        data: {
+          countedGood: dto.good,
+          countedNeedsRepair: dto.needsRepair,
+          countedDamaged: dto.damaged,
+          countedAt: new Date(),
+          countedById: actor.id,
+        },
+      });
+      if (updated.count !== 1) throw new NotFoundException(OPNAME_ITEM_NOT_FOUND);
+    });
+    const line = (await this.groupLineDtos(id)).find((l) => l.id === lineId);
+    if (!line) throw new NotFoundException(OPNAME_ITEM_NOT_FOUND);
+    return line;
+  }
+
+  private async groupLineDtos(opnameId: string): Promise<OpnameGroupLineDto[]> {
+    const [rows, org] = await Promise.all([
+      this.prisma.stockOpnameGroupLine.findMany({
+        where: { opnameId },
+        include: {
+          groupItem: {
+            include: {
+              category: { select: { golongan: true, number: true } },
+              location: { select: { code: true, name: true } },
+            },
+          },
+        },
+        orderBy: [{ groupItem: { location: { code: 'asc' } } }, { groupItem: { name: 'asc' } }],
+      }),
+      this.codes.org(this.prisma),
+    ]);
+    const counterIds = [...new Set(rows.map((r) => r.countedById).filter((v): v is string => Boolean(v)))];
+    const counters = new Map(
+      (await this.prisma.user.findMany({ where: { id: { in: counterIds } }, select: { id: true, fullName: true } })).map((u) => [u.id, u]),
+    );
+    return rows.map((r) => {
+      const g = r.groupItem;
+      return {
+        id: r.id,
+        groupItem: {
+          id: g.id,
+          name: g.name,
+          code: codePrefix({ golongan: g.category.golongan, roomCode: g.location.code, typeNumber: g.category.number, org, year: g.acquisitionYear }),
+          room: g.location,
+        },
+        expected: { good: r.expectedGood, needsRepair: r.expectedNeedsRepair, damaged: r.expectedDamaged },
+        counted:
+          r.countedAt === null
+            ? null
+            : { good: r.countedGood!, needsRepair: r.countedNeedsRepair!, damaged: r.countedDamaged! },
+        countedAt: r.countedAt,
+        countedBy: r.countedById ? (counters.get(r.countedById) ?? null) : null,
+      };
+    });
   }
 
   // ---------------------------------------------------------------- scanning

@@ -84,9 +84,45 @@ export const REPORT_RESULTS = [
 ] as const;
 export type ReportResult = (typeof REPORT_RESULTS)[number];
 
+export class GroupCountsDto {
+  @ApiProperty() good!: number;
+  @ApiProperty() needsRepair!: number;
+  @ApiProperty() damaged!: number;
+}
+
+/** A group item (kitchenware) counted in a stock opname. */
+export class OpnameGroupLineDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() groupItem!: { id: string; name: string; code: string; room: { code: string; name: string } };
+  @ApiProperty({ type: GroupCountsDto }) expected!: GroupCountsDto;
+  @ApiProperty({ type: GroupCountsDto, nullable: true }) counted!: GroupCountsDto | null;
+  @ApiProperty({ nullable: true }) countedAt!: Date | null;
+  @ApiProperty({ nullable: true }) countedBy!: { id: string; fullName: string } | null;
+}
+
+export class OpnameGroupReportDto {
+  @ApiProperty({ type: [OpnameGroupLineDto] }) matched!: OpnameGroupLineDto[];
+  @ApiProperty({ type: [OpnameGroupLineDto] }) different!: OpnameGroupLineDto[];
+  @ApiProperty({ type: [OpnameGroupLineDto], description: 'Tidak dihitung; jumlah tercatat tetap' }) notCounted!: OpnameGroupLineDto[];
+}
+
 export class OpnameReportDto {
   @ApiProperty({ type: StockOpnameDto }) session!: StockOpnameDto;
   @ApiProperty({ type: Object }) groups!: Record<ReportResult, OpnameItemDto[]>;
+  @ApiProperty({ type: OpnameGroupReportDto }) groupLines!: OpnameGroupReportDto;
+}
+
+const COUNT_MESSAGE = 'Jumlah harus bilangan bulat 0 atau lebih';
+
+export class CountGroupLineDto {
+  @ApiProperty() @IsInt({ message: COUNT_MESSAGE }) @Min(0, { message: COUNT_MESSAGE }) @Max(100000)
+  good!: number;
+
+  @ApiProperty() @IsInt({ message: COUNT_MESSAGE }) @Min(0, { message: COUNT_MESSAGE }) @Max(100000)
+  needsRepair!: number;
+
+  @ApiProperty() @IsInt({ message: COUNT_MESSAGE }) @Min(0, { message: COUNT_MESSAGE }) @Max(100000)
+  damaged!: number;
 }
 
 export class CreateStockOpnameDto {
