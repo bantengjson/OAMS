@@ -60,7 +60,7 @@ describe('inventory report (e2e)', () => {
     const sheet = await load(res.body as Buffer);
     expect(sheet.getCell('A1').value).toBe('DAFTAR INVENTARIS BARANG');
     expect(sheet.getCell('A2').value).toBe('DPC PDI PERJUANGAN KOTA SURABAYA');
-    expect(String(sheet.getCell('A3').value)).toMatch(/^TAHUN \d{4}$/);
+    expect(sheet.getCell('A3').text).toMatch(/^TAHUN \d{4}$/);
     const texts: string[] = [];
     sheet.eachRow((row) => texts.push(row.values ? (row.values as unknown[]).filter(Boolean).join(' | ') : ''));
     const all = texts.join('\n');
