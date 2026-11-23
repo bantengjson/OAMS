@@ -13,6 +13,7 @@ import { CONDITION_TONE, STATUS_TONE, TONE_CLASS } from '@/lib/tones';
 import { cn, formatDate, initials } from '@/lib/utils';
 import type { AssetListItem } from '@/types/api';
 import type { SortField } from './asset-list-state';
+import { noStickerReason, printableIds } from './printable';
 
 export function AssetStatusBadge({ status }: { status: AssetListItem['status'] }) {
   return <Badge tone={STATUS_TONE[status]}>{STATUS_LABEL[status]}</Badge>;
@@ -71,7 +72,8 @@ export function AssetTable({
   const categoryTone = useCategoryTone();
   const show = (k: string) => visible.has(k);
   const cols = 2 + ASSET_COLUMNS.filter((c) => !c.required && show(c.key)).length + (selection ? 1 : 0) + 1;
-  const pageIds = rows.map((r) => r.id);
+  // Only items that can still carry a sticker are selectable: the selection exists to print.
+  const pageIds = printableIds(rows);
   const picked = new Set(selection?.ids ?? []);
   const allPicked = pageIds.length > 0 && pageIds.every((id) => picked.has(id));
   const stop = (e: { stopPropagation: () => void }) => e.stopPropagation();
@@ -84,9 +86,11 @@ export function AssetTable({
             <TH className="w-10">
               <input
                 type="checkbox"
-                className="h-4 w-4 accent-primary"
+                className="h-4 w-4 accent-primary disabled:cursor-not-allowed disabled:opacity-40"
                 aria-label="Pilih semua di halaman ini"
                 checked={allPicked}
+                disabled={pageIds.length === 0}
+                title={pageIds.length === 0 ? 'Tidak ada barang di halaman ini yang stikernya dapat dicetak.' : undefined}
                 onChange={(e) => selection.onChange(e.target.checked ? pageIds : [])}
               />
             </TH>
@@ -126,6 +130,7 @@ export function AssetTable({
         ) : (
           rows.map((a) => {
             const isPicked = picked.has(a.id);
+            const noSticker = noStickerReason(a);
             return (
               <TR
                 key={a.id}
@@ -136,9 +141,11 @@ export function AssetTable({
                   <TD onClick={stop}>
                     <input
                       type="checkbox"
-                      className="h-4 w-4 accent-primary"
+                      className="h-4 w-4 accent-primary disabled:cursor-not-allowed disabled:opacity-40"
                       aria-label={`Pilih ${a.name}`}
                       checked={isPicked}
+                      disabled={Boolean(noSticker)}
+                      title={noSticker ?? undefined}
                       onChange={(e) =>
                         selection.onChange(e.target.checked ? [...selection.ids, a.id] : selection.ids.filter((id) => id !== a.id))
                       }

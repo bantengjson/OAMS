@@ -119,7 +119,7 @@ function AssetDetailContent() {
             </div>
           </div>
           <div className="flex flex-wrap gap-2 xl:max-w-[60%] xl:justify-end [&_button]:h-8 [&_button]:px-2.5">
-            {canGenerate ? (
+            {canGenerate && live ? (
               <Link href={`/qr/print?ids=${a.id}`}>
                 <Button variant="outline" leftIcon={<Printer className="h-4 w-4" />}>Cetak QR</Button>
               </Link>

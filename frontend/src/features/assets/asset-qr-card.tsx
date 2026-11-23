@@ -19,6 +19,7 @@ import { framedStickerPng } from '@/lib/sticker-image';
 import { FramedSticker } from '@/features/qr/framed-sticker';
 import { formatDateTime } from '@/lib/utils';
 import type { AssetDetail } from '@/types/api';
+import { noStickerReason } from './printable';
 
 export function AssetQrCard({ asset, canGenerate }: { asset: AssetDetail; canGenerate: boolean }) {
   const queryClient = useQueryClient();
@@ -72,6 +73,7 @@ export function AssetQrCard({ asset, canGenerate }: { asset: AssetDetail; canGen
   if (info.isPending) return <PageSpinner />;
   if (info.isError) return <Alert variant="error">{getErrorMessage(info.error)}</Alert>;
   const qr = info.data;
+  const noSticker = noStickerReason(asset);
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
@@ -107,6 +109,8 @@ export function AssetQrCard({ asset, canGenerate }: { asset: AssetDetail; canGen
             <dd>{qr.printedCount} kali{qr.lastPrintedAt ? `, terakhir ${formatDateTime(qr.lastPrintedAt)}` : ''}</dd>
           </dl>
 
+          {noSticker ? <Alert variant="info">{noSticker}</Alert> : null}
+
           {!qr.isActive ? (
             <Alert variant="info">QR nonaktif: pemindaian menampilkan pesan &ldquo;tidak dikenal&rdquo;. Aktifkan kembali bila stiker masih dipakai.</Alert>
           ) : null}
@@ -125,9 +129,11 @@ export function AssetQrCard({ asset, canGenerate }: { asset: AssetDetail; canGen
             <Button variant="outline" size="sm" onClick={() => void download('svg')} leftIcon={<Download className="h-4 w-4" />}>Unduh QR SVG</Button>
             {canGenerate ? (
               <>
-                <Link href={`/qr/print?ids=${asset.id}`}>
-                  <Button variant="outline" size="sm" leftIcon={<Printer className="h-4 w-4" />}>Cetak stiker</Button>
-                </Link>
+                {noSticker ? null : (
+                  <Link href={`/qr/print?ids=${asset.id}`}>
+                    <Button variant="outline" size="sm" leftIcon={<Printer className="h-4 w-4" />}>Cetak stiker</Button>
+                  </Link>
+                )}
                 <Button variant="outline" size="sm" onClick={() => toggle.mutate()} loading={toggle.isPending} leftIcon={<Power className="h-4 w-4" />}>
                   {qr.isActive ? 'Nonaktifkan' : 'Aktifkan'}
                 </Button>
