@@ -8,7 +8,10 @@ import {
   PERMISSION_DEFINITIONS,
   ROLE_DEFINITIONS,
 } from '../common/auth/permissions.catalog.js';
+import { ASSET_CODE_ORG_KEY, DEFAULT_ASSET_CODE_ORG, OFFICE_CODE, OFFICE_NAME } from '../common/office.js';
 import type { PrismaClient } from '../generated/prisma/client.js';
+
+export { OFFICE_CODE, OFFICE_NAME } from '../common/office.js';
 
 export interface SeedOptions {
   adminEmail: string;
@@ -20,8 +23,6 @@ export interface SeedOptions {
 
 export const USERNAME_PATTERN = /^[a-z0-9._-]{3,50}$/;
 
-export const OFFICE_CODE = 'KANTOR';
-export const OFFICE_NAME = 'DPC PDI Perjuangan Kota Surabaya';
 
 /** The office's rooms; the letter is part of every asset code registered in the room. */
 export const OFFICE_ROOMS: readonly { code: string; name: string }[] = [
@@ -42,9 +43,6 @@ export const OFFICE_ROOMS: readonly { code: string; name: string }[] = [
   { code: 'O', name: 'Halaman Parkiran' },
 ];
 
-/** Setting key of the organisation part of asset codes ("DPC"). */
-export const ASSET_CODE_ORG_KEY = 'asset_code_org';
-export const DEFAULT_ASSET_CODE_ORG = 'DPC';
 
 export async function hashPassword(plain: string): Promise<string> {
   return argon2.hash(plain, { type: argon2.argon2id });
