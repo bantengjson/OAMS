@@ -317,6 +317,12 @@ export class AssetsService {
             dto.locationId !== undefined ? (dto.locationId ?? null) : before.locationId,
           )
         : null;
+    // The room letter belongs to the room the item was registered in: a later mutation does not
+    // change it, so filling a missing year keeps the letter the old code already carries.
+    const codeParts =
+      placement && !roomChanged && !categoryChanged
+        ? { ...placement.parts, roomCode: roomLetterOf(before.assetCode) ?? placement.parts.roomCode }
+        : placement?.parts;
 
     const data = this.toData(dto, true);
     if (placement) {
@@ -328,9 +334,13 @@ export class AssetsService {
         await this.guard.setStatus(tx, id, before.status, dto.status!);
         delete data.status;
       }
-      if (placement && !printed) {
+      if (codeParts && !printed) {
+        // Re-read under the label's row lock: mark-printed may have committed since the check above.
+        const locked = await tx.$queryRaw<{ printed_count: number }[]>`
+          SELECT printed_count FROM asset_labels WHERE asset_id = ${id}::uuid FOR UPDATE`;
+        if ((locked[0]?.printed_count ?? 0) > 0) throw new ConflictException(CODE_LOCKED);
         const year = dto.acquisitionYear ?? before.acquisitionYear;
-        data.assetCode = await this.codes.next(tx, codePrefix({ ...placement.parts, org: await this.codes.org(tx), year }));
+        data.assetCode = await this.codes.next(tx, codePrefix({ ...codeParts, org: await this.codes.org(tx), year }));
       }
       return tx.asset.update({ where: { id }, data, include: assetDetailInclude });
     });
@@ -554,4 +564,9 @@ export function rootOf(id: string, paths: PathIndex): string {
 
 function assertYear(year: number): void {
   if (year > jakartaYear() + 1) throw new BadRequestException(YEAR_IN_FUTURE);
+}
+
+/** The room letter inside an office code (`NG.A/012/DPC/2023-01` -> `A`); null when it has none. */
+export function roomLetterOf(assetCode: string): string | null {
+  return /^(?:BG|NG)\.([A-Z]{1,3})\//.exec(assetCode)?.[1] ?? null;
 }

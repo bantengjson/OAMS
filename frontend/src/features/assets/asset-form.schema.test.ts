@@ -2,6 +2,7 @@ import {
   assetFormSchema,
   emptyAssetForm,
   placementError,
+  yearProblem,
   toAssetPayload,
   toAssetUpdatePayload,
 } from './asset-form.schema';
@@ -22,14 +23,16 @@ const BG = { golongan: 'BG' as const, number: 4 };
 const LAND = { golongan: 'NG' as const, number: 1 };
 
 describe('assetFormSchema', () => {
-  it('requires name, type and year', () => {
-    const result = assetFormSchema.safeParse({ ...valid, name: ' ', categoryId: '', acquisitionYear: '' });
+  it('requires name and type', () => {
+    const result = assetFormSchema.safeParse({ ...valid, name: ' ', categoryId: '' });
     const fields = result.success ? [] : result.error.issues.map((i) => i.path[0]);
-    expect(fields).toEqual(expect.arrayContaining(['name', 'categoryId', 'acquisitionYear']));
+    expect(fields).toEqual(expect.arrayContaining(['name', 'categoryId']));
   });
 
   it('takes a four-digit year and a quantity of 1-100', () => {
     expect(assetFormSchema.safeParse({ ...valid, acquisitionYear: '23' }).success).toBe(false);
+    // Empty is allowed by the schema: the form decides (required on create, optional for an imported TT item).
+    expect(assetFormSchema.safeParse({ ...valid, acquisitionYear: '' }).success).toBe(true);
     expect(assetFormSchema.safeParse({ ...valid, quantity: '0' }).success).toBe(false);
     expect(assetFormSchema.safeParse({ ...valid, quantity: '101' }).success).toBe(false);
     expect(assetFormSchema.safeParse({ ...valid, quantity: '12' }).success).toBe(true);
@@ -39,6 +42,19 @@ describe('assetFormSchema', () => {
     expect(assetFormSchema.safeParse({ ...valid, purchasePrice: '1500000.50' }).success).toBe(true);
     expect(assetFormSchema.safeParse({ ...valid, purchasePrice: '1.500.000' }).success).toBe(false);
     expect(assetFormSchema.safeParse({ ...valid, purchasePrice: '-5' }).success).toBe(false);
+  });
+});
+
+describe('yearProblem', () => {
+  it('requires a year when creating', () => {
+    expect(yearProblem('create', null, '')).toBe('Tahun pengadaan wajib diisi');
+    expect(yearProblem('create', null, '2023')).toBeNull();
+  });
+
+  it('lets an imported TT item keep an empty year, but never clears a stored year', () => {
+    expect(yearProblem('edit', null, '')).toBeNull();
+    expect(yearProblem('edit', 2020, '')).toBe('Tahun yang sudah terisi tidak bisa dikosongkan');
+    expect(yearProblem('edit', 2020, '2021')).toBeNull();
   });
 });
 

@@ -80,6 +80,18 @@ describe('stock opname: group lines (e2e)', () => {
     await ctx.http().put(`${URL}/${sessionId}/group-lines/${line.id}`).set(bearer(petugas)).send({ good: 1.5, needsRepair: 0, damaged: 0 }).expect(400);
   });
 
+  it('refuses a quantity change while the session counts the item', async () => {
+    const res = await ctx
+      .http()
+      .patch(`/api/v1/group-items/${untouched}`)
+      .set(bearer(admin))
+      .send({ qtyGood: 38, reason: 'Dua garpu hilang' })
+      .expect(409);
+    expect(res.body.message).toBe('Barang ini sedang dihitung di stock opname; ubah lewat hasil hitung.');
+    // fields that are not quantities stay editable
+    await ctx.http().patch(`/api/v1/group-items/${untouched}`).set(bearer(admin)).send({ specification: 'Stainless', reason: 'Lengkapi data' }).expect(200);
+  });
+
   it('closing applies counted numbers', async () => {
     await ctx.http().post(`${URL}/${sessionId}/close`).set(bearer(admin)).expect(200);
     const item = await ctx.prisma.groupItem.findUniqueOrThrow({ where: { id: differs } });

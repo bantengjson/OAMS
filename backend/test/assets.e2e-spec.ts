@@ -717,6 +717,41 @@ describe('assets: office format (e2e)', () => {
     expect(res.body.groupItems.units).toBeGreaterThanOrEqual(7);
   });
 
+  it('refuses a mutation that puts a vehicle in a room', async () => {
+    const car = await ctx
+      .http()
+      .post(URL)
+      .set(bearer(admin))
+      .send(body({ categoryId: t.bg.id, locationId: undefined, acquisitionYear: 2022, name: 'Motor Mutasi' }))
+      .expect(201);
+    const res = await ctx
+      .http()
+      .post('/api/v1/mutations')
+      .set(bearer(admin))
+      .send({ assetId: car.body.id, toLocationId: t.roomA.id, reason: 'Coba pindah ruangan' })
+      .expect(400);
+    expect(res.body.message).toBe('Kendaraan tidak memakai ruangan.');
+  });
+
+  it('keeps the registration room in the code when a late year is filled after a move', async () => {
+    const created = await ctx.prisma.asset.create({
+      data: {
+        assetCode: 'NG.A/960/DPC/TT-03',
+        name: 'Meja Pindah TT',
+        categoryId: codeType.id,
+        locationId: t.roomB.id, // already moved to B by a mutation; the code says A
+        ownershipType: 'OFFICE',
+        acquisitionMethod: 'PURCHASE',
+        condition: 'GOOD',
+        status: 'IN_USE',
+        label: { create: { publicToken: token(3) } },
+      },
+    });
+    const res = await ctx.http().patch(`${URL}/${created.id}`).set(bearer(admin)).send({ acquisitionYear: 2014 }).expect(200);
+    expect(res.body.assetCode).toBe('NG.A/960/DPC/2014-01');
+    expect(res.body.room.code).toBe('B');
+  });
+
   it('search finds by specification; filters by golongan', async () => {
     await ctx.http().post(URL).set(bearer(admin)).send(body({ specification: 'Merk Unik Zebra' })).expect(201);
     const res = await ctx.http().get(URL).query({ search: 'unik zebra' }).set(bearer(viewer)).expect(200);

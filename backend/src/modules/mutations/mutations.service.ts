@@ -1,4 +1,4 @@
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service.js';
 import type { AuthUser } from '../../common/auth/auth-user.js';
 import { PERMISSIONS } from '../../common/auth/permissions.catalog.js';
@@ -10,7 +10,7 @@ import { isSerializationFailure, isUniqueViolation } from '../../common/prisma/p
 import { PrismaService } from '../../common/prisma/prisma.service.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 import { AssetStateGuard } from '../assets/asset-state.guard.js';
-import { ASSET_NOT_FOUND, AssetsService } from '../assets/assets.service.js';
+import { ASSET_NOT_FOUND, AssetsService, LAND_NO_ROOM, ROOM_INVALID, VEHICLE_NO_ROOM } from '../assets/assets.service.js';
 import { EmployeesService } from '../employees/employees.service.js';
 import type { CreateMutationDto } from './dto/create-mutation.dto.js';
 import type { MutationQueryDto } from './dto/mutation-query.dto.js';
@@ -94,9 +94,17 @@ export class MutationsService {
     const responsibleChanges = changesResponsible && toResponsibleEmployeeId !== asset.responsibleEmployeeId;
     if (!locationChanges && !responsibleChanges) throw new ConflictException(MUTATION_NO_CHANGE);
     if (locationChanges) {
-      const loc = await this.prisma.location.findUnique({ where: { id: toLocationId }, select: { isActive: true } });
+      const loc = await this.prisma.location.findUnique({ where: { id: toLocationId }, select: { isActive: true, type: true } });
       if (!loc) throw new NotFoundException('Lokasi tujuan tidak ditemukan.');
       if (!loc.isActive) throw new ConflictException(LOCATION_INACTIVE);
+      // Vehicles and land & building have no room, so they cannot be moved into one.
+      const type = await this.prisma.asset.findUniqueOrThrow({
+        where: { id: asset.id },
+        select: { category: { select: { golongan: true, number: true } } },
+      });
+      if (type.category.golongan === 'BG') throw new BadRequestException(VEHICLE_NO_ROOM);
+      if (type.category.number === 1) throw new BadRequestException(LAND_NO_ROOM);
+      if (loc.type !== 'ROOM') throw new BadRequestException(ROOM_INVALID);
     }
     if (responsibleChanges && toResponsibleEmployeeId) {
       await this.employees.assertActive(this.prisma, toResponsibleEmployeeId);

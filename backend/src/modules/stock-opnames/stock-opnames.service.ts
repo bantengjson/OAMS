@@ -240,6 +240,10 @@ export class StockOpnamesService {
         where: { opnameId: id, countedAt: { not: null } },
         include: { groupItem: true },
       });
+      // Lock the items so an edit racing with close cannot be lost (edits during the session are refused).
+      if (counted.length > 0) {
+        await tx.$queryRaw`SELECT id FROM group_items WHERE id = ANY(${counted.map((l) => l.groupItemId)}::uuid[]) FOR UPDATE`;
+      }
       for (const line of counted) {
         const g = line.groupItem;
         const next = { qtyGood: line.countedGood!, qtyNeedsRepair: line.countedNeedsRepair!, qtyDamaged: line.countedDamaged! };

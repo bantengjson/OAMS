@@ -19,7 +19,7 @@ import { ASSET_CONDITIONS, ASSET_STATUSES, OWNERSHIP_TYPES } from '@/types/api';
 import type { Category } from '@/types/api';
 import Link from 'next/link';
 import { EmployeeLookup } from '@/features/employees/employee-lookup';
-import { FLOW_STATUSES, assetFormSchema, emptyAssetForm, placementError, usesNoRoom } from './asset-form.schema';
+import { FLOW_STATUSES, assetFormSchema, emptyAssetForm, placementError, usesNoRoom, yearProblem } from './asset-form.schema';
 import type { AssetFormValues, PlacementType } from './asset-form.schema';
 import { AssetConditionBadge } from './asset-table';
 
@@ -110,8 +110,9 @@ export function AssetForm({
       form.setError('locationId', { message: roomProblem });
       return;
     }
-    if (isEdit && initial.acquisitionYear && !values.acquisitionYear.trim()) {
-      form.setError('acquisitionYear', { message: 'Tahun yang sudah terisi tidak bisa dikosongkan' });
+    const yearIssue = yearProblem(isEdit ? 'edit' : 'create', initial.acquisitionYear ? Number(initial.acquisitionYear) : null, values.acquisitionYear);
+    if (yearIssue) {
+      form.setError('acquisitionYear', { message: yearIssue });
       return;
     }
     try {

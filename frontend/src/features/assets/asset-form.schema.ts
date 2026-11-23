@@ -10,10 +10,11 @@ export const assetFormSchema = z.object({
   categoryId: z.string().min(1, 'Pilih jenis barang'),
   /** Room; the rules depend on the type (see placementError). */
   locationId: z.string(),
+  /** Empty is allowed here; `yearProblem` decides (required on create, optional for an imported TT item). */
   acquisitionYear: z
     .string()
     .trim()
-    .refine((v) => /^(19|20)\d{2}$/.test(v), 'Tahun pengadaan 4 digit, mis. 2023'),
+    .refine((v) => v === '' || /^(19|20)\d{2}$/.test(v), 'Tahun pengadaan 4 digit, mis. 2023'),
   quantity: z
     .string()
     .trim()
@@ -72,6 +73,16 @@ export interface PlacementType {
 }
 
 export const usesNoRoom = (t: PlacementType) => t.golongan === 'BG' || t.number === 1;
+
+/**
+ * The year is part of the code: required when registering, and an item imported without one
+ * (code `…/TT-01`) may stay without one, but a stored year is never cleared.
+ */
+export function yearProblem(mode: 'create' | 'edit', storedYear: number | null, value: string): string | null {
+  if (value.trim()) return null;
+  if (mode === 'create') return 'Tahun pengadaan wajib diisi';
+  return storedYear === null ? null : 'Tahun yang sudah terisi tidak bisa dikosongkan';
+}
 
 export function placementError(type: PlacementType, locationId: string): string | null {
   if (usesNoRoom(type)) {

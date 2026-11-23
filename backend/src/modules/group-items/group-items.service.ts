@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { AuditService } from '../../common/audit/audit.service.js';
 import type { AuditEntryPublicDto } from '../../common/audit/audit.types.js';
 import type { AuthUser } from '../../common/auth/auth-user.js';
@@ -20,6 +20,7 @@ const MODULE = 'group_items';
 export const GROUP_NOT_FOUND = 'Barang kelompok tidak ditemukan.';
 export const GROUP_ARCHIVED = 'Barang kelompok sudah diarsipkan.';
 export const NOT_A_GROUP_TYPE = 'Jenis ini bukan jenis Barang Kelompok.';
+export const COUNTED_IN_OPNAME = 'Barang ini sedang dihitung di stock opname; ubah lewat hasil hitung.';
 const TYPE_INVALID = 'Jenis barang tidak ditemukan atau nonaktif.';
 const ROOM_INVALID = 'Ruangan tidak ditemukan atau nonaktif.';
 
@@ -141,6 +142,17 @@ export class GroupItemsService {
     if (before.archivedAt) throw new BadRequestException(GROUP_ARCHIVED);
     if (dto.locationId) await this.assertRoom(dto.locationId);
     const { reason, ...fields } = dto;
+    // While a session counts this item, its numbers belong to that count: closing would overwrite an edit here.
+    const changesQuantity = (['qtyGood', 'qtyNeedsRepair', 'qtyDamaged'] as const).some(
+      (k) => fields[k] !== undefined && fields[k] !== before[k],
+    );
+    if (changesQuantity) {
+      const open = await this.prisma.stockOpnameGroupLine.findFirst({
+        where: { groupItemId: id, opname: { status: 'OPEN' } },
+        select: { id: true },
+      });
+      if (open) throw new ConflictException(COUNTED_IN_OPNAME);
+    }
     const data: Prisma.GroupItemUncheckedUpdateInput = {};
     for (const [key, value] of Object.entries(fields)) {
       if (value !== undefined) (data as Record<string, unknown>)[key] = value;

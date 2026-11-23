@@ -11,6 +11,7 @@ describe('asset state guard (e2e)', () => {
   let categoryId: string;
   let employeeId: string;
   let roomId: string;
+  let room2Id: string;
 
   const bearer = (s: LoginResult) => ({ Authorization: `Bearer ${s.accessToken}` });
   const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date());
@@ -24,6 +25,7 @@ describe('asset state guard (e2e)', () => {
         .send({
           name,
           categoryId,
+          locationId: roomId,
           ownershipType: 'OFFICE',
           acquisitionYear: 2024,
           condition: 'GOOD',
@@ -44,7 +46,7 @@ describe('asset state guard (e2e)', () => {
 
   // Petugas may request but not approve, so the request stays PENDING and leaves the asset row untouched.
   const requestMutation = (assetId: string) =>
-    ctx.http().post('/api/v1/mutations').set(bearer(petugas)).send({ assetId, toLocationId: roomId, reason: 'Uji balapan' });
+    ctx.http().post('/api/v1/mutations').set(bearer(petugas)).send({ assetId, toLocationId: room2Id, reason: 'Uji balapan' });
 
   /** Polls until `done` holds; fails the test instead of hanging when it never does. */
   const waitUntil = async (done: () => Promise<boolean>) => {
@@ -95,10 +97,11 @@ describe('asset state guard (e2e)', () => {
     ctx = await createTestApp();
     admin = await ctx.loginAs('ADMIN_INVENTARIS');
     petugas = await ctx.loginAs('PETUGAS_INVENTARIS');
-    categoryId = ((await testTypes(ctx.prisma)).bg).id;
+    categoryId = ((await testTypes(ctx.prisma)).ng).id;
     employeeId = (await ctx.prisma.employee.create({ data: { fullName: 'Pegawai Balapan' } })).id;
-    roomId = (await ctx.prisma.location.create({ data: { code: 'BALAPAN_RUANG', name: 'Ruang Balapan', type: 'OFFICE' } }))
-      .id;
+    const t = await testTypes(ctx.prisma);
+    roomId = t.roomA.id;
+    room2Id = t.roomB.id;
   });
 
   afterAll(async () => {
