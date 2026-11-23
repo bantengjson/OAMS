@@ -1,6 +1,7 @@
 'use client';
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback } from 'react';
 import { Boxes, CheckCircle2, RefreshCw, Tags, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +14,7 @@ import { assetsApi } from '@/lib/api/assets';
 import { categoriesApi } from '@/lib/api/categories';
 import { api } from '@/lib/api/client';
 import { usersApi } from '@/lib/api/users';
+import { useRefreshAction } from '@/hooks/use-refresh-action';
 import { useAuth } from '@/lib/auth/use-auth';
 import { cn } from '@/lib/utils';
 
@@ -42,11 +44,18 @@ export default function DashboardPage() {
     enabled: canMaster,
   });
 
-  const refresh = () => {
-    void queryClient.invalidateQueries({ queryKey: ['assets', 'statistics'] });
-    void queryClient.invalidateQueries({ queryKey: ['count'] });
-    void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-  };
+  // refetch, not invalidate: the button only stops spinning once the new numbers are really in.
+  const { refreshing, run: refresh } = useRefreshAction(
+    useCallback(
+      () =>
+        Promise.all([
+          queryClient.refetchQueries({ queryKey: ['assets', 'statistics'] }),
+          queryClient.refetchQueries({ queryKey: ['count'] }),
+          queryClient.refetchQueries({ queryKey: ['dashboard'] }),
+        ]),
+      [queryClient],
+    ),
+  );
 
   const s = stats.data;
   const activePct = s && s.total > 0 ? Math.round((s.active / s.total) * 100) : 0;
@@ -67,8 +76,15 @@ export default function DashboardPage() {
                 {systemOk ? 'Sistem normal' : 'Sistem terganggu'}
               </HeaderPill>
             )}
-            <Button variant="outline" size="sm" onClick={refresh} leftIcon={<RefreshCw className="h-4 w-4" />}>
-              Muat ulang
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void refresh()}
+              disabled={refreshing}
+              aria-label={refreshing ? 'Sedang menyegarkan data' : 'Segarkan data'}
+              leftIcon={<RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} />}
+            >
+              {refreshing ? 'Menyegarkan...' : 'Refresh'}
             </Button>
           </>
         }
