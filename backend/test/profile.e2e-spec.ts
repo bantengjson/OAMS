@@ -34,15 +34,15 @@ describe('own profile: name and photo (e2e)', () => {
 
   it('anyone signed in changes their own display name, not their username', async () => {
     const before = await ctx.http().get('/api/v1/auth/me').set(bearer(viewer)).expect(200);
-    const res = await ctx.http().patch('/api/v1/auth/me').set(bearer(viewer)).send({ fullName: '  Budi Santoso  ' }).expect(200);
-    expect(res.body).toMatchObject({ id: viewer.userId, fullName: 'Budi Santoso', username: before.body.username, avatarUrl: null });
+    const res = await ctx.http().patch('/api/v1/auth/me').set(bearer(viewer)).send({ fullName: '  Bima Profil Uji  ' }).expect(200);
+    expect(res.body).toMatchObject({ id: viewer.userId, fullName: 'Bima Profil Uji', username: before.body.username, avatarUrl: null });
     const me = await ctx.http().get('/api/v1/auth/me').set(bearer(viewer)).expect(200);
-    expect(me.body.fullName).toBe('Budi Santoso');
+    expect(me.body.fullName).toBe('Bima Profil Uji');
 
     await ctx.http().patch('/api/v1/auth/me').set(bearer(viewer)).send({ fullName: ' ' }).expect(400);
     await ctx.http().patch('/api/v1/auth/me').set(bearer(viewer)).send({ fullName: 'x'.repeat(151) }).expect(400);
     // Only the name: other fields are rejected, not silently applied.
-    await ctx.http().patch('/api/v1/auth/me').set(bearer(viewer)).send({ fullName: 'Budi', username: 'baru' }).expect(400);
+    await ctx.http().patch('/api/v1/auth/me').set(bearer(viewer)).send({ fullName: 'Bima', username: 'baru' }).expect(400);
 
     const audit = await ctx.prisma.auditLog.findFirst({ where: { action: 'user.profile_updated', entityId: viewer.userId } });
     expect(audit?.actorId).toBe(viewer.userId);
