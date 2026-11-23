@@ -2,7 +2,7 @@ const LETTERS = /^[A-Z]{1,3}$/;
 
 /** Bijective base-26: A=1 … Z=26, AA=27 … */
 function toNumber(code: string): number {
-  return [...code].reduce((n, ch) => n * 26 + (ch.charCodeAt(0) - 64), 0);
+  return code.split('').reduce((n, ch) => n * 26 + (ch.charCodeAt(0) - 64), 0);
 }
 
 function toLetters(n: number): string {
