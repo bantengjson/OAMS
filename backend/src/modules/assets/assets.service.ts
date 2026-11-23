@@ -215,7 +215,7 @@ export class AssetsService {
     await this.assertReferences(dto);
     if (dto.responsibleEmployeeId) await this.employees.assertActive(this.prisma, dto.responsibleEmployeeId);
     const { id } = await this.prisma.$transaction(async (tx) => {
-      const assetCode = await this.codes.next(tx);
+      const assetCode = await this.codes.nextLegacy(tx);
       const asset = await tx.asset.create({
         data: { ...this.toCreateData(dto), assetCode, createdById: actor.id },
         select: { id: true },
