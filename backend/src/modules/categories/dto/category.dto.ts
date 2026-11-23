@@ -1,30 +1,66 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
-import { IsCode } from '../../../common/dto/code.validators.js';
-import { trim } from '../../../common/dto/transforms.js';
+import { IsBoolean, IsIn, IsInt, IsNotEmpty, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import { MasterDataQueryDto } from '../../../common/dto/master-data-query.dto.js';
+import { toBoolean, trim } from '../../../common/dto/transforms.js';
 
+export const GOLONGAN = ['BG', 'NG'] as const;
+export type Golongan = (typeof GOLONGAN)[number];
+const GOLONGAN_MESSAGE = 'Golongan harus BG atau NG';
+const NUMBER_MESSAGE = 'Nomor jenis harus angka 1-999';
+
+/** Item type ("Jenis Barang"); the API path stays /categories. */
 export class CategoryDto {
   @ApiProperty() id!: string;
-  @ApiProperty({ example: 'KOMPUTER_IT' }) code!: string;
+  @ApiProperty({ example: 'NG-012' }) code!: string;
+  @ApiProperty({ enum: GOLONGAN }) golongan!: Golongan;
+  @ApiProperty({ example: 12 }) number!: number;
+  @ApiProperty({ description: 'Jenis untuk Barang Kelompok (dihitung, tanpa QR)' }) isGroup!: boolean;
   @ApiProperty() name!: string;
+  @ApiProperty({ example: 'NG 012 · Kursi Merah' }) label!: string;
   @ApiProperty({ nullable: true }) description!: string | null;
   @ApiProperty() isActive!: boolean;
+  @ApiProperty({ description: 'Sudah dipakai barang; golongan, nomor, dan jenis kelompok terkunci' }) inUse!: boolean;
   @ApiProperty() createdAt!: Date;
   @ApiProperty() updatedAt!: Date;
 }
 
-export class CreateCategoryDto {
-  @ApiProperty({ example: 'PRINTER', description: 'Huruf besar, angka, garis bawah; 2-20 karakter' })
-  @IsCode()
-  code!: string;
+export class CategoryQueryDto extends MasterDataQueryDto {
+  @ApiPropertyOptional({ enum: GOLONGAN })
+  @IsOptional()
+  @IsIn(GOLONGAN, { message: GOLONGAN_MESSAGE })
+  golongan?: Golongan;
 
-  @ApiProperty({ example: 'Printer' })
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Transform(toBoolean)
+  @IsBoolean({ message: 'isGroup harus true atau false' })
+  isGroup?: boolean;
+}
+
+export class CreateCategoryDto {
+  @ApiProperty({ enum: GOLONGAN })
+  @IsIn(GOLONGAN, { message: GOLONGAN_MESSAGE })
+  golongan!: Golongan;
+
+  @ApiPropertyOptional({ description: 'Kosongkan untuk nomor berikutnya di golongan ini' })
+  @IsOptional()
+  @IsInt({ message: NUMBER_MESSAGE })
+  @Min(1, { message: NUMBER_MESSAGE })
+  @Max(999, { message: NUMBER_MESSAGE })
+  number?: number;
+
+  @ApiProperty({ example: 'Kursi Merah' })
   @Transform(trim)
   @IsString({ message: 'Nama wajib diisi' })
   @IsNotEmpty({ message: 'Nama wajib diisi' })
   @MaxLength(150)
   name!: string;
+
+  @ApiPropertyOptional({ default: false })
+  @IsOptional()
+  @IsBoolean({ message: 'isGroup harus true atau false' })
+  isGroup?: boolean;
 
   @ApiPropertyOptional({ nullable: true })
   @IsOptional()
@@ -35,10 +71,17 @@ export class CreateCategoryDto {
 }
 
 export class UpdateCategoryDto {
+  @ApiPropertyOptional({ enum: GOLONGAN })
+  @IsOptional()
+  @IsIn(GOLONGAN, { message: GOLONGAN_MESSAGE })
+  golongan?: Golongan;
+
   @ApiPropertyOptional()
   @IsOptional()
-  @IsCode()
-  code?: string;
+  @IsInt({ message: NUMBER_MESSAGE })
+  @Min(1, { message: NUMBER_MESSAGE })
+  @Max(999, { message: NUMBER_MESSAGE })
+  number?: number;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -47,6 +90,11 @@ export class UpdateCategoryDto {
   @IsNotEmpty({ message: 'Nama tidak boleh kosong' })
   @MaxLength(150)
   name?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean({ message: 'isGroup harus true atau false' })
+  isGroup?: boolean;
 
   @ApiPropertyOptional({ nullable: true })
   @IsOptional()

@@ -2,11 +2,10 @@ import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post, Query 
 import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PERMISSIONS } from '../../common/auth/permissions.catalog.js';
 import { RequirePermissions } from '../../common/auth/permissions.decorator.js';
-import { MasterDataQueryDto } from '../../common/dto/master-data-query.dto.js';
 import type { Paginated } from '../../common/dto/paginated.js';
 import { ParseUuid } from '../../common/pipes/uuid.pipe.js';
 import { CategoriesService } from './categories.service.js';
-import { CategoryDto, CreateCategoryDto, UpdateCategoryDto } from './dto/category.dto.js';
+import { CategoryDto, CategoryQueryDto, CreateCategoryDto, UpdateCategoryDto } from './dto/category.dto.js';
 
 @ApiTags('categories')
 @ApiBearerAuth()
@@ -16,8 +15,8 @@ export class CategoriesController {
 
   @Get()
   @RequirePermissions(PERMISSIONS.MASTER_DATA_VIEW)
-  @ApiOperation({ summary: 'Daftar kategori' })
-  list(@Query() q: MasterDataQueryDto): Promise<Paginated<CategoryDto>> {
+  @ApiOperation({ summary: 'Daftar jenis barang' })
+  list(@Query() q: CategoryQueryDto): Promise<Paginated<CategoryDto>> {
     return this.categories.list(q);
   }
 
