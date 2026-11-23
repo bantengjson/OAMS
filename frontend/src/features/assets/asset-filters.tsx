@@ -6,7 +6,8 @@ import type { ReactNode } from 'react';
 import { FilterBar } from '@/components/ui/filter-bar';
 import { categoryOptions } from './category-options';
 import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
+import { FilterSelect } from '@/components/ui/filter-select';
+import type { FilterOption } from '@/components/ui/filter-select';
 import { ALL_CATEGORIES_QUERY } from '@/hooks/use-category-tone';
 import type { AssetQuery } from '@/lib/api/assets';
 import { CONDITION_LABEL, OWNERSHIP_LABEL } from '@/lib/asset-labels';
@@ -50,6 +51,13 @@ export function toAssetQuery(f: AssetFilterState, debouncedSearch: string): Asse
   };
 }
 
+const GOLONGAN_OPTIONS: FilterOption[] = [
+  { value: 'BG', label: 'BG · Bergerak (kendaraan)' },
+  { value: 'NG', label: 'NG · Tidak bergerak' },
+];
+const CONDITION_OPTIONS: FilterOption[] = ASSET_CONDITIONS.map((c) => ({ value: c, label: CONDITION_LABEL[c] }));
+const OWNERSHIP_OPTIONS: FilterOption[] = OWNERSHIP_TYPES.map((o) => ({ value: o, label: OWNERSHIP_LABEL[o] }));
+
 /** Search and filters of the inventory list; status is chosen with the status chips above it. */
 export function AssetFilters({
   value,
@@ -62,7 +70,16 @@ export function AssetFilters({
 }) {
   const categories = useQuery(ALL_CATEGORIES_QUERY);
   const rooms = useQuery({ queryKey: ['rooms', 'all'], queryFn: () => roomsApi.list(), staleTime: 60_000 });
-  const categoryChoices = categoryOptions(categories.data?.data ?? [], value.categoryId);
+  // The panel searches these, so the whole list can be offered without a long scroll.
+  const typeOptions: FilterOption[] = (categories.data?.data ?? [])
+    .filter((c) => !c.isGroup)
+    .map((c) => ({ value: c.id, label: c.label, group: c.golongan === 'BG' ? 'BG · Bergerak' : 'NG · Tidak bergerak' }));
+  const typeChoices = categoryOptions(
+    (categories.data?.data ?? []).map((c) => ({ id: c.id, name: c.label, isActive: c.isActive })),
+    value.categoryId,
+  );
+  const unknownType = typeChoices.find((o) => o.value === value.categoryId && !typeOptions.some((t) => t.value === o.value));
+  const roomOptions: FilterOption[] = (rooms.data ?? []).map((r) => ({ value: r.id, label: `${r.code} · ${r.name}` }));
   const set = <K extends keyof AssetFilterState>(key: K, v: AssetFilterState[K]) =>
     onChange({ ...value, [key]: v });
 
@@ -78,45 +95,43 @@ export function AssetFilters({
           aria-label="Cari barang"
         />
       </div>
-      <div className="w-full sm:w-44">
-        <Select value={value.golongan} onChange={(e) => set('golongan', e.target.value as AssetFilterState['golongan'])} aria-label="Filter golongan">
-          <option value="">Semua golongan</option>
-          <option value="BG">BG · Bergerak</option>
-          <option value="NG">NG · Tidak bergerak</option>
-        </Select>
-      </div>
-      <div className="w-full sm:w-44">
-        <Select value={value.locationId} onChange={(e) => set('locationId', e.target.value)} aria-label="Filter ruangan">
-          <option value="">Semua ruangan</option>
-          {rooms.data?.map((r) => (
-            <option key={r.id} value={r.id}>{r.code} · {r.name}</option>
-          ))}
-        </Select>
-      </div>
-      <div className="w-full sm:w-44">
-        <Select value={value.categoryId} onChange={(e) => set('categoryId', e.target.value)} aria-label="Filter jenis">
-          <option value="">Semua jenis</option>
-          {categoryChoices.map((c) => (
-            <option key={c.value} value={c.value}>{c.label}</option>
-          ))}
-        </Select>
-      </div>
-      <div className="w-full sm:w-40">
-        <Select value={value.condition} onChange={(e) => set('condition', e.target.value as AssetFilterState['condition'])} aria-label="Filter kondisi">
-          <option value="">Semua kondisi</option>
-          {ASSET_CONDITIONS.map((c) => (
-            <option key={c} value={c}>{CONDITION_LABEL[c]}</option>
-          ))}
-        </Select>
-      </div>
-      <div className="w-full sm:w-44">
-        <Select value={value.ownershipType} onChange={(e) => set('ownershipType', e.target.value as AssetFilterState['ownershipType'])} aria-label="Filter kepemilikan">
-          <option value="">Semua kepemilikan</option>
-          {OWNERSHIP_TYPES.map((o) => (
-            <option key={o} value={o}>{OWNERSHIP_LABEL[o]}</option>
-          ))}
-        </Select>
-      </div>
+      <FilterSelect
+        className="w-full sm:w-44"
+        label="Golongan"
+        value={value.golongan}
+        onChange={(v) => set('golongan', v as AssetFilterState['golongan'])}
+        options={GOLONGAN_OPTIONS}
+      />
+      <FilterSelect
+        className="w-full sm:w-52"
+        label="Ruangan"
+        value={value.locationId}
+        onChange={(v) => set('locationId', v)}
+        options={roomOptions}
+        widthClassName="w-72"
+      />
+      <FilterSelect
+        className="w-full sm:w-48"
+        label="Jenis"
+        value={value.categoryId}
+        onChange={(v) => set('categoryId', v)}
+        options={unknownType ? [...typeOptions, unknownType] : typeOptions}
+        widthClassName="w-80"
+      />
+      <FilterSelect
+        className="w-full sm:w-44"
+        label="Kondisi"
+        value={value.condition}
+        onChange={(v) => set('condition', v as AssetFilterState['condition'])}
+        options={CONDITION_OPTIONS}
+      />
+      <FilterSelect
+        className="w-full sm:w-48"
+        label="Kepemilikan"
+        value={value.ownershipType}
+        onChange={(v) => set('ownershipType', v as AssetFilterState['ownershipType'])}
+        options={OWNERSHIP_OPTIONS}
+      />
       <label className="flex items-center gap-2 text-[13px] text-body">
         <input
           type="checkbox"
