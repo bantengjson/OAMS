@@ -7,6 +7,15 @@ export class CountByRefDto {
   @ApiProperty() count!: number;
 }
 
+export class CountByTypeDto extends CountByRefDto {
+  @ApiProperty({ example: 'NG 012 · Kursi Merah' }) label!: string;
+}
+
+export class GroupItemsSummaryDto {
+  @ApiProperty({ description: 'Jenis barang kelompok aktif' }) types!: number;
+  @ApiProperty({ description: 'Jumlah unit barang kelompok aktif' }) units!: number;
+}
+
 export class YearCountDto {
   @ApiProperty() year!: number;
   @ApiProperty() count!: number;
@@ -19,7 +28,9 @@ export class AssetStatisticsDto {
   @ApiProperty({ description: 'Barang yang sudah dilepas (tidak diarsipkan)' }) disposed!: number;
   @ApiProperty({ type: Object }) byStatus!: Record<AssetStatus, number>;
   @ApiProperty({ type: Object }) byCondition!: Record<AssetCondition, number>;
-  @ApiProperty({ type: [CountByRefDto] }) byCategory!: CountByRefDto[];
+  @ApiProperty({ type: [CountByTypeDto] }) byCategory!: CountByTypeDto[];
+  @ApiProperty({ type: [CountByRefDto], description: 'Per ruangan (A · Sekretariat, …)' }) byRoom!: CountByRefDto[];
+  @ApiProperty({ type: GroupItemsSummaryDto }) groupItems!: GroupItemsSummaryDto;
   @ApiProperty({ type: [CountByRefDto], description: 'Dikelompokkan per Kantor (akar lokasi)' })
   byOffice!: CountByRefDto[];
   @ApiProperty({ type: [YearCountDto], description: 'Barang aktif per tahun perolehan, urut naik' })

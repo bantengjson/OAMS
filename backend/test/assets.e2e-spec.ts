@@ -469,24 +469,30 @@ describe('assets (e2e)', () => {
   });
   it('statistics group live assets by acquisition year', async () => {
     const stats = async () => (await ctx.http().get(`${URL}/statistics`).set(bearer(viewer)).expect(200)).body;
-    const create = async (name: string, acquisitionDate?: string) =>
+    const create = async (name: string, acquisitionYear: number) =>
       (
         await ctx
           .http()
           .post(URL)
           .set(bearer(admin))
-          .send({ ...baseAsset(), name, serialNumber: undefined, acquisitionDate })
+          .send({ ...baseAsset(), name, serialNumber: undefined, acquisitionDate: undefined, acquisitionYear })
           .expect(201)
       ).body.id as string;
     const before = await stats();
 
-    await create('Tahun 1991 A', '1991-05-01');
-    await create('Tahun 1991 B', '1991-12-31');
-    await create('Tahun 1993', '1993-01-01');
-    await create('Tanpa tahun', undefined);
-    const archived = await create('Arsip 1992', '1992-03-03');
+    await create('Tahun 1991 A', 1991);
+    await create('Tahun 1991 B', 1991);
+    await create('Tahun 1993', 1993);
+    // Only the office import may leave the year empty ("TT").
+    await ctx.prisma.asset.create({
+      data: {
+        assetCode: 'NG.AST_R1/900/DPC/TT-99', name: 'Tanpa tahun', categoryId: ids.category, locationId: ids.room1,
+        ownershipType: 'OFFICE', acquisitionMethod: 'PURCHASE', condition: 'GOOD', status: 'IN_USE',
+      },
+    });
+    const archived = await create('Arsip 1992', 1992);
     await ctx.http().post(`${URL}/${archived}/archive`).set(bearer(admin)).send({}).expect(200);
-    const disposed = await create('Dilepas 1992', '1992-04-04');
+    const disposed = await create('Dilepas 1992', 1992);
     const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date());
     await ctx
       .http()
@@ -691,6 +697,24 @@ describe('assets: office format (e2e)', () => {
     const after = await ctx.http().get(`${URL}/${created.body.id}`).set(bearer(viewer)).expect(200);
     expect(after.body.assetCode).toBe(created.body.assetCode);
     expect(after.body.room.code).toBe('B');
+  });
+
+  it('statistics by room, labelled types, office years and group items', async () => {
+    await ctx
+      .http()
+      .post('/api/v1/group-items')
+      .set(bearer(admin))
+      .send({ categoryId: t.group.id, locationId: t.roomA.id, name: 'Piring Statistik', acquisitionYear: 2020, qtyGood: 7 })
+      .expect(201);
+    const res = await ctx.http().get(`${URL}/statistics`).set(bearer(viewer)).expect(200);
+    expect(Object.keys(res.body.byCondition).sort()).toEqual(['DAMAGED', 'GOOD', 'NEEDS_REPAIR']);
+    expect(res.body.byRoom).toEqual(expect.arrayContaining([expect.objectContaining({ id: t.roomA.id, name: 'A · Sekretariat' })]));
+    expect(res.body.byCategory).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: codeType.id, label: 'NG 960 · Meja Uji Kode' })]),
+    );
+    expect(res.body.byAcquisitionYear).toEqual(expect.arrayContaining([expect.objectContaining({ year: 2019 })]));
+    expect(res.body.groupItems.types).toBeGreaterThanOrEqual(1);
+    expect(res.body.groupItems.units).toBeGreaterThanOrEqual(7);
   });
 
   it('search finds by specification; filters by golongan', async () => {

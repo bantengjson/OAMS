@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { EmployeesModule } from '../employees/employees.module.js';
+import { GroupItemsModule } from '../group-items/group-items.module.js';
 import { AssetCodeSettingsController } from './asset-code-settings.controller.js';
 import { AssetCodeService } from './asset-code.js';
 import { AssetConditionsController } from './asset-conditions.controller.js';
@@ -11,7 +12,7 @@ import { AssetsController } from './assets.controller.js';
 import { AssetsService } from './assets.service.js';
 
 @Module({
-  imports: [EmployeesModule],
+  imports: [EmployeesModule, GroupItemsModule],
   // Static routes (`statistics`) and `:id/...` sub-resources before the generic `:id` handlers.
   controllers: [AssetConditionsController, AssetsController, AssetFilesController, AssetCodeSettingsController],
   providers: [AssetCodeService, AssetsService, AssetFilesService, AssetConditionsService, AssetStateGuard],

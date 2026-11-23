@@ -26,7 +26,9 @@ import {
 import type { AssetDetailRow, PathIndex } from './assets.mapper.js';
 import type { AssetDetailDto, AssetListItemDto, CreatedAssetsDto, CreatedUnitDto } from './dto/asset.dto.js';
 import type { AssetQueryDto } from './dto/asset-query.dto.js';
-import type { AssetStatisticsDto, CountByRefDto } from './dto/asset-statistics.dto.js';
+import type { AssetStatisticsDto, CountByRefDto, CountByTypeDto } from './dto/asset-statistics.dto.js';
+import { GroupItemsService } from '../group-items/group-items.service.js';
+import { typeLabel } from '../categories/categories.service.js';
 import type { CreateAssetDto } from './dto/create-asset.dto.js';
 import type { UpdateAssetDto } from './dto/update-asset.dto.js';
 
@@ -66,6 +68,7 @@ export class AssetsService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly codes: AssetCodeService,
+    private readonly groupItems: GroupItemsService,
     private readonly settings: SettingsService,
     private readonly employees: EmployeesService,
     private readonly conditions: AssetConditionsService,
@@ -160,13 +163,13 @@ export class AssetsService {
       this.prisma.assetMutation.count({ where: { status: 'PENDING' } }),
       this.prisma.assetLoan.count({ where: { status: 'ACTIVE' } }),
       this.prisma.assetLoan.count({ where: { status: 'ACTIVE', dueAt: { lt: today } } }),
-      // acquisition_date is a calendar date (no time zone), so its year is the Jakarta year.
+      // The office year ("tahun pengadaan"), the same year that is in the asset code.
       this.prisma.$queryRaw<{ year: number; count: number }[]>`
-        SELECT extract(year FROM acquisition_date)::int AS year, count(*)::int AS count
+        SELECT acquisition_year AS year, count(*)::int AS count
         FROM assets
-        WHERE archived_at IS NULL AND status <> 'DISPOSED' AND acquisition_date IS NOT NULL
+        WHERE archived_at IS NULL AND status <> 'DISPOSED' AND acquisition_year IS NOT NULL
         GROUP BY 1 ORDER BY 1`,
-      this.prisma.asset.count({ where: { ...live, acquisitionDate: null } }),
+      this.prisma.asset.count({ where: { ...live, acquisitionYear: null } }),
     ]);
 
     const byStatus = Object.fromEntries(Object.keys(AssetStatus).map((k) => [k, 0])) as Record<
@@ -182,11 +185,19 @@ export class AssetsService {
 
     const categories = await this.prisma.category.findMany({
       where: { id: { in: byCategoryRows.map((r) => r.categoryId) } },
-      select: { id: true, name: true },
+      select: { id: true, name: true, golongan: true, number: true },
     });
-    const categoryName = new Map(categories.map((c) => [c.id, c.name]));
-    const byCategory: CountByRefDto[] = byCategoryRows
-      .map((r) => ({ id: r.categoryId, name: categoryName.get(r.categoryId) ?? '-', count: r._count._all }))
+    const typeById = new Map(categories.map((c) => [c.id, c]));
+    const byCategory: CountByTypeDto[] = byCategoryRows
+      .map((r) => {
+        const c = typeById.get(r.categoryId);
+        return {
+          id: r.categoryId,
+          name: c?.name ?? '-',
+          label: c ? typeLabel(c.golongan, c.number, c.name) : '-',
+          count: r._count._all,
+        };
+      })
       .sort((a, b) => b.count - a.count);
 
     const paths = await this.pathIndex();
@@ -196,6 +207,14 @@ export class AssetsService {
       const root = rootOf(r.locationId, paths);
       officeCounts.set(root, (officeCounts.get(root) ?? 0) + r._count._all);
     }
+    const rooms = await this.prisma.location.findMany({
+      where: { type: 'ROOM', id: { in: byLocationRows.map((r) => r.locationId).filter((v): v is string => Boolean(v)) } },
+      select: { id: true, code: true, name: true },
+    });
+    const roomCount = new Map(byLocationRows.map((r) => [r.locationId, r._count._all]));
+    const byRoom: CountByRefDto[] = rooms
+      .map((r) => ({ id: r.id, name: `${r.code} · ${r.name}`, count: roomCount.get(r.id) ?? 0 }))
+      .sort((a, b) => b.count - a.count);
     const byOffice: CountByRefDto[] = Array.from(officeCounts.entries())
       .map(([id, count]) => ({ id, name: paths.get(id)?.name ?? '-', count }))
       .sort((a, b) => b.count - a.count);
@@ -208,7 +227,9 @@ export class AssetsService {
       byStatus,
       byCondition,
       byCategory,
+      byRoom,
       byOffice,
+      groupItems: await this.groupItems.summary(),
       byAcquisitionYear: byYearRows.map((r) => ({ year: Number(r.year), count: Number(r.count) })),
       withoutAcquisitionYear,
       pendingMutations,
