@@ -27,3 +27,6 @@ npm-debug.log*
 Thumbs.db
 *.tsbuildinfo
 backend/.test-uploads/
+
+# office data (never commit: the repo is public)
+/data-kantor/
